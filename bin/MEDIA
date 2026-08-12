@@ -1,0 +1,5 @@
+#!/system/bin/sh
+
+USB="/mnt/media_rw/4E28-7C59"
+
+sh "$USB/scripts/core/media.sh"

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RK322X Control Panel</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background:#111;
+    color:#eee;
+    margin:0;
+    padding:25px;
+}
+
+h1 {
+    margin-top:0;
+}
+
+.panel {
+    max-width:800px;
+    margin:auto;
+}
+
+button {
+    padding:15px 22px;
+    margin:6px;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.status {
+    padding:15px;
+    margin:20px 0;
+    background:#222;
+    border-radius:8px;
+}
+
+#result {
+    white-space:pre-wrap;
+    background:#000;
+    padding:15px;
+    min-height:80px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+
+<h1>RK322X Control Panel</h1>
+
+<div class="status">
+    <b>BOX</b><br>
+    IP : 192.168.50.20<br>
+    HTTP : 8000<br>
+    CONTROL : 8080
+</div>
+
+<h2>Commandes</h2>
+
+<button onclick="cmd('HELP')">HELP</button>
+<button onclick="cmd('SEND_LOGS')">SEND LOGS</button>
+<button onclick="cmd('PURGE_LOG')">PURGE LOG</button>
+<button onclick="cmd('SYNC')">SYNC</button>
+
+<h2>Résultat</h2>
+
+<div id="result">Prêt.</div>
+
+</div>
+
+<script>
+
+function cmd(command) {
+
+    document.getElementById("result").textContent =
+        "Exécution : " + command + "...";
+
+    fetch("http://" + location.hostname + ":8080/api/" + command)
+        .then(r => r.text())
+        .then(t => {
+            document.getElementById("result").textContent =
+                command + "\n\n" + t;
+        })
+        .catch(e => {
+            document.getElementById("result").textContent =
+                "Erreur : " + e;
+        });
+}
+
+</script>
+
+</body>
+</html>

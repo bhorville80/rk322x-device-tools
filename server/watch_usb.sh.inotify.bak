@@ -1,0 +1,63 @@
+#!/system/bin/sh
+
+USB_DIR="/mnt/media_rw/4E28-7C59"
+INCOMING="$USB_DIR/incoming"
+LOG_DIR="$USB_DIR/log"
+LOG="$LOG_DIR/watch.log"
+
+mkdir -p "$INCOMING" "$LOG_DIR"
+
+log()
+{
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
+}
+
+log "========================================"
+log "USB WATCHER START"
+log "INCOMING: $INCOMING"
+log "========================================"
+
+watch_event()
+{
+    EVENT="$1"
+    FILE="$2"
+
+    log "EVENT=$EVENT FILE=$FILE"
+
+    case "$FILE" in
+        *.cmd)
+            log "Commande détectée: $FILE"
+
+            CMD="$(cat "$FILE" 2>/dev/null)"
+            log "CMD=$CMD"
+
+            case "$CMD" in
+                SEND_LOGS)
+                    log "Exécution SEND_LOGS"
+                    sh "$USB_DIR/deploy.sh" SEND_LOGS >> "$LOG" 2>&1
+                    ;;
+
+                HELP)
+                    log "HELP demandé"
+                    sh "$USB_DIR/deploy.sh" HELP >> "$LOG" 2>&1
+                    ;;
+
+                *)
+                    log "Commande inconnue: $CMD"
+                    ;;
+            esac
+
+            rm -f "$FILE"
+            ;;
+    esac
+}
+
+export WATCHER_LOG="$LOG"
+
+while true
+do
+    /system/bin/busybox inotifyd \
+        /data/local/tmp/usb_inotify_handler \
+        "$INCOMING":w
+    sleep 1
+done
