@@ -24,6 +24,8 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 
 ## 📅 Court terme
 
+* [ ] Couper le HDMI
+
 ### Déploiement
 
 * [ ] Améliorer la gestion des commandes de `deploy.sh`
@@ -41,20 +43,10 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 * [ ] Prendre en charge plusieurs profils de périphériques
 * [ ] Ajouter des paramètres spécifiques par modèle
 
-### Logs
-
-* [ ] Améliorer le format des logs
-* [ ] Ajouter des résumés de déploiement
-* [ ] Ajouter différents niveaux de logs
-* [ ] Améliorer la collecte des logs
-* [ ] Ajouter la rotation des fichiers de logs
-* [ ] Ajouter un rapport de diagnostic
-
----
 
 ## 🌐 Réseau
 
-* [ ] Améliorer les scripts de configuration réseau
+* [x] Améliorer les scripts de configuration réseau
 * [ ] Ajouter des outils de diagnostic réseau
 * [ ] Ajouter des tests de connectivité
 * [ ] Ajouter la détection automatique de l'adresse IP
@@ -66,7 +58,7 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 
 ## 🔌 USB
 
-* [ ] Améliorer la détection des périphériques USB
+* [x] Améliorer la détection des périphériques USB
 * [ ] Améliorer la synchronisation USB
 * [ ] Ajouter le suivi de l'état de synchronisation
 * [ ] Ajouter la validation de la synchronisation
@@ -140,12 +132,42 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 
 ### Gestion des périphériques
 
-* [ ] Gestion de plusieurs périphériques
+* [x] Gestion de plusieurs périphériques
 * [ ] Détection automatique des périphériques
 * [ ] Identification des modèles
 * [ ] Gestion des profils
 * [ ] Historique des opérations
 * [ ] Gestion des états des périphériques
+
+---
+
+## 🔮 Long terme
+
+Fonctionnalités envisagées :
+
+* [ ] Interface Web complète d'administration
+* [ ] Gestion distante des périphériques
+* [ ] Déploiement multi-périphériques
+* [ ] Profils de déploiement avancés
+* [ ] Gestion centralisée des configurations
+* [ ] Monitoring des périphériques
+* [ ] Historique centralisé des opérations
+* [ ] Système de notifications
+* [ ] API REST d'administration
+* [ ] Versioning complet des déploiements
+* [ ] Tests automatisés complets
+* [ ] Intégration CI/CD
+
+### Logs
+
+* [ ] Améliorer le format des logs
+* [ ] Ajouter des résumés de déploiement
+* [ ] Ajouter différents niveaux de logs
+* [ ] Améliorer la collecte des logs
+* [ ] Ajouter la rotation des fichiers de logs
+* [ ] Ajouter un rapport de diagnostic
+
+---
 
 ---
 
@@ -170,67 +192,6 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 * [ ] Ajouter une gestion des permissions
 * [ ] Ajouter une traçabilité des opérations sensibles
 
----
-
-## 🧪 Tests
-
-### Tests automatisés
-
-* [ ] Ajouter des tests unitaires
-* [ ] Ajouter des tests d'intégration
-* [ ] Tester les scripts de déploiement
-* [ ] Tester les opérations ADB
-* [ ] Tester les opérations USB
-* [ ] Tester la configuration réseau
-* [ ] Tester les mécanismes de rollback
-* [ ] Ajouter des tests sur différents modèles d'appareils
-
----
-
-## 🚀 Versioning & Releases
-
-* [ ] Définir une stratégie de versioning
-* [ ] Ajouter des releases versionnées
-* [ ] Générer automatiquement les changelogs
-* [ ] Documenter les changements
-* [ ] Maintenir plusieurs versions de déploiement
-* [ ] Ajouter une compatibilité par version Android / firmware
-
----
-
-## 🤖 CI/CD
-
-* [ ] Mettre en place une pipeline CI
-* [ ] Automatiser les tests
-* [ ] Automatiser les contrôles qualité
-* [ ] Automatiser la création des releases
-* [ ] Ajouter la validation des scripts
-* [ ] Automatiser la génération des artefacts
-* [ ] Ajouter des tests sur plusieurs environnements
-
----
-
-## 🔮 Long terme
-
-Fonctionnalités envisagées :
-
-* [ ] Interface Web complète d'administration
-* [ ] Gestion distante des périphériques
-* [ ] Déploiement multi-périphériques
-* [ ] Serveur centralisé de déploiement
-* [ ] Découverte automatique des périphériques
-* [ ] Profils de déploiement avancés
-* [ ] Gestion centralisée des configurations
-* [ ] Monitoring des périphériques
-* [ ] Historique centralisé des opérations
-* [ ] Système de notifications
-* [ ] API REST d'administration
-* [ ] Versioning complet des déploiements
-* [ ] Tests automatisés complets
-* [ ] Intégration CI/CD
-
----
-
 ## 🗺️ Priorités
 
 Les priorités actuelles sont orientées autour de quatre axes :
@@ -238,15 +199,10 @@ Les priorités actuelles sont orientées autour de quatre axes :
 ```text
 Déploiement fiable
         ↓
-Configuration reproductible
-        ↓
 Diagnostics & monitoring
         ↓
-Automatisation
-        ↓
 Administration centralisée
-        ↓
-Gestion multi-périphériques
+
 ```
 
 ---
