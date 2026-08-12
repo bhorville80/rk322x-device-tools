@@ -1,290 +1,260 @@
 # Roadmap
 
-> Évolutions prévues et développement futur de **BackendJavaServ**.
+> Évolutions prévues et développements futurs pour `rk322x-device-tools`.
 
-Ce document présente les principales fonctionnalités, améliorations techniques et évolutions envisagées pour le moteur d'API REST SQL dynamique.
+Ce document présente les fonctionnalités prévues, les améliorations techniques et les évolutions envisagées pour le projet.
 
 ---
 
 ## 🚧 Version actuelle
 
-### Core
+### Administration système
 
-* [x] Initialisation du projet Spring Boot
-* [x] Structure Controller / Service / Model
-* [x] `DynamicQueryController`
-* [x] `DynamicAdminController`
-* [x] `DynamicEndpointService`
-* [x] `DynamicEndpointDefinition`
-* [x] Configuration Maven
-* [x] Configuration Spring Boot
-* [x] Configuration des logs avec Log4j2
-
-### API dynamique
-
-* [x] Base de gestion des endpoints dynamiques
-* [ ] Finaliser le système de définition des endpoints
-* [ ] Finaliser l'exécution des requêtes dynamiques
-* [ ] Standardiser les réponses JSON
-* [ ] Ajouter une gestion complète des erreurs
+* [x] Accès ADB
+* [x] Accès Root
+* [x] Gestion de la date et de l'heure
+* [x] Inspection du réseau
+* [x] Synchronisation USB
+* [x] Déploiement de scripts
+* [x] Gestion du Wi-Fi / Bluetooth
+* [x] Gestion des logs
+* [x] Serveur HTTP de fichiers via BusyBox
 
 ---
 
-# 📅 Court terme
+## 📅 Court terme
 
-## SQL
+### Déploiement
 
-* [ ] Ajouter la connexion à une base SQL
-* [ ] Supporter les requêtes SQL dynamiques
-* [ ] Ajouter les requêtes paramétrées
-* [ ] Gérer les paramètres de requête
-* [ ] Ajouter la validation des requêtes
-* [ ] Améliorer la gestion des erreurs SQL
-* [ ] Ajouter la gestion des transactions
+* [ ] Améliorer la gestion des commandes de `deploy.sh`
+* [ ] Ajouter le suivi de l'état du déploiement
+* [ ] Ajouter la validation du déploiement
+* [ ] Ajouter la détection automatique des erreurs
+* [ ] Améliorer les mécanismes de rollback
+* [ ] Ajouter une vérification post-déploiement
 
-## Endpoints dynamiques
+### Configuration
 
-* [ ] Créer un endpoint dynamiquement
-* [ ] Modifier un endpoint
-* [ ] Supprimer un endpoint
-* [ ] Lister les endpoints disponibles
-* [ ] Activer / désactiver un endpoint
-* [ ] Ajouter une validation des définitions
-* [ ] Ajouter une gestion des versions
+* [ ] Améliorer les profils de périphériques
+* [ ] Centraliser la configuration des appareils
+* [ ] Ajouter la validation de configuration
+* [ ] Prendre en charge plusieurs profils de périphériques
+* [ ] Ajouter des paramètres spécifiques par modèle
 
-## JSON
+### Logs
 
-* [ ] Transformer les résultats SQL en JSON
-* [ ] Supporter les objets JSON imbriqués
-* [ ] Supporter les tableaux JSON
-* [ ] Gérer les alias SQL pour construire la structure JSON
-* [ ] Standardiser le format des réponses
-* [ ] Ajouter la gestion des valeurs `null`
-
----
-
-# 🔐 Sécurité
-
-* [ ] Sécuriser l'exécution des requêtes SQL
-* [ ] Empêcher les injections SQL
-* [ ] Valider les paramètres utilisateur
-* [ ] Ajouter une authentification
-* [ ] Ajouter une gestion des rôles
-* [ ] Ajouter des permissions par endpoint
-* [ ] Protéger les endpoints d'administration
-* [ ] Ajouter une gestion des secrets et credentials
-
----
-
-# 📚 Documentation API
-
-* [ ] Documenter les endpoints dynamiques
-* [ ] Améliorer la documentation OpenAPI
-* [ ] Générer automatiquement la documentation des endpoints
-* [ ] Documenter les paramètres SQL
-* [ ] Ajouter des exemples de requêtes
-* [ ] Ajouter des exemples de réponses JSON
-* [ ] Documenter les erreurs HTTP
-
----
-
-# 🛠️ Administration
-
-## Dynamic Admin API
-
-* [ ] API de création d'endpoints
-* [ ] API de modification d'endpoints
-* [ ] API de suppression d'endpoints
-* [ ] API de recherche d'endpoints
-* [ ] API d'activation / désactivation
-* [ ] Historique des modifications
-* [ ] Versioning des définitions
-
-## Configuration
-
-* [ ] Centraliser la configuration
-* [ ] Supporter plusieurs bases de données
-* [ ] Ajouter des profils de configuration
-* [ ] Ajouter une validation de configuration
-* [ ] Supporter les variables d'environnement
-* [ ] Améliorer la gestion des environnements `dev / test / prod`
-
----
-
-# 📊 Observabilité
-
-## Logging
-
-* [ ] Améliorer les logs SQL
-* [ ] Ajouter les niveaux de logs
-* [ ] Ajouter des logs par endpoint
-* [ ] Ajouter des identifiants de requête
 * [ ] Améliorer le format des logs
-* [ ] Ajouter une rotation des logs
-
-## Monitoring
-
-* [ ] Ajouter des métriques API
-* [ ] Mesurer les temps d'exécution SQL
-* [ ] Mesurer les temps de réponse HTTP
-* [ ] Ajouter un endpoint de health check
-* [ ] Ajouter des informations de diagnostic
-* [ ] Préparer l'intégration avec Prometheus / Grafana
+* [ ] Ajouter des résumés de déploiement
+* [ ] Ajouter différents niveaux de logs
+* [ ] Améliorer la collecte des logs
+* [ ] Ajouter la rotation des fichiers de logs
+* [ ] Ajouter un rapport de diagnostic
 
 ---
 
-# 🧪 Tests
+## 🌐 Réseau
 
-## Tests unitaires
-
-* [ ] Tester `DynamicEndpointService`
-* [ ] Tester les contrôleurs
-* [ ] Tester les modèles
-* [ ] Tester le moteur SQL
-* [ ] Tester la génération JSON
-
-## Tests d'intégration
-
-* [ ] Tester les endpoints REST
-* [ ] Tester les requêtes SQL
-* [ ] Tester les paramètres
-* [ ] Tester les erreurs SQL
-* [ ] Tester les réponses JSON
-
-## Tests de sécurité
-
-* [ ] Tester les injections SQL
-* [ ] Tester les paramètres invalides
-* [ ] Tester les accès non autorisés
-* [ ] Tester les endpoints d'administration
+* [ ] Améliorer les scripts de configuration réseau
+* [ ] Ajouter des outils de diagnostic réseau
+* [ ] Ajouter des tests de connectivité
+* [ ] Ajouter la détection automatique de l'adresse IP
+* [ ] Améliorer la gestion du serveur HTTP
+* [ ] Ajouter la vérification de l'état des interfaces réseau
+* [ ] Ajouter la détection des problèmes de connexion
 
 ---
 
-# 🐳 Déploiement
+## 🔌 USB
 
-* [ ] Ajouter un `Dockerfile`
-* [ ] Ajouter `docker-compose`
-* [ ] Configurer les environnements
-* [ ] Ajouter les variables d'environnement
-* [ ] Ajouter un health check Docker
-* [ ] Préparer le déploiement cloud
-* [ ] Documenter le déploiement
-
----
-
-# ⚡ Performance
-
-* [ ] Optimiser l'exécution SQL
-* [ ] Ajouter une gestion du pooling des connexions
-* [ ] Ajouter du cache lorsque pertinent
-* [ ] Optimiser la génération JSON
-* [ ] Ajouter la pagination
-* [ ] Ajouter des limites de résultats
-* [ ] Tester les performances sur de gros volumes
+* [ ] Améliorer la détection des périphériques USB
+* [ ] Améliorer la synchronisation USB
+* [ ] Ajouter le suivi de l'état de synchronisation
+* [ ] Ajouter la validation de la synchronisation
+* [ ] Améliorer la gestion des supports USB absents
+* [ ] Ajouter la détection des erreurs USB
+* [ ] Ajouter des informations sur les périphériques connectés
 
 ---
 
-# 🔄 Intégration avec l'écosystème JSON
+## 📡 Wi-Fi & Bluetooth
 
-À terme, **BackendJavaServ** pourra être utilisé comme moteur backend pour les outils de génération et de visualisation JSON.
-
-Objectifs possibles :
-
-* [ ] Intégration avec **NextJsonViewer**
-* [ ] Génération d'API depuis une configuration JSON
-* [ ] Import/export de définitions d'endpoints
-* [ ] Génération de formulaires à partir des définitions
-* [ ] Génération automatique de structures JSON
-* [ ] Synchronisation Builder → Backend
-* [ ] Gestion centralisée des endpoints depuis une interface web
-
-Architecture cible possible :
-
-```text
-                    ┌─────────────────────┐
-                    │   NextJsonViewer    │
-                    │     / Builder       │
-                    └──────────┬──────────┘
-                               │
-                               │ JSON Definition
-                               ▼
-                    ┌─────────────────────┐
-                    │   BackendJavaServ   │
-                    │  Dynamic REST API   │
-                    └──────────┬──────────┘
-                               │
-                               │ SQL
-                               ▼
-                    ┌─────────────────────┐
-                    │     SQL Database    │
-                    └─────────────────────┘
-```
+* [ ] Améliorer la gestion de l'arrêt du Wi-Fi
+* [ ] Améliorer la gestion de l'arrêt du Bluetooth
+* [ ] Ajouter la détection de l'état des interfaces sans fil
+* [ ] Vérifier la désactivation effective des interfaces
+* [ ] Ajouter des diagnostics Wi-Fi
+* [ ] Ajouter des diagnostics Bluetooth
+* [ ] Améliorer la gestion des erreurs liées aux interfaces sans fil
 
 ---
 
-# 🚀 Moyen terme
+## 🔍 Diagnostics
 
-* [ ] Moteur complet de génération d'API REST
-* [ ] Gestion multi-bases de données
-* [ ] Gestion avancée des relations SQL
-* [ ] Génération SQL depuis des définitions structurées
-* [ ] Génération JSON avancée
-* [ ] Pagination / tri / filtrage dynamiques
-* [ ] Cache des requêtes
-* [ ] Gestion avancée des permissions
-* [ ] Interface d'administration web
+* [ ] Ajouter des diagnostics automatiques des appareils
+* [ ] Collecter les informations matérielles
+* [ ] Collecter les informations système Android
+* [ ] Ajouter des diagnostics du stockage
+* [ ] Ajouter des diagnostics de la mémoire
+* [ ] Ajouter des diagnostics des processus
+* [ ] Ajouter des diagnostics réseau
+* [ ] Ajouter un état général de santé du périphérique
+* [ ] Générer un rapport de diagnostic
 
 ---
 
-# 🌐 Long terme
+## 📋 Manifests de déploiement
+
+* [ ] Définir des manifests de déploiement
+* [ ] Ajouter la validation des manifests
+* [ ] Ajouter le versioning des manifests
+* [ ] Conserver l'historique des déploiements
+* [ ] Permettre des déploiements reproductibles
+* [ ] Ajouter la vérification de compatibilité avec le périphérique
+* [ ] Ajouter des manifests spécifiques par modèle
+
+---
+
+## ⚙️ Automatisation
+
+* [ ] Automatiser l'initialisation des périphériques
+* [ ] Automatiser la configuration de la date et de l'heure
+* [ ] Automatiser la configuration réseau
+* [ ] Automatiser l'installation des scripts
+* [ ] Automatiser la collecte des logs
+* [ ] Ajouter des contrôles de santé après déploiement
+* [ ] Automatiser les diagnostics
+* [ ] Automatiser les vérifications de configuration
+
+---
+
+## 🖥️ Administration
+
+### Interface utilisateur
+
+* [ ] Créer une interface d'administration Web
+* [ ] Afficher l'état des périphériques
+* [ ] Afficher les informations système
+* [ ] Afficher les logs
+* [ ] Suivre les déploiements en temps réel
+* [ ] Permettre le lancement d'actions depuis l'interface
+
+### Gestion des périphériques
+
+* [ ] Gestion de plusieurs périphériques
+* [ ] Détection automatique des périphériques
+* [ ] Identification des modèles
+* [ ] Gestion des profils
+* [ ] Historique des opérations
+* [ ] Gestion des états des périphériques
+
+---
+
+## 📦 Déploiement multi-périphériques
+
+* [ ] Gestion de plusieurs appareils simultanément
+* [ ] Déploiement parallèle
+* [ ] Suivi individuel des déploiements
+* [ ] Gestion des erreurs par périphérique
+* [ ] Rapport global de déploiement
+* [ ] Annulation d'un déploiement
+* [ ] Rollback par périphérique
+
+---
+
+## 🔐 Sécurité
+
+* [ ] Renforcer la gestion des accès Root
+* [ ] Sécuriser les scripts de déploiement
+* [ ] Valider les fichiers avant installation
+* [ ] Vérifier l'intégrité des fichiers déployés
+* [ ] Ajouter une gestion des permissions
+* [ ] Ajouter une traçabilité des opérations sensibles
+
+---
+
+## 🧪 Tests
+
+### Tests automatisés
+
+* [ ] Ajouter des tests unitaires
+* [ ] Ajouter des tests d'intégration
+* [ ] Tester les scripts de déploiement
+* [ ] Tester les opérations ADB
+* [ ] Tester les opérations USB
+* [ ] Tester la configuration réseau
+* [ ] Tester les mécanismes de rollback
+* [ ] Ajouter des tests sur différents modèles d'appareils
+
+---
+
+## 🚀 Versioning & Releases
+
+* [ ] Définir une stratégie de versioning
+* [ ] Ajouter des releases versionnées
+* [ ] Générer automatiquement les changelogs
+* [ ] Documenter les changements
+* [ ] Maintenir plusieurs versions de déploiement
+* [ ] Ajouter une compatibilité par version Android / firmware
+
+---
+
+## 🤖 CI/CD
+
+* [ ] Mettre en place une pipeline CI
+* [ ] Automatiser les tests
+* [ ] Automatiser les contrôles qualité
+* [ ] Automatiser la création des releases
+* [ ] Ajouter la validation des scripts
+* [ ] Automatiser la génération des artefacts
+* [ ] Ajouter des tests sur plusieurs environnements
+
+---
+
+## 🔮 Long terme
 
 Fonctionnalités envisagées :
 
-* [ ] API Gateway dynamique
-* [ ] Génération automatique d'API depuis une base SQL
 * [ ] Interface Web complète d'administration
-* [ ] Multi-utilisateurs
-* [ ] Gestion des organisations / projets
-* [ ] Versioning des APIs
-* [ ] Import / export de projets
-* [ ] Génération automatique de documentation
-* [ ] Monitoring centralisé
-* [ ] Déploiement automatisé
-* [ ] CI/CD
-* [ ] Support de plusieurs moteurs SQL
+* [ ] Gestion distante des périphériques
+* [ ] Déploiement multi-périphériques
+* [ ] Serveur centralisé de déploiement
+* [ ] Découverte automatique des périphériques
+* [ ] Profils de déploiement avancés
+* [ ] Gestion centralisée des configurations
+* [ ] Monitoring des périphériques
+* [ ] Historique centralisé des opérations
+* [ ] Système de notifications
+* [ ] API REST d'administration
+* [ ] Versioning complet des déploiements
+* [ ] Tests automatisés complets
+* [ ] Intégration CI/CD
 
 ---
 
-# 📌 Priorités
+## 🗺️ Priorités
 
-L'ordre de priorité envisagé est :
+Les priorités actuelles sont orientées autour de quatre axes :
 
 ```text
-1. Moteur SQL
-      ↓
-2. Endpoints dynamiques
-      ↓
-3. SQL → JSON
-      ↓
-4. Sécurité
-      ↓
-5. Tests
-      ↓
-6. Documentation
-      ↓
-7. Administration
-      ↓
-8. Performance
-      ↓
-9. Intégration NextJsonViewer
+Déploiement fiable
+        ↓
+Configuration reproductible
+        ↓
+Diagnostics & monitoring
+        ↓
+Automatisation
+        ↓
+Administration centralisée
+        ↓
+Gestion multi-périphériques
 ```
 
 ---
 
 ## ℹ️ Notes
 
-Cette roadmap est évolutive et pourra être modifiée en fonction des besoins du projet.
+Cette roadmap est volontairement évolutive.
 
-Les fonctionnalités indiquées comme **prévues** ne sont pas nécessairement implémentées dans la version actuelle.
+Les fonctionnalités peuvent être ajoutées, supprimées ou réorganisées en fonction des besoins du projet et des retours d'utilisation.
 
-L'objectif principal reste de construire progressivement un moteur fiable permettant de transformer des sources SQL en **APIs REST dynamiques et structurées en JSON**.
+Les éléments cochés correspondent aux fonctionnalités considérées comme déjà disponibles dans la version actuelle. Les éléments non cochés représentent des évolutions prévues ou envisagées.
