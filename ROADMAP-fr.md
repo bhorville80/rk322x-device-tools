@@ -199,7 +199,7 @@ Les priorités actuelles sont orientées autour de quatre axes :
 ```text
 Déploiement fiable
         ↓
-Diagnostics & monitoring
+Diagnostics & monitoring ->>> SCRIPT diag en prio
         ↓
 Administration centralisée
 
