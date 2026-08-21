@@ -8,6 +8,11 @@ INCOMING="$USB/incoming"
 
 mkdir -p "$USB/server" "$USB/log" "$INCOMING"
 
+log()
+{
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
+}
+
 case "$1" in
     start)
         ;;
@@ -29,6 +34,10 @@ fi
 
 echo "CONTROL SERVER STARTED" >> "$LOG"
 
+log "========================================"
+log "CONTROL SERVER START (PORT $PORT)"
+log "========================================"
+
 (
     while true
     do
@@ -38,9 +47,12 @@ echo "CONTROL SERVER STARTED" >> "$LOG"
 
         COMMAND="$(echo "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
 
+        log "REQUEST: ${COMMAND:-<inconnu>}"
+
         case "$COMMAND" in
             HELP|SEND_LOGS|PURGE_LOG|SYNC)
                 touch "$INCOMING/$COMMAND"
+                log "COMMANDE ACCEPTED: $COMMAND"
 
                 BODY="{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
 
@@ -49,6 +61,8 @@ echo "CONTROL SERVER STARTED" >> "$LOG"
                 ;;
 
             *)
+                log "COMMANDE REJECTED: inconnue"
+
                 BODY='{"status":"error","message":"unknown command"}'
 
                 printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \

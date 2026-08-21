@@ -1,5 +1,19 @@
 #!/system/bin/sh
 
+SCRIPT_ID="$(basename "$0" .sh)"
+
+RUNLOG_LOADED=0
+for B in "$(dirname "$0")" /data/scripts; do
+    if [ -f "$B/core/runlog.sh" ]; then
+        . "$B/core/runlog.sh"
+        RUNLOG_LOADED=1
+        break
+    fi
+done
+
+main()
+{
+
 IFACE="eth0"
 IP="192.168.50.20"
 PREFIX="24"
@@ -51,3 +65,17 @@ echo "IP      : $IP"
 echo "MASK    : /$PREFIX"
 echo "GATEWAY : $GATEWAY"
 echo "DNS     : $DNS"
+}
+
+if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then
+    main >> "$RUNLOG_FILE" 2>&1
+    RC=$?
+    runlog_end "$RC"
+    cat "$RUNLOG_FILE"
+else
+    main
+    RC=$?
+fi
+
+exit "$RC"
+
