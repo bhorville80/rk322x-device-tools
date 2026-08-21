@@ -83,6 +83,9 @@ PACKAGING
                (archive tar.gz du toolkit complet)
   Cote box   : deploy PKG [fichier.dpk]
                extraction + installation traquee comme INSTALL
+  show_key     Liste les paquets .dpk de la cle, marque celui
+               que deploy PKG prendra, compare a la version
+               installee, etat incoming/logs/manifests
   Le .dpk se pose simplement a la racine de la cle
 
 EXEMPLES D'USAGE SUR SITE

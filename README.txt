@@ -84,6 +84,14 @@ deploy PKG /path/to/file.dpk
 
 Installation from a package goes through the same tracked path as `INSTALL` (backup, manifest, links).
 
+### Show what is available on the key
+
+Lists the `.dpk` packages on the key, marks the one `deploy PKG` would pick, compares with the installed version and shows pending triggers / log counts:
+
+```bash
+show_key
+```
+
 ### Expose the USB key over HTTP
 
 Starts the BusyBox HTTP server (port 8000) serving the key contents:

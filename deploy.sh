@@ -4,7 +4,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help selftest"
+INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help selftest show_key"
 
 find_usb()
 {
