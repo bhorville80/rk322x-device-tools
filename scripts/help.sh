@@ -23,6 +23,8 @@ DEPLOIEMENT   (depuis la cle : sh /mnt/media_rw/<ID>/deploy.sh <cmd>)
   INSTALL      Installe les scripts de la cle sur la box
                (/data/scripts + liens /data/bin)
                avec sauvegarde auto de l'existant
+  PKG [f]      Installe depuis un paquet .dpk (tar.gz)
+               a la racine de la cle, ou chemin fourni
   RESTORE      Restaure la derniere installation sauvegardee
   EXPOSE       Expose le contenu de la cle en HTTP port 8000
   STOP         Arrete les serveurs HTTP actifs
@@ -75,6 +77,13 @@ LOGS
   Chaque outil ecrit : log/exec/<script>_<YYYYmmdd-HHMMSS>.log
   Collecte globale   : deploy SEND_LOGS -> log/log_<TS>/
   Serveurs           : log/control_server.log, http_server.log
+
+PACKAGING
+  Cote PC    : tools/pack.sh construit dist/rk322x-tools_v<ver>_<TS>.dpk
+               (archive tar.gz du toolkit complet)
+  Cote box   : deploy PKG [fichier.dpk]
+               extraction + installation traquee comme INSTALL
+  Le .dpk se pose simplement a la racine de la cle
 
 EXEMPLES D'USAGE SUR SITE
   adb shell                 puis su

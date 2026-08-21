@@ -63,6 +63,27 @@ sh /mnt/media_rw/<USB_ID>/deploy.sh INSTALL
 
 The list of commands exposed in `/data/bin` is defined by `INSTALL_LIST` at the top of `deploy.sh`.
 
+### Install from a package
+
+The toolkit can be packaged as a single `.dpk` file (a tar.gz archive readable by toybox and busybox).
+
+Build the package on the PC (from a git-bash/POSIX shell):
+
+```bash
+tools/pack.sh
+```
+
+Output: `dist/rk322x-tools_v<version>_<TS>.dpk`
+
+Drop the `.dpk` at the root of the USB key (or anywhere) and install:
+
+```bash
+deploy PKG
+deploy PKG /path/to/file.dpk
+```
+
+Installation from a package goes through the same tracked path as `INSTALL` (backup, manifest, links).
+
 ### Expose the USB key over HTTP
 
 Starts the BusyBox HTTP server (port 8000) serving the key contents:

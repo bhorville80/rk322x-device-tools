@@ -80,7 +80,7 @@ write_manifest()
 
     {
         echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
-        echo "usb     : $USB_ID"
+        echo "source  : $INSTALL_SRC_TYPE : $INSTALL_SRC_ID"
         echo "device  : $(getprop ro.product.device 2>/dev/null)"
         echo "uid     : $(id -u 2>/dev/null)"
         echo "list    : $INSTALL_LIST"
@@ -96,8 +96,12 @@ write_manifest()
     return 0
 }
 
-do_install()
+install_from()
 {
+    SRC="$1"
+    INSTALL_SRC_TYPE="${2:-usb}"
+    INSTALL_SRC_ID="${3:-inconnu}"
+
     echo ""
     echo "=== RK322X INSTALL ==="
 
@@ -105,7 +109,12 @@ do_install()
         return 1
     fi
 
-    require_usb || return 1
+    if [ ! -f "$SRC/deploy.sh" ]; then
+        echo "[ERREUR] source invalide (deploy.sh absent) : $SRC"
+        return 1
+    fi
+
+    echo "[0] Source ($INSTALL_SRC_TYPE) : $SRC"
 
     echo "[1] Sauvegarde existant..."
     backup_existing || return 1
@@ -113,24 +122,24 @@ do_install()
     mkdir -p "$SCRIPTS_DIR/core" "$SCRIPTS_DIR/config" "$BIN_DIR"
 
     echo "[2] Copie des scripts..."
-    if cp -f "$USB_DIR"/scripts/*.sh "$SCRIPTS_DIR/" 2>/dev/null; then
+    if cp -f "$SRC"/scripts/*.sh "$SCRIPTS_DIR/" 2>/dev/null; then
         echo "    [ OK ] $SCRIPTS_DIR"
     else
         echo "    [ ERREUR ] $SCRIPTS_DIR"
     fi
-    if cp -f "$USB_DIR"/scripts/core/*.sh "$SCRIPTS_DIR/core/" 2>/dev/null; then
+    if cp -f "$SRC"/scripts/core/*.sh "$SCRIPTS_DIR/core/" 2>/dev/null; then
         echo "    [ OK ] $SCRIPTS_DIR/core"
     else
         echo "    [ ERREUR ] $SCRIPTS_DIR/core"
     fi
-    if cp -f "$USB_DIR/config/device.conf" "$SCRIPTS_DIR/config/" 2>/dev/null; then
+    if cp -f "$SRC/config/device.conf" "$SCRIPTS_DIR/config/" 2>/dev/null; then
         echo "    [ OK ] $SCRIPTS_DIR/config/device.conf"
     else
-        echo "    [ WARN ] device.conf absent sur la cle"
+        echo "    [ WARN ] device.conf absent dans la source"
     fi
 
     echo "[3] Copie de deploy.sh..."
-    if cp -f "$USB_DIR/deploy.sh" "$SCRIPTS_DIR/deploy.sh"; then
+    if cp -f "$SRC/deploy.sh" "$SCRIPTS_DIR/deploy.sh"; then
         echo "    [ OK ] $SCRIPTS_DIR/deploy.sh"
     else
         echo "    [ ERREUR ] $SCRIPTS_DIR/deploy.sh"
@@ -139,18 +148,93 @@ do_install()
     link_bin
 
     echo "[4] Trace..."
-    USB_ID="$(basename "$USB_DIR")"
     {
         echo "version : $(sed -n 's/^DEPLOY_VERSION=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | tr -d '\r')"
         echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
-        echo "usb     : $USB_ID"
+        echo "source  : $INSTALL_SRC_TYPE : $INSTALL_SRC_ID"
     } > "$SCRIPTS_DIR/VERSION"
     echo "    [ OK ] $SCRIPTS_DIR/VERSION"
     write_manifest
 
     echo ""
     echo "=== TERMINE ==="
-    echo "Commandes disponibles : deploy INSTALL | RESTORE | EXPOSE | STOP | SEND_LOGS | HELP"
+    echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | HELP"
+}
+
+do_install()
+{
+    require_usb || return 1
+    install_from "$USB_DIR" usb "$(basename "$USB_DIR")"
+}
+
+find_pkg()
+{
+    PKG_FILE=""
+
+    if [ -n "$1" ]; then
+        if [ -f "$1" ]; then
+            PKG_FILE="$1"
+            return 0
+        fi
+        echo "[ERREUR] paquet introuvable : $1"
+        return 1
+    fi
+
+    require_usb || return 1
+
+    LATEST="$(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort | tail -n 1)"
+    if [ -n "$LATEST" ]; then
+        PKG_FILE="$LATEST"
+        return 0
+    fi
+
+    echo "[ERREUR] aucun .dpk a la racine de la cle"
+    return 1
+}
+
+do_pkg()
+{
+    echo ""
+    echo "=== RK322X INSTALL PAR PAQUET ==="
+
+    if ! require_root; then
+        return 1
+    fi
+
+    find_pkg "$1" || return 1
+    echo "[0] Paquet : $PKG_FILE"
+
+    TAR=""
+    if tar -tzf "$PKG_FILE" > /dev/null 2>&1; then
+        TAR="tar"
+    elif busybox tar -tzf "$PKG_FILE" > /dev/null 2>&1; then
+        TAR="busybox tar"
+    else
+        echo "[ERREUR] archive illisible (tar+gzip requis)"
+        return 1
+    fi
+    echo "    [ OK ] extraction via : $TAR"
+
+    STAGE="/data/local/tmp/dpk_$(date '+%Y%m%d-%H%M%S')"
+    mkdir -p "$STAGE" || { echo "[ERREUR] staging impossible"; return 1; }
+
+    if ! $TAR -xzf "$PKG_FILE" -C "$STAGE"; then
+        echo "[ ERREUR ] extraction echouee"
+        rm -rf "$STAGE"
+        return 1
+    fi
+
+    if [ ! -f "$STAGE/deploy.sh" ]; then
+        echo "[ERREUR] paquet invalide (deploy.sh absent apres extraction)"
+        rm -rf "$STAGE"
+        return 1
+    fi
+
+    install_from "$STAGE" pkg "$(basename "$PKG_FILE")"
+    RC=$?
+
+    rm -rf "$STAGE"
+    return $RC
 }
 
 do_restore()
@@ -229,6 +313,10 @@ case "$1" in
         do_install
         ;;
 
+    PKG)
+        do_pkg "$2"
+        ;;
+
     RESTORE)
         do_restore
         ;;
@@ -291,6 +379,7 @@ case "$1" in
         echo ""
         echo "Commandes:"
         echo "  INSTALL      Installer les scripts de la cle (avec sauvegarde auto)"
+        echo "  PKG [f]      Installer depuis un paquet .dpk (racine cle ou chemin)"
         echo "  RESTORE      Restaurer la derniere installation sauvegardee"
         echo "  EXPOSE       Exposer la cle (HTTP port 8000)"
         echo "  STOP         Arreter les serveurs"
