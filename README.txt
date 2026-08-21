@@ -1,12 +1,11 @@
 
-
 # rk322x-device-tools
 
-> Toolkit for administering, deploying and maintaining RK322x-based Android devices via USB and ADB.
+> Toolkit for administering, deploying and maintaining RK322x-based Android devices via USB, ADB and HTTP.
 
 This repository contains the scripts and tools used to administer, configure, deploy and maintain RK322x-based Android devices.
 
-The toolkit is designed to be used directly from a USB drive connected to the device, with support for ADB, root access, network configuration, USB synchronization, logging, Wi-Fi/Bluetooth management and file serving.
+The toolkit is designed to be used directly from a USB drive connected to the device. The USB key is detected automatically: any mounted key containing `deploy.sh` is accepted (no hardcoded volume ID).
 
 ---
 
@@ -28,11 +27,7 @@ adb shell
 su
 ```
 
-### Check the current date and time
-
-```bash
-date
-```
+> **Note:** All commands are expected to run from a root shell. The scripts do not elevate privileges internally.
 
 ### Check the Ethernet interface
 
@@ -50,49 +45,174 @@ Expected IP address:
 
 ## DEPLOY
 
-The main deployment script is located on the USB drive.
+The main deployment script is located at the root of the USB drive.
 
 ### Display help
 
 ```bash
-sh /mnt/media_rw/4E28-7C59/deploy.sh HELP
+sh /mnt/media_rw/<USB_ID>/deploy.sh
+```
+
+### Install the tools on the device
+
+Copies the scripts from the USB key to `/data/scripts`, then creates command links in `/data/bin` (including `deploy` itself):
+
+```bash
+sh /mnt/media_rw/<USB_ID>/deploy.sh INSTALL
+```
+
+The list of commands exposed in `/data/bin` is defined by `INSTALL_LIST` at the top of `deploy.sh`.
+
+### Expose the USB key over HTTP
+
+Starts the BusyBox HTTP server (port 8000) serving the key contents:
+
+```bash
+deploy EXPOSE
+```
+
+### Stop the servers
+
+```bash
+deploy STOP
 ```
 
 ### Collect logs
 
+Collects `logcat`, `dmesg`, `getprop`, `ip link`, `mount` and `ps` into the USB key:
+
 ```bash
-sh /mnt/media_rw/4E28-7C59/deploy.sh SEND_LOGS
+deploy SEND_LOGS
 ```
 
 Collected logs are stored in:
 
 ```text
-/mnt/media_rw/4E28-7C59/log/
+/mnt/media_rw/<USB_ID>/log/log_<TS>/
 ```
 
 ---
 
-## SCRIPTS
+## TOOLS
 
-The toolkit provides several scripts installed in `/data/bin`.
+After `INSTALL`, the following commands are available in `/data/bin`.
 
-### Synchronize DATA → USB
+### Help
+
+Full documentation of the toolkit:
 
 ```bash
-/data/bin/sync_usb
+help
 ```
 
-### Add a script to the USB drive
+### State verification
+
+Checks network/IP, wireless/bluetooth and HDMI state against the target configuration. Exit code is 1 if at least one check fails:
 
 ```bash
-/data/bin/add_script_to_usb <script>
+check_state
+```
+
+Sections verified:
+
+```text
+NETWORK / IP      eth0 link, IP vs expected, gateway ping, DNS
+WIRELESS / BT     wifi_on, bluetooth_on, wlan0/p2p0/hci0
+HDMI              fb0 blank, Rockchip sysfs nodes, resolution
+SYSTEM            uptime, available RAM
+```
+
+### User creation inspection
+
+Reports which user-creation methods exist on the system (`pm create-user`, `cmd user`, busybox/toybox applets), existing users, max users and sudo/sudoers presence:
+
+```bash
+inspect_user [name]
+```
+
+### Hardware inspection
+
+Full performance report: memory, CPU frequencies/governors, Mali GPU, thermal zones, storage, display/HDMI, load/uptime and top RAM consumers:
+
+```bash
+inspect_system
+```
+
+### Services inspection
+
+Init services with running/stopped states, package inventory (system/third-party/disabled), top RAM processes and SurfaceFlinger cost:
+
+```bash
+inspect_services
+```
+
+### HDMI control
+
+Cuts or restores the HDMI output using Rockchip sysfs nodes, with framebuffer blank fallback:
+
+```bash
+hdmi OFF
+hdmi ON
+hdmi STATUS
 ```
 
 ### Disable Wi-Fi / Bluetooth
 
+Disables Wi-Fi service, bluetooth settings/services and brings down `wlan0`, `p2p0`, `hci0`:
+
 ```bash
-/data/bin/disable_wireless
+disable_wireless
 ```
+
+Verify afterwards with `check_state`.
+
+### Media listing
+
+Lists mounted media (USB/SD) with detected type:
+
+```bash
+media
+```
+
+### Maintenance
+
+Synchronize `/data/scripts` back to the USB key:
+
+```bash
+sync_usb
+```
+
+Add a script to `/data/bin`:
+
+```bash
+add_to_bin <script>
+```
+
+Copy a file to the USB key root:
+
+```bash
+add_script_to_usb <file>
+```
+
+---
+
+## EXECUTION LOGS
+
+Every tool writes one log file per execution:
+
+```text
+log/exec/<script>_<YYYYmmdd-HHMMSS>.log
+```
+
+Each log contains a header (script, start time, device, uid), the full output and a footer with the exit code.
+
+If no USB key is present, logs fall back to:
+
+```text
+/data/local/tmp/rk322x_logs/exec/
+```
+
+Server-side persistent logs remain in `log/control_server.log`, `log/http_server.log` and `log/watch.log`.
 
 ---
 
@@ -100,12 +220,12 @@ The toolkit provides several scripts installed in `/data/bin`.
 
 Changing the system date requires root privileges on the RK322x device.
 
-### Set the date and time
+### Set the date and time from a file
 
-Example:
+Reads the `SET_HEURE` file at the USB key root:
 
 ```bash
-su -c 'date 080820262026.00'
+setHEURE_FILE
 ```
 
 ### Format
@@ -128,24 +248,16 @@ ss   = Seconds
 Example:
 
 ```text
-08 08 20 26 2026 .00
-```
-
-Command:
-
-```text
 080820262026.00
 ```
 
-> **Note:** The `date` command must be executed with root privileges.
+> **Note:** Run from a root shell (`su`). Scripts do not elevate privileges internally.
 
 ---
 
 ## WIFI / BLUETOOTH
 
-The `disable_wireless.sh` script is used to disable wireless connectivity.
-
-The script handles:
+The `disable_wireless` command handles:
 
 ```text
 Wi-Fi
@@ -155,59 +267,86 @@ p2p0
 hci0
 ```
 
-### Disable wireless interfaces
+### Verify the result
 
 ```bash
-/data/bin/disable_wireless
-```
-
-### Check network interfaces
-
-```bash
+check_state
 ip link
-```
-
-### Check related processes
-
-```bash
 ps | grep -iE 'bluetooth|wpa|wifi'
 ```
 
 ---
 
-## RESEAU / SERVEUR DE FICHIERS
+## RESEAU / SERVEURS
 
-The RK322x device can expose the contents of the USB drive using the BusyBox HTTP server.
+### Static network configuration
 
-### Configuration
+Configures `eth0` with static IP, default route and DNS:
 
-**Device IP:**
-
-```text
-192.168.50.20
+```bash
+sh /mnt/media_rw/<USB_ID>/set_network.sh
 ```
 
-**Port:**
+Target values:
 
 ```text
-8000
+IP      : 192.168.50.20
+PREFIX  : 24
+GATEWAY : 192.168.50.1
+DNS     : 192.168.50.1 / 8.8.8.8
 ```
 
-**URL:**
+### HTTP file server
 
+Exposes the USB key contents on port 8000 (also available via `deploy EXPOSE`):
+
+```bash
+sh /mnt/media_rw/<USB_ID>/server/start_server.sh
+```
+
+URL:
+
+```text
 http://192.168.50.20:8000/
-
-### Start the HTTP server
-
-```bash
-busybox httpd -f -p 0.0.0.0:8000 \
-    -h /mnt/media_rw/4E28-7C59
 ```
 
-If root privileges are required:
+### Control API
+
+JSON control server on port 8080:
 
 ```bash
-su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
+sh /mnt/media_rw/<USB_ID>/server/control_server.sh start
+```
+
+Trigger commands from a PC:
+
+```bash
+curl http://192.168.50.20:8080/api/HELP
+curl http://192.168.50.20:8080/api/SEND_LOGS
+curl http://192.168.50.20:8080/api/PURGE_LOG
+curl http://192.168.50.20:8080/api/SYNC
+```
+
+Each request drops a trigger file in `incoming/`. The watcher (`watch_usb.sh`, 1 s polling) executes the matching action and logs to `log/watch.log`.
+
+All requests are recorded with timestamps in `log/control_server.log`.
+
+---
+
+## CONFIG
+
+Device profile stored in `config/device.conf`:
+
+```text
+DEVICE_ID=RK322X_MXQ
+DEVICE_NAME=Leelbox
+PROFILE=mxq
+RAM_MB=2048
+NETWORK=static
+INTERFACE=eth0
+IP=192.168.50.20
+NETMASK=255.255.255.0
+DEPLOY_VERSION=1
 ```
 
 ---
@@ -217,47 +356,55 @@ su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
 ```text
 /
 ├── README.md
-├── ROADMAP.md
-├── TROUBLESHOOTING.md
+├── README.txt
+├── roadmap.md
 │
-├── deploy.sh
-├── set_time.sh
+├── deploy.sh            INSTALL | EXPOSE | STOP | SEND_LOGS
 ├── set_network.sh
+├── setHEURE_FILE.sh
+├── setHEURE_INIT.sh
 ├── disable_wireless.sh
 ├── index.html
-├── setHEURE_INIT.sh
-├── setHEURE_FILE.sh
 │
 ├── scripts/
-│   ├── core/
-│   │   ├── log.sh
-│   │   ├── media.sh
-│   │   └── usb.sh
-│   │
+│   ├── help.sh
+│   ├── check_state.sh
+│   ├── inspect_user.sh
+│   ├── inspect_system.sh
+│   ├── inspect_services.sh
+│   ├── hdmi.sh
 │   ├── sync_usb.sh
+│   ├── disable_wireless.sh
 │   ├── add_script_to_usb.sh
 │   ├── add_to_bin.sh
 │   ├── boxhelp.sh
-│   ├── test.sh
-│   └── disable_wireless.sh
+│   │
+│   └── core/
+│       ├── runlog.sh    shared per-execution logging module
+│       ├── log.sh
+│       ├── media.sh
+│       └── usb.sh
 │
-├── log/
-│   └── log_YYYYMMDD_HHMMSS/
+├── bin/
+│   ├── HELP
+│   └── MEDIA
+│
+├── server/
+│   ├── start_server.sh
+│   ├── control_server.sh
+│   └── watch_usb.sh
 │
 ├── config/
-│   ├── profiles/
-│   └── device.conf
+│   ├── device.conf
+│   └── profiles/
 │
+├── log/
+│   ├── exec/                 <script>_<YYYYmmdd-HHMMSS>.log
+│   └── log_<TS>/             SEND_LOGS collections
+│
+├── incoming/                 watcher trigger files
 ├── history/
-│   ├── config/
-│   ├── deploy/
-│   └── scripts/
-│
-├── incoming/
-│
 └── manifests/
-    ├── history/
-    └── current/
 ```
 
 ---
@@ -266,42 +413,7 @@ su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
 
 Future development and planned improvements are tracked in:
 
-**[ROADMAP.md](ROADMAP.md)**
-
-The roadmap covers planned improvements such as:
-
-* New deployment features
-* Additional RK322x device support
-* Network configuration improvements
-* Diagnostic tools
-* Logging improvements
-* USB management enhancements
-* Device configuration profiles
-* Manifest management
-* Deployment automation
-
----
-
-## TROUBLESHOOTING
-
-Known issues, encountered problems and solutions are documented in:
-
-**[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**
-
-This document should be updated whenever a new problem is identified, diagnosed or resolved.
-
-It covers issues related to:
-
-* ADB
-* Root access
-* USB mounting
-* Network configuration
-* Wi-Fi / Bluetooth
-* Date and time
-* BusyBox HTTP server
-* Script execution
-* Deployment
-* Device-specific behavior
+**[roadmap.md](roadmap.md)**
 
 ---
 
@@ -311,4 +423,4 @@ This project is intended as a practical administration and deployment toolkit fo
 
 The toolkit is continuously evolving alongside the deployment process.
 
-New features, fixes and known issues should be documented through the roadmap and troubleshooting documentation.
+New features, fixes and known issues should be documented through the roadmap.

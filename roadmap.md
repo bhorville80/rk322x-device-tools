@@ -26,7 +26,7 @@ This document tracks planned features, improvements and technical work for the p
 
 ### Deployment
 
-* [ ] Improve `deploy.sh` command handling
+* [x] Improve `deploy.sh` command handling
 * [ ] Add deployment status reporting
 * [ ] Add deployment validation
 * [ ] Add automatic error detection
@@ -41,7 +41,7 @@ This document tracks planned features, improvements and technical work for the p
 
 ### Logging
 
-* [ ] Improve log formatting
+* [x] Improve log formatting
 * [ ] Add deployment summaries
 * [ ] Add error levels
 * [ ] Improve log collection
@@ -61,7 +61,7 @@ This document tracks planned features, improvements and technical work for the p
 
 ## USB
 
-* [ ] Improve USB detection
+* [x] Improve USB detection
 * [ ] Improve USB synchronization
 * [ ] Add synchronization status
 * [ ] Add synchronization validation
@@ -73,19 +73,19 @@ This document tracks planned features, improvements and technical work for the p
 
 * [ ] Improve Wi-Fi shutdown handling
 * [ ] Improve Bluetooth shutdown handling
-* [ ] Add wireless state detection
-* [ ] Add verification after disabling interfaces
+* [x] Add wireless state detection
+* [x] Add verification after disabling interfaces
 
 ---
 
 ## Diagnostics
 
-* [ ] Add automated device diagnostics
-* [ ] Add hardware information collection
-* [ ] Add Android system information
-* [ ] Add storage diagnostics
-* [ ] Add memory diagnostics
-* [ ] Add process diagnostics
+* [x] Add automated device diagnostics
+* [x] Add hardware information collection
+* [x] Add Android system information
+* [x] Add storage diagnostics
+* [x] Add memory diagnostics
+* [x] Add process diagnostics
 * [ ] Add network diagnostics
 
 ---

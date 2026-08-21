@@ -3,7 +3,7 @@
 SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state"
+INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help"
 
 find_usb()
 {
@@ -176,6 +176,12 @@ case "$1" in
         echo "  EXPOSE       Exposer la cle (HTTP port 8000)"
         echo "  STOP         Arreter les serveurs"
         echo "  SEND_LOGS    Collecter les logs sur la cle"
+        echo ""
+        if [ -f "/data/scripts/help.sh" ]; then
+            echo "Aide complete des outils : help"
+        elif [ -f "$USB_DIR/scripts/help.sh" ] || find_usb; then
+            echo "Aide complete des outils : sh $USB_DIR/scripts/help.sh"
+        fi
         echo ""
         ;;
 esac
