@@ -2,8 +2,9 @@
 
 SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
+BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help"
+INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help selftest"
 
 find_usb()
 {
@@ -20,41 +21,15 @@ require_usb()
 {
     if find_usb; then
         echo "Cle : $USB_DIR"
-    else
-        echo "[ERREUR] aucune cle USB contenant deploy.sh trouvee"
-        exit 1
+        return 0
     fi
+    echo "[ERREUR] aucune cle USB contenant deploy.sh trouvee"
+    return 1
 }
 
-do_install()
+link_bin()
 {
-    echo ""
-    echo "=== RK322X INSTALL ==="
-    require_usb
-
-    mkdir -p "$SCRIPTS_DIR/core" "$BIN_DIR"
-
-    echo ""
-    echo "[1] Copie des scripts..."
-    if cp -f "$USB_DIR"/scripts/*.sh "$SCRIPTS_DIR/" 2>/dev/null; then
-        echo "    [ OK ] $SCRIPTS_DIR"
-    else
-        echo "    [ ERREUR ] $SCRIPTS_DIR"
-    fi
-    if cp -f "$USB_DIR"/scripts/core/*.sh "$SCRIPTS_DIR/core/" 2>/dev/null; then
-        echo "    [ OK ] $SCRIPTS_DIR/core"
-    else
-        echo "    [ ERREUR ] $SCRIPTS_DIR/core"
-    fi
-
-    echo "[2] Copie de deploy.sh..."
-    if cp -f "$USB_DIR/deploy.sh" "$SCRIPTS_DIR/deploy.sh"; then
-        echo "    [ OK ] $SCRIPTS_DIR/deploy.sh"
-    else
-        echo "    [ ERREUR ] $SCRIPTS_DIR/deploy.sh"
-    fi
-
-    echo "[3] Commandes dans $BIN_DIR..."
+    echo "[*] Commandes dans $BIN_DIR..."
     for NAME in deploy $INSTALL_LIST; do
         if [ -f "$SCRIPTS_DIR/$NAME.sh" ]; then
             TARGET="$SCRIPTS_DIR/$NAME.sh"
@@ -68,17 +43,156 @@ do_install()
         ln -sf "$TARGET" "$BIN_DIR/$NAME"
         echo "    [ OK ] $NAME"
     done
+}
+
+backup_existing()
+{
+    if [ -d "$SCRIPTS_DIR" ] && [ -n "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
+        TS="$(date '+%Y%m%d-%H%M%S')"
+        DEST="$BACKUP_DIR/scripts_$TS"
+        mkdir -p "$DEST" 2>/dev/null || { echo "[ ERREUR ] backup impossible ($DEST)"; return 1; }
+        if cp -rf "$SCRIPTS_DIR" "$DEST/"; then
+            echo "[ OK ] sauvegarde -> $DEST"
+            LAST_BACKUP="$DEST"
+            return 0
+        fi
+        echo "[ ERREUR ] sauvegarde echouee"
+        return 1
+    fi
+    echo "[ -- ] rien a sauvegarder"
+    return 0
+}
+
+write_manifest()
+{
+    MAN_DIR="$USB_DIR/manifests/current"
+    HIS_DIR="$USB_DIR/manifests/history"
+
+    mkdir -p "$MAN_DIR" "$HIS_DIR" 2>/dev/null
+
+    for F in "$MAN_DIR"/install_*.manifest; do
+        [ -f "$F" ] || continue
+        mv "$F" "$HIS_DIR/" 2>/dev/null
+    done
+
+    TS="$(date '+%Y%m%d-%H%M%S')"
+    MAN="$MAN_DIR/install_$TS.manifest"
+
+    {
+        echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "usb     : $USB_ID"
+        echo "device  : $(getprop ro.product.device 2>/dev/null)"
+        echo "uid     : $(id -u 2>/dev/null)"
+        echo "list    : $INSTALL_LIST"
+        echo "--- files ---"
+        ls -1R "$SCRIPTS_DIR" 2>/dev/null
+    } > "$MAN" 2>/dev/null
+
+    if [ -f "$MAN" ]; then
+        echo "[ OK ] manifest -> $MAN"
+        return 0
+    fi
+    echo "[ WARN ] manifest non ecrit"
+    return 0
+}
+
+do_install()
+{
+    echo ""
+    echo "=== RK322X INSTALL ==="
+
+    if ! require_root; then
+        return 1
+    fi
+
+    require_usb || return 1
+
+    echo "[1] Sauvegarde existant..."
+    backup_existing || return 1
+
+    mkdir -p "$SCRIPTS_DIR/core" "$SCRIPTS_DIR/config" "$BIN_DIR"
+
+    echo "[2] Copie des scripts..."
+    if cp -f "$USB_DIR"/scripts/*.sh "$SCRIPTS_DIR/" 2>/dev/null; then
+        echo "    [ OK ] $SCRIPTS_DIR"
+    else
+        echo "    [ ERREUR ] $SCRIPTS_DIR"
+    fi
+    if cp -f "$USB_DIR"/scripts/core/*.sh "$SCRIPTS_DIR/core/" 2>/dev/null; then
+        echo "    [ OK ] $SCRIPTS_DIR/core"
+    else
+        echo "    [ ERREUR ] $SCRIPTS_DIR/core"
+    fi
+    if cp -f "$USB_DIR/config/device.conf" "$SCRIPTS_DIR/config/" 2>/dev/null; then
+        echo "    [ OK ] $SCRIPTS_DIR/config/device.conf"
+    else
+        echo "    [ WARN ] device.conf absent sur la cle"
+    fi
+
+    echo "[3] Copie de deploy.sh..."
+    if cp -f "$USB_DIR/deploy.sh" "$SCRIPTS_DIR/deploy.sh"; then
+        echo "    [ OK ] $SCRIPTS_DIR/deploy.sh"
+    else
+        echo "    [ ERREUR ] $SCRIPTS_DIR/deploy.sh"
+    fi
+
+    link_bin
+
+    echo "[4] Trace..."
+    USB_ID="$(basename "$USB_DIR")"
+    {
+        echo "version : $(sed -n 's/^DEPLOY_VERSION=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | tr -d '\r')"
+        echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "usb     : $USB_ID"
+    } > "$SCRIPTS_DIR/VERSION"
+    echo "    [ OK ] $SCRIPTS_DIR/VERSION"
+    write_manifest
 
     echo ""
     echo "=== TERMINE ==="
-    echo "Commandes disponibles : deploy INSTALL | EXPOSE | STOP | SEND_LOGS | HELP"
+    echo "Commandes disponibles : deploy INSTALL | RESTORE | EXPOSE | STOP | SEND_LOGS | HELP"
+}
+
+do_restore()
+{
+    echo ""
+    echo "=== RK322X RESTORE ==="
+
+    if ! require_root; then
+        return 1
+    fi
+
+    LATEST="$(ls -1d "$BACKUP_DIR"/scripts_* 2>/dev/null | sort | tail -n 1)"
+    if [ -z "$LATEST" ]; then
+        echo "[ERREUR] aucune sauvegarde dans $BACKUP_DIR"
+        return 1
+    fi
+
+    echo "[1] Restauration depuis $LATEST..."
+    rm -rf "$SCRIPTS_DIR"
+    if cp -rf "$LATEST/scripts" "$SCRIPTS_DIR"; then
+        echo "    [ OK ] $SCRIPTS_DIR"
+    else
+        echo "    [ ERREUR ] restauration echouee"
+        return 1
+    fi
+
+    link_bin
+
+    echo ""
+    echo "=== TERMINE ==="
 }
 
 do_expose()
 {
     echo ""
     echo "=== RK322X EXPOSE ==="
-    require_usb
+
+    if ! require_busybox; then
+        return 1
+    fi
+
+    require_usb || return 1
     sh "$USB_DIR/server/start_server.sh"
 }
 
@@ -113,6 +227,10 @@ case "$1" in
 
     INSTALL)
         do_install
+        ;;
+
+    RESTORE)
+        do_restore
         ;;
 
     EXPOSE)
@@ -172,7 +290,8 @@ case "$1" in
         echo "Usage: deploy <commande>"
         echo ""
         echo "Commandes:"
-        echo "  INSTALL      Rapatrier les scripts de la cle vers la box"
+        echo "  INSTALL      Installer les scripts de la cle (avec sauvegarde auto)"
+        echo "  RESTORE      Restaurer la derniere installation sauvegardee"
         echo "  EXPOSE       Exposer la cle (HTTP port 8000)"
         echo "  STOP         Arreter les serveurs"
         echo "  SEND_LOGS    Collecter les logs sur la cle"

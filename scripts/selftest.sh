@@ -1,0 +1,114 @@
+#!/system/bin/sh
+
+SCRIPT_ID="$(basename "$0" .sh)"
+
+RUNLOG_LOADED=0
+for B in "$(dirname "$0")" /data/scripts; do
+    if [ -f "$B/core/runlog.sh" ]; then
+        . "$B/core/runlog.sh"
+        RUNLOG_LOADED=1
+        break
+    fi
+done
+
+BASE="$(cd "$(dirname "$0")" && pwd)"
+
+PASS=0
+FAIL=0
+
+t_ok() { printf '  [ OK ] %-42s\n' "$1"; PASS=$((PASS+1)); }
+t_ko() { printf '  [ KO ] %-42s (%s)\n' "$1" "$2"; FAIL=$((FAIL+1)); }
+
+check_rc()
+{
+    LABEL="$1"; shift
+    EXPECTED="$1"; shift
+    "$@" > /dev/null 2>&1
+    RC=$?
+    case " $EXPECTED " in
+        *" $RC "*)
+            t_ok "$LABEL"
+            ;;
+        *)
+            t_ko "$LABEL" "rc=$RC attendu:$EXPECTED"
+            ;;
+    esac
+}
+
+main()
+{
+    echo ""
+    echo "=== RK322X SELFTEST ==="
+
+    echo ""
+    echo "--- Modules ---"
+
+    FOUND=0
+    for B in "$BASE/core" /data/scripts/core; do
+        [ -f "$B/runlog.sh" ] && [ -f "$B/config.sh" ] && FOUND=1 && break
+    done
+    if [ "$FOUND" -eq 1 ]; then
+        t_ok "modules core (runlog, config)"
+    else
+        t_ko "modules core (runlog, config)" "introuvables"
+    fi
+
+    echo ""
+    echo "--- Cle USB ---"
+
+    USB_FOUND=""
+    for d in /mnt/media_rw/*; do
+        if [ -f "$d/deploy.sh" ]; then
+            USB_FOUND="$d"
+            break
+        fi
+    done
+    if [ -n "$USB_FOUND" ]; then
+        t_ok "cle USB detectee ($USB_FOUND)"
+    else
+        t_ko "cle USB detectee" "aucune"
+    fi
+
+    echo ""
+    echo "--- Outils ---"
+
+    check_rc "help"                "0" sh "$BASE/help.sh"
+    check_rc "check_state"         "0 1" sh "$BASE/check_state.sh"
+    check_rc "inspect_system"      "0" sh "$BASE/inspect_system.sh"
+    check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"
+    check_rc "media"               "0" sh "$BASE/core/media.sh"
+    check_rc "hdmi STATUS"         "0" sh "$BASE/hdmi.sh" STATUS
+
+    if [ -f "$SCRIPTS_DIR_DEPLOY" ] || [ -f "/data/scripts/deploy.sh" ]; then
+        DEPLOY_SH="/data/scripts/deploy.sh"
+    elif [ -n "$USB_FOUND" ]; then
+        DEPLOY_SH="$USB_FOUND/deploy.sh"
+    fi
+    if [ -n "$DEPLOY_SH" ] && [ -f "$DEPLOY_SH" ]; then
+        check_rc "deploy HELP"     "0" sh "$DEPLOY_SH"
+    else
+        t_ko "deploy HELP" "deploy.sh introuvable"
+    fi
+
+    echo ""
+    echo "=== RESUME ==="
+    printf '  PASS : %-4d FAIL : %d\n' "$PASS" "$FAIL"
+    echo ""
+
+    if [ "$FAIL" -eq 0 ]; then
+        return 0
+    fi
+    return 1
+}
+
+if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then
+    main >> "$RUNLOG_FILE" 2>&1
+    RC=$?
+    runlog_end "$RC"
+    cat "$RUNLOG_FILE"
+else
+    main
+    RC=$?
+fi
+
+exit "$RC"

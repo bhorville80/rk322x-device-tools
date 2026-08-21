@@ -14,8 +14,13 @@ done
 main()
 {
 
-USB_DIR="/mnt/media_rw/4E28-7C59"
-TIME_FILE="$USB_DIR/SET_HEURE"
+TIME_FILE=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/SET_HEURE" ]; then
+        TIME_FILE="$d/SET_HEURE"
+        break
+    fi
+done
 
 if [ ! -f "$TIME_FILE" ]; then
     echo "ERREUR: fichier $TIME_FILE absent"

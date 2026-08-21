@@ -1,16 +1,5 @@
 #!/system/bin/sh
 
-EXPECTED_IP="192.168.50.20"
-
-PASS=0
-FAIL=0
-WARN=0
-
-ok()   { printf '  [ OK ] %-18s %s\n' "$1" "$2"; PASS=$((PASS+1)); }
-ko()   { printf '  [ KO ] %-18s %s\n' "$1" "$2"; FAIL=$((FAIL+1)); }
-warn() { printf '  [WARN] %-18s %s\n' "$1" "$2"; WARN=$((WARN+1)); }
-info() { printf '  [ -- ] %-18s %s\n' "$1" "$2"; }
-
 SCRIPT_ID="$(basename "$0" .sh)"
 
 RUNLOG_LOADED=0
@@ -22,26 +11,49 @@ for B in "$(dirname "$0")" /data/scripts; do
     fi
 done
 
+for B in "$(dirname "$0")" "$(dirname "$0")/.." "$(dirname "$0")/../.." /data/scripts; do
+    if [ -f "$B/core/config.sh" ]; then
+        . "$B/core/config.sh"
+        break
+    fi
+done
+
+EXPECTED_IP="$(config_get IP 192.168.50.20)"
+IFACE="$(config_get INTERFACE eth0)"
+DEVICE_NAME="$(config_get DEVICE_NAME boitier)"
+
+PASS=0
+FAIL=0
+WARN=0
+
+ok()   { printf '  [ OK ] %-18s %s\n' "$1" "$2"; PASS=$((PASS+1)); }
+ko()   { printf '  [ KO ] %-18s %s\n' "$1" "$2"; FAIL=$((FAIL+1)); }
+warn() { printf '  [WARN] %-18s %s\n' "$1" "$2"; WARN=$((WARN+1)); }
+info() { printf '  [ -- ] %-18s %s\n' "$1" "$2"; }
+
 main()
 {
     echo ""
     echo "=== VERIFICATION ETAT ==="
+    echo ""
+    echo "--- BOITIER ---"
+    info "Boitier" "$DEVICE_NAME"
 
     echo ""
     echo "--- RESEAU / IP ---"
 
-    ETH_OUT="$(ip link show eth0 2>/dev/null)"
+    ETH_OUT="$(ip link show "$IFACE" 2>/dev/null)"
     if [ -z "$ETH_OUT" ]; then
-        ko "Interface eth0" "absente"
+        ko "Interface $IFACE" "absente"
     else
         case "$ETH_OUT" in
-            *"state UP"*)       ok "Interface eth0" "UP" ;;
-            *"state UNKNOWN"*)  ok "Interface eth0" "UP (unknown)" ;;
-            *)                  warn "Interface eth0" "DOWN" ;;
+            *"state UP"*)       ok "Interface $IFACE" "UP" ;;
+            *"state UNKNOWN"*)  ok "Interface $IFACE" "UP (unknown)" ;;
+            *)                  warn "Interface $IFACE" "DOWN" ;;
         esac
     fi
 
-    IP_CUR="$(ip addr show eth0 2>/dev/null | sed -n 's/.*inet \([0-9.]*\).*/\1/p' | head -n 1)"
+    IP_CUR="$(ip addr show "$IFACE" 2>/dev/null | sed -n 's/.*inet \([0-9.]*\).*/\1/p' | head -n 1)"
     if [ -n "$IP_CUR" ]; then
         if [ "$IP_CUR" = "$EXPECTED_IP" ]; then
             ok "Adresse IP" "$IP_CUR"
@@ -49,7 +61,7 @@ main()
             warn "Adresse IP" "$IP_CUR (attendu : $EXPECTED_IP)"
         fi
     else
-        ko "Adresse IP" "aucune adresse sur eth0"
+        ko "Adresse IP" "aucune adresse sur $IFACE"
     fi
 
     GW="$(ip route 2>/dev/null | sed -n 's/^default via \([0-9.]*\).*/\1/p')"
@@ -81,14 +93,14 @@ main()
         *)  info "Wi-Fi" "etat inconnu ($WIFI_ON)" ;;
     esac
 
-    for IFACE in wlan0 p2p0; do
-        I_OUT="$(ip link show "$IFACE" 2>/dev/null)"
+    for WLAN_IF in wlan0 p2p0; do
+        I_OUT="$(ip link show "$WLAN_IF" 2>/dev/null)"
         if [ -z "$I_OUT" ]; then
-            ok "$IFACE" "absente"
+            ok "$WLAN_IF" "absente"
         else
             case "$I_OUT" in
-                *"state UP"*)   warn "$IFACE" "UP" ;;
-                *)              ok "$IFACE" "presente mais DOWN" ;;
+                *"state UP"*)   warn "$WLAN_IF" "UP" ;;
+                *)              ok "$WLAN_IF" "presente mais DOWN" ;;
             esac
         fi
     done

@@ -77,6 +77,16 @@ deploy EXPOSE
 deploy STOP
 ```
 
+### Restore the previous installation
+
+`INSTALL` automatically backs up the existing `/data/scripts` before overwriting (into `/data/backup/scripts_<TS>/`). To restore the last backup:
+
+```bash
+deploy RESTORE
+```
+
+Each installation also writes a manifest into `manifests/current/install_<TS>.manifest` (previous ones are rotated to `manifests/history/`).
+
 ### Collect logs
 
 Collects `logcat`, `dmesg`, `getprop`, `ip link`, `mount` and `ps` into the USB key:
@@ -120,6 +130,14 @@ NETWORK / IP      eth0 link, IP vs expected, gateway ping, DNS
 WIRELESS / BT     wifi_on, bluetooth_on, wlan0/p2p0/hci0
 HDMI              fb0 blank, Rockchip sysfs nodes, resolution
 SYSTEM            uptime, available RAM
+```
+
+### Selftest
+
+Read-only check that every tool of the toolkit answers correctly:
+
+```bash
+selftest
 ```
 
 ### User creation inspection
@@ -330,6 +348,12 @@ curl http://192.168.50.20:8080/api/SYNC
 Each request drops a trigger file in `incoming/`. The watcher (`watch_usb.sh`, 1 s polling) executes the matching action and logs to `log/watch.log`.
 
 All requests are recorded with timestamps in `log/control_server.log`.
+
+Optional security: if the file `server/token` exists on the key, every API call must carry the token:
+
+```text
+curl "http://192.168.50.20:8080/api/HELP?token=<valeur>"
+```
 
 ---
 

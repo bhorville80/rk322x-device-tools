@@ -11,60 +11,72 @@ for B in "$(dirname "$0")" /data/scripts; do
     fi
 done
 
+for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
+    if [ -f "$B/core/config.sh" ]; then
+        . "$B/core/config.sh"
+        break
+    fi
+done
+
+IFACE="$(config_get INTERFACE eth0)"
+IP="$(config_get IP 192.168.50.20)"
+PREFIX="$(config_get PREFIX 24)"
+GATEWAY="$(config_get GATEWAY 192.168.50.1)"
+DNS="$(config_get DNS 192.168.50.1)"
+
 main()
 {
+    echo ""
+    echo "=== RK322X NETWORK CONFIG ==="
+    if ! require_root; then
+        return 1
+    fi
 
-IFACE="eth0"
-IP="192.168.50.20"
-PREFIX="24"
-GATEWAY="192.168.50.1"
-DNS="192.168.50.1"
+    echo "[1] Interface: $IFACE"
 
-echo "=== RK322X NETWORK CONFIG ==="
+    ip link set "$IFACE" up
 
-echo "[1] Interface: $IFACE"
+    echo "[2] Nettoyage ancienne configuration..."
 
-ip link set "$IFACE" up
+    ip addr flush dev "$IFACE"
 
-echo "[2] Nettoyage ancienne configuration..."
+    echo "[3] Configuration IP..."
 
-ip addr flush dev "$IFACE"
+    ip addr add "$IP/$PREFIX" dev "$IFACE"
 
-echo "[3] Configuration IP..."
+    echo "[4] Route par défaut..."
 
-ip addr add "$IP/$PREFIX" dev "$IFACE"
+    ip route del default 2>/dev/null
+    ip route add default via "$GATEWAY" dev "$IFACE"
 
-echo "[4] Route par défaut..."
+    echo "[5] DNS..."
 
-ip route del default 2>/dev/null
-ip route add default via "$GATEWAY" dev "$IFACE"
+    setprop net.dns1 "$DNS"
+    setprop net.dns2 "8.8.8.8"
 
-echo "[5] DNS..."
+    echo
+    echo "=== CONFIGURATION ==="
 
-setprop net.dns1 "$DNS"
-setprop net.dns2 "8.8.8.8"
+    ip addr show "$IFACE"
 
-echo
-echo "=== CONFIGURATION ==="
+    echo
+    echo "=== ROUTES ==="
 
-ip addr show "$IFACE"
+    ip route
 
-echo
-echo "=== ROUTES ==="
+    echo
+    echo "=== DNS ==="
 
-ip route
+    getprop | grep -E 'net.dns'
 
-echo
-echo "=== DNS ==="
+    echo
+    echo "NETWORK READY"
+    echo "IP      : $IP"
+    echo "MASK    : /$PREFIX"
+    echo "GATEWAY : $GATEWAY"
+    echo "DNS     : $DNS"
 
-getprop | grep -E 'net.dns'
-
-echo
-echo "NETWORK READY"
-echo "IP      : $IP"
-echo "MASK    : /$PREFIX"
-echo "GATEWAY : $GATEWAY"
-echo "DNS     : $DNS"
+    return 0
 }
 
 if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then
@@ -78,4 +90,3 @@ else
 fi
 
 exit "$RC"
-

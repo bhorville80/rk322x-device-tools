@@ -1,19 +1,54 @@
 #!/system/bin/sh
 
-USB="/mnt/media_rw/4E28-7C59"
+USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
+    USB=""
+    for d in /mnt/media_rw/*; do
+        if [ -f "$d/deploy.sh" ]; then
+            USB="$d"
+            break
+        fi
+    done
+fi
+
+if [ -z "$USB" ]; then
+    echo "[ERREUR] cle USB introuvable"
+    exit 1
+fi
+
 INCOMING="$USB/incoming"
 LOG_DIR="$USB/log"
 LOG="$LOG_DIR/watch.log"
+LOCK="$USB/server/watch.lock"
 
-mkdir -p "$INCOMING" "$LOG_DIR"
+mkdir -p "$INCOMING" "$LOG_DIR" "$USB/server"
+
+if [ -f "$LOCK" ]; then
+    LPID="$(cat "$LOCK" 2>/dev/null)"
+    if [ -n "$LPID" ] && kill -0 "$LPID" 2>/dev/null; then
+        echo "[ERREUR] watcher deja actif (PID $LPID)"
+        exit 1
+    fi
+    rm -f "$LOCK"
+fi
+
+echo $$ > "$LOCK"
 
 log()
 {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
 }
 
+cleanup()
+{
+    rm -f "$LOCK"
+    exit 0
+}
+
+trap cleanup INT TERM
+
 log "========================================"
-log "USB WATCHER POLLING START"
+log "USB WATCHER POLLING START (PID $$)"
 log "INCOMING: $INCOMING"
 log "========================================"
 
@@ -24,6 +59,13 @@ do
         [ -f "$FILE" ] || continue
 
         NAME="$(basename "$FILE")"
+
+        case "$NAME" in
+            .*|_*)
+                rm -f "$FILE"
+                continue
+                ;;
+        esac
 
         case "$NAME" in
             HELP)

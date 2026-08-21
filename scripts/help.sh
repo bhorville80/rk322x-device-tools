@@ -22,6 +22,8 @@ cat << 'EOF'
 DEPLOIEMENT   (depuis la cle : sh /mnt/media_rw/<ID>/deploy.sh <cmd>)
   INSTALL      Installe les scripts de la cle sur la box
                (/data/scripts + liens /data/bin)
+               avec sauvegarde auto de l'existant
+  RESTORE      Restaure la derniere installation sauvegardee
   EXPOSE       Expose le contenu de la cle en HTTP port 8000
   STOP         Arrete les serveurs HTTP actifs
   SEND_LOGS    Collecte logcat/dmesg/getprop/ip/mount/ps
@@ -32,6 +34,7 @@ VERIFICATION
   check_state        Etat IP / wireless / bluetooth / HDMI
                      compare a la config cible
                      exit 1 si au moins un KO
+  selftest           Verifie que tous les outils repondent
 
 INSPECTION
   inspect_user       Methodes de creation utilisateur dispo
@@ -66,6 +69,7 @@ SERVEURS   (dossier server/ de la cle)
   control_server.sh  API port 8080 (HELP/SEND_LOGS/PURGE_LOG/SYNC)
                      + watch_usb.sh execute les fichiers temoins
                      poses dans incoming/
+  Securite : si server/token existe, l'API exige ?token=<valeur>
 
 LOGS
   Chaque outil ecrit : log/exec/<script>_<YYYYmmdd-HHMMSS>.log
