@@ -61,5 +61,28 @@ runlog_end()
         echo "fin    : $(date '+%Y-%m-%d %H:%M:%S')"
         echo "rc     : $1"
     } >> "$RUNLOG_FILE" 2>/dev/null
+
+    runlog_rotate
+    return 0
+}
+
+runlog_rotate()
+{
+    MAX=5
+
+    NB="$(ls -1 "$RUNLOG_DIR/${SCRIPT_ID}_"*.log 2>/dev/null | wc -l)"
+    case "$NB" in
+        ''|*[!0-9]*) return 0 ;;
+    esac
+
+    OVER=$((NB - MAX))
+    if [ "$OVER" -le 0 ]; then
+        return 0
+    fi
+
+    for F in $(ls -1 "$RUNLOG_DIR/${SCRIPT_ID}_"*.log 2>/dev/null | sort | head -n "$OVER"); do
+        rm -f "$F" 2>/dev/null
+    done
+
     return 0
 }
