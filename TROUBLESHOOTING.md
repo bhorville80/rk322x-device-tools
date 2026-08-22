@@ -254,6 +254,22 @@ If the script depends on other files, verify that the complete USB directory str
 
 ---
 
+### `tmp-mksh: ... No such file or directory` / `syntax error: 'do' unexpected`
+
+Signature of **CRLF line endings** (Windows) corrupting the shebang:
+the kernel tries to execute `/system/bin/sh\r`, which does not exist.
+
+* Fixed permanently: `.gitattributes` forces LF (`eol=lf`) for everything
+  deployed to the box; `tools/pack.sh` refuses a build containing `\r`;
+  the pre-commit hook converts CRLF->LF automatically.
+* If an old copy still shows the symptom: rebuild the key/package from
+  a clean checkout and re-run INSTALL.
+
+Reminder: `/mnt/media_rw/*` is mounted **noexec** - always run scripts
+via `sh <path>`, never `./script` (Permission denied is expected there).
+
+---
+
 ### Deployment logs are missing
 
 Check:

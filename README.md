@@ -53,6 +53,32 @@ amorce SELFTEST       # tous les outils repondent ?
 
 Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
 
+### Panneau web (EXPOSE)
+
+`deploy EXPOSE` (ou `amorce EXPOSE`) lance toute la pile : HTTP 8000,
+control API 8080, GUI TV 8081 et le watcher USB.
+
+Quatre pages sur `http://<ip-box>:8000` :
+
+* **index.html** - accueil/bilan : versions installee vs cle, verdict
+  conf_check, dernier etat reseau
+* **cle.html** - presentation de la cle et catalogue des outils
+* **commandes.html** - commandes minimales + boutons de recette par phase
+  (P1..P7, global, RETOUR LOGS, GENERER MANIFEST a 7/7)
+* **metriques.html** - vitals / check state / conf check
+
+### Recette
+
+```bash
+recette                 # sequence complete + "CLE PRETE POUR ANALYSE RETOUR"
+recette P5              # ou phase par phase ; etat : log/recette_phases.txt
+```
+
+A la fin : manifest certifie (phases + conf_check + sha256 des scripts
+deployes), snapshot device/allconf, diff de derive vs precedent -
+dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
+`docs/RECETTE.md`.
+
 ### Outils v3
 
 | Outil | Role |
@@ -64,6 +90,12 @@ Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
 | `vitals STATUS/WATCH [N] [S]` | signes vitaux : temperatures, CPU/charge, RAM, usure eMMC, lien reseau, alimentation |
 | `sys_diag` | sante systeme : horloge 1970, lmkd, entropie, eMMC, securite |
 | `sd_inspect STATUS/DMESG` | carte SD : enumeration mmc, montage/vold, traces du boot bloque |
+| `device_info` | inventaire puces/materiel trie par fonctionnalite + services par fonction |
+| `thermal STATUS/ECO/PERF` | profil CPU/thermique (eco conseille en 24/7) |
+| `conf_check` | validation config (+profils+secrets) et etat d'application des optimisations |
+| `mem_tune STATUS/OPTIMIZE/RESTORE` | memoire : zram, swappiness, lmk, buffers logd |
+| `run_state` | outils lances / jamais lances / echecs (analyse log/exec) |
+| `recette [P1..P7/RETOUR/MANIFEST]` | recette bout-en-bout, phases ou globale, manifest certifie |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
 | `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
@@ -261,13 +293,18 @@ su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
 ├── AMORCE                  aide-memoire affiche sur la box
 ├── deploy.sh               installeur / point d'entree cle USB
 │
+├── docs/                   RECETTE.md + PJ-releve-energie.csv (livrable)
+│
 ├── web/
-│   └── index.html          panneau web (copie a la racine de la cle par INSTALL/PKG)
+│   ├── index.html          accueil/bilan (copie racine cle par INSTALL/PKG)
+│   ├── cle.html            presentation cle + catalogue outils
+│   ├── commandes.html      commandes + recette par phases + manifest
+│   └── metriques.html      vitals / state / conf check
 │
 ├── scripts/                tous les outils + core/ (deployes dans /data/scripts)
 ├── server/                 httpd 8000, control API 8080, GUI 8081, watch_usb
-├── config/                 device.conf + profiles/
-├── tools/                  build / check / pack / dpk (cote PC)
+├── config/                 device.conf + profiles/ + secrets.conf (jamais livre)
+├── tools/                  build / check / pack / dpk + hooks git (cote PC)
 ├── admin/                  provisioning Windows / Linux
 │
 ├── dist/                   paquets .dpk construits + latest/
@@ -276,7 +313,8 @@ su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
 │
 └── manifests/
     ├── history/
-    └── current/
+    ├── current/
+    └── recette/            manifest certifie + allconf + diff derive
 ```
 
 ---

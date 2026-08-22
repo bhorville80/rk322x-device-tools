@@ -11,6 +11,8 @@ Cle montee noexec : toujours "sh <chemin>", jamais ./ .
 [2] ENSUITE (sur la box)
 
   amorce
+  recette            bilan complet + cle prete pour retour
 
 Aide : help        Rapport global : inspect_all
+Web  : http://<ip-box>:8000 (accueil/cle/commandes/metriques)
 ===============================================================
