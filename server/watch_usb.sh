@@ -1,19 +1,54 @@
 #!/system/bin/sh
 
-USB="/mnt/media_rw/4E28-7C59"
+USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
+    USB=""
+    for d in /mnt/media_rw/*; do
+        if [ -f "$d/deploy.sh" ]; then
+            USB="$d"
+            break
+        fi
+    done
+fi
+
+if [ -z "$USB" ]; then
+    echo "[ERREUR] cle USB introuvable"
+    exit 1
+fi
+
 INCOMING="$USB/incoming"
 LOG_DIR="$USB/log"
 LOG="$LOG_DIR/watch.log"
+LOCK="$USB/server/watch.lock"
 
-mkdir -p "$INCOMING" "$LOG_DIR"
+mkdir -p "$INCOMING" "$LOG_DIR" "$USB/server"
+
+if [ -f "$LOCK" ]; then
+    LPID="$(cat "$LOCK" 2>/dev/null)"
+    if [ -n "$LPID" ] && kill -0 "$LPID" 2>/dev/null; then
+        echo "[ERREUR] watcher deja actif (PID $LPID)"
+        exit 1
+    fi
+    rm -f "$LOCK"
+fi
+
+echo $$ > "$LOCK"
 
 log()
 {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
 }
 
+cleanup()
+{
+    rm -f "$LOCK"
+    exit 0
+}
+
+trap cleanup INT TERM
+
 log "========================================"
-log "USB WATCHER POLLING START"
+log "USB WATCHER POLLING START (PID $$)"
 log "INCOMING: $INCOMING"
 log "========================================"
 
@@ -26,6 +61,13 @@ do
         NAME="$(basename "$FILE")"
 
         case "$NAME" in
+            .*|_*)
+                rm -f "$FILE"
+                continue
+                ;;
+        esac
+
+        case "$NAME" in
             HELP)
                 log "HELP"
                 sh "$USB/deploy.sh" HELP >> "$LOG" 2>&1
@@ -35,6 +77,7 @@ do
             SEND_LOGS)
                 log "SEND_LOGS"
                 sh "$USB/deploy.sh" SEND_LOGS >> "$LOG" 2>&1
+                sh "$USB/scripts/rotate_logs.sh" > /dev/null 2>&1
                 rm -f "$FILE"
                 ;;
 
@@ -42,6 +85,70 @@ do
                 log "SYNC"
                 sh "$USB/scripts/sync_usb.sh" >> "$LOG" 2>&1
                 rm -f "$FILE"
+                ;;
+
+            FIELD_OFF)
+                log "FIELD_OFF"
+                sh "$USB/scripts/field_mode.sh" OFF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            FIELD_ON)
+                log "FIELD_ON"
+                sh "$USB/scripts/field_mode.sh" ON >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            HDMI_OFF)
+                log "HDMI_OFF"
+                sh "$USB/scripts/hdmi.sh" OFF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            HDMI_ON)
+                log "HDMI_ON"
+                sh "$USB/scripts/hdmi.sh" ON >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            PANEL)
+                log "PANEL"
+                IP="$(sed -n 's/^IP=//p' "$USB/scripts/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+                [ -n "$IP" ] || IP="192.168.50.20"
+                sh "$USB/scripts/inspect_gui.sh" URL "http://$IP:8000" >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            STATE)
+                log "STATE"
+                mkdir -p "$LOG_DIR"
+                sh "$USB/scripts/check_state.sh" > "$LOG_DIR/state_last.txt" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            ROTATE_LOGS)
+                log "ROTATE_LOGS"
+                sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            ECO_MODE)
+                log "ECO_MODE"
+                sh "$USB/scripts/thermal.sh" ECO >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            PERF_MODE)
+                log "PERF_MODE"
+                sh "$USB/scripts/thermal.sh" PERF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            REBOX)
+                log "REBOOT demande"
+                rm -f "$FILE"
+                sync
+                reboot || setprop sys.powerctl reboot
                 ;;
 
             PURGE_LOG)

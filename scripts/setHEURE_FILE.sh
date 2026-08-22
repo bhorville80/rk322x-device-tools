@@ -14,30 +14,35 @@ done
 main()
 {
 
+TIME_FILE=""
 for d in /mnt/media_rw/*; do
-    [ -d "$d" ] || continue
-
-    ID="$(basename "$d")"
-    LINE="$(mount | grep " $d " | sed -n '1p')"
-
-    case "$LINE" in
-        *"public:8,1"*)
-            TYPE="USB"
-            ;;
-        *"public:179,65"*)
-            TYPE="SD"
-            ;;
-        *)
-            TYPE="UNKNOWN"
-            ;;
-    esac
-
-    echo "ID=$ID"
-    echo "TYPE=$TYPE"
-    echo "PATH=$d"
-    echo "MOUNT=$LINE"
-    echo "---"
+    if [ -f "$d/SET_HEURE" ]; then
+        TIME_FILE="$d/SET_HEURE"
+        break
+    fi
 done
+
+if [ ! -f "$TIME_FILE" ]; then
+    echo "ERREUR: fichier $TIME_FILE absent"
+    exit 1
+fi
+
+TIME="$(cat "$TIME_FILE" | tr -d '[:space:]')"
+
+if [ -z "$TIME" ]; then
+    echo "ERREUR: fichier SET_HEURE vide"
+    exit 1
+fi
+
+echo "Heure actuelle :"
+date
+
+echo "Heure demandée : $TIME"
+
+date "$TIME"
+
+echo "Heure après réglage :"
+date
 }
 
 if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then

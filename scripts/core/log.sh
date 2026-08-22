@@ -1,6 +1,18 @@
 #!/system/bin/sh
 
-USB_DIR="/mnt/media_rw/4E28-7C59"
+USB_DIR=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/deploy.sh" ]; then
+        USB_DIR="$d"
+        break
+    fi
+done
+
+if [ -z "$USB_DIR" ]; then
+    echo "[ERREUR] cle USB introuvable"
+    return 1 2>/dev/null || exit 1
+fi
+
 LOG_DIR="$USB_DIR/log"
 LOG_FILE="$LOG_DIR/system.log"
 

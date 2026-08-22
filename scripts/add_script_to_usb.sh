@@ -1,6 +1,17 @@
 #!/system/bin/sh
 
-USB="/mnt/media_rw/4E28-7C59"
+USB=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/deploy.sh" ]; then
+        USB="$d"
+        break
+    fi
+done
+
+if [ -z "$USB" ]; then
+    echo "[ERREUR] cle USB introuvable"
+    exit 1
+fi
 
 if [ ! -d "$USB" ]; then
     echo "ERREUR: clé USB non trouvée: $USB"

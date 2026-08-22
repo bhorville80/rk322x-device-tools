@@ -14,34 +14,47 @@ body {
     padding:25px;
 }
 
-h1 {
-    margin-top:0;
-}
-
 .panel {
-    max-width:800px;
+    max-width:860px;
     margin:auto;
 }
 
+h1 { margin-top:0; }
+h2 { margin-bottom:6px; font-size:18px; color:#9cf; }
+
 button {
-    padding:15px 22px;
-    margin:6px;
-    font-size:16px;
+    padding:12px 18px;
+    margin:4px;
+    font-size:15px;
     cursor:pointer;
+    border-radius:6px;
+    border:1px solid #555;
+    background:#333;
+    color:#eee;
 }
 
+button:hover  { background:#444; }
+button.warn   { background:#7a33; border-color:#a63; }
+button.danger { background:#933; border-color:#c55; }
+
 .status {
-    padding:15px;
-    margin:20px 0;
+    padding:12px;
+    margin:16px 0;
     background:#222;
     border-radius:8px;
+    line-height:1.5;
 }
 
 #result {
     white-space:pre-wrap;
     background:#000;
     padding:15px;
-    min-height:80px;
+    min-height:120px;
+    max-height:420px;
+    overflow:auto;
+    border-radius:8px;
+    font-family:monospace;
+    font-size:13px;
 }
 </style>
 </head>
@@ -54,42 +67,171 @@ button {
 
 <div class="status">
     <b>BOX</b><br>
-    IP : 192.168.50.20<br>
-    HTTP : 8000<br>
-    CONTROL : 8080
+    IP : <span id="ip">192.168.50.20</span> &nbsp;|&nbsp;
+    HTTP : 8000 &nbsp;|&nbsp; CONTROL : 8080 &nbsp;|&nbsp; GUI : 8081<br>
+    <a href="/config/device.conf" target="_blank" style="color:#9cf">config (copie cle) /config/device.conf</a>
+    &nbsp;|&nbsp; <a href="/log/state_last.txt" target="_blank" style="color:#9cf">dernier etat</a>
 </div>
 
-<h2>Commandes</h2>
+<h2>Etat</h2>
+<button onclick="state()">CHECK STATE</button>
+<span style="font-size:12px;color:#888"> resultat ecrit dans log/state_last.txt</span>
 
+<h2>Configuration active (box)</h2>
+<button onclick="cmd('CONFIG')">VOIR LA CONFIG</button>
+
+<h2>Maintenance</h2>
+<button onclick="timeSync()">SYNC HORLOGE</button>
+<button onclick="cmd('SYNC')">SYNC</button>
 <button onclick="cmd('HELP')">HELP</button>
 <button onclick="cmd('SEND_LOGS')">SEND LOGS</button>
-<button onclick="cmd('PURGE_LOG')">PURGE LOG</button>
-<button onclick="cmd('SYNC')">SYNC</button>
+<button class="warn" onclick="if(confirm('Purger les logs ?'))cmd('PURGE_LOG')">PURGE LOG</button>
+<button class="warn" onclick="cmd('ROTATE_LOGS')">ROTATE LOGS</button>
+
+<h2>Affichage TV</h2>
+<button onclick="cmd('PANEL')">AFFICHER CE PANNEAU SUR LA TV</button>
+<button onclick="cmd('HDMI_OFF')">HDMI OFF</button>
+<button onclick="cmd('HDMI_ON')">HDMI ON</button>
+<button class="warn" onclick="cmd('FIELD_OFF')">FIELD MODE OFF</button>
+<button onclick="cmd('FIELD_ON')">FIELD MODE ON</button>
+
+<h2>Telecommande GUI (port 8081)</h2>
+
+<div style="margin:4px 0">
+    <input id="gurl" placeholder="http://adresse-a-afficher" size="34"
+           style="padding:10px;background:#000;color:#eee;border:1px solid #555">
+    <button onclick="guiUrl()">AFFICHER URL</button>
+</div>
+<div style="margin:4px 0">
+    <input id="gtxt" placeholder="message affiche sur la TV" size="34"
+           style="padding:10px;background:#000;color:#eee;border:1px solid #555">
+    <button onclick="guiText()">AFFICHER TEXTE</button>
+</div>
+
+<div style="margin:8px 0">
+    <button onclick="guiKey('KEYCODE_DPAD_UP')">HAUT</button>
+    <button onclick="guiKey('KEYCODE_DPAD_LEFT')">GAUCHE</button>
+    <button onclick="guiKey('KEYCODE_DPAD_CENTER')">OK</button>
+    <button onclick="guiKey('KEYCODE_DPAD_RIGHT')">DROITE</button>
+    <button onclick="guiKey('KEYCODE_DPAD_DOWN')">BAS</button>
+    <button onclick="guiKey('KEYCODE_BACK')">RETOUR</button>
+    <button onclick="guiKey('KEYCODE_HOME')">HOME</button>
+</div>
+
+<div style="margin:4px 0">
+    <button class="warn" onclick="guiShot()">SCREENSHOT TV</button>
+    <span id="shotinfo" style="font-size:12px;color:#888"></span>
+</div>
+<img id="shot" alt="" style="display:none;max-width:100%;border:1px solid #444;margin-top:8px">
+
+<h2>Systeme</h2>
+<button onclick="cmd('ECO_MODE')">MODE ECO</button>
+<button onclick="cmd('PERF_MODE')">MODE PERF</button>
+<span style="font-size:12px;color:#888">profil CPU (24/7 : eco conseille)</span><br>
+<button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
 
 <h2>Résultat</h2>
-
 <div id="result">Prêt.</div>
 
 </div>
 
 <script>
 
-function cmd(command) {
+var API = "http://" + location.hostname + ":8080/api/";
+var GAPI = "http://" + location.hostname + ":8081/gui/";
 
-    document.getElementById("result").textContent =
-        "Exécution : " + command + "...";
+function gcall(query) {
+    fetch(GAPI + query)
+        .then(r => r.text())
+        .then(t => show("GUI\n" + t))
+        .catch(e => show("Erreur GUI : " + e));
+}
 
-    fetch("http://" + location.hostname + ":8080/api/" + command)
+function guiUrl() {
+    var u = document.getElementById("gurl").value.trim();
+    if (u) gcall("URL?u=" + encodeURIComponent(u));
+}
+
+function guiText() {
+    var t = document.getElementById("gtxt").value.trim();
+    if (t) gcall("TEXT?t=" + encodeURIComponent(t));
+}
+
+function guiKey(k) {
+    gcall("KEY?k=" + k);
+}
+
+function timeSync() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    var v = "" + d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) +
+            "." + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
+    show("SYNC HORLOGE : envoi " + v + " (UTC)...");
+    fetch(API + "TIME_SYNC?t=" + v)
+        .then(r => r.text())
+        .then(t => show("SYNC HORLOGE\n" + t))
+        .catch(e => show("Erreur : " + e));
+}
+
+function guiShot() {
+    document.getElementById("shotinfo").textContent = "capture en cours...";
+    fetch(GAPI + "SHOT")
         .then(r => r.text())
         .then(t => {
-            document.getElementById("result").textContent =
-                command + "\n\n" + t;
+            show("GUI SHOT\n" + t);
+            setTimeout(function() {
+                var im = document.getElementById("shot");
+                im.src = "/log/gui_shots/latest.png?" + Date.now();
+                im.style.display = "block";
+                document.getElementById("shotinfo").textContent =
+                    "rendu ci-dessous (aussi : /log/gui_shots/latest.png)";
+            }, 1500);
+        })
+        .catch(e => { show("Erreur GUI : " + e); document.getElementById("shotinfo").textContent = ""; });
+}
+
+function show(t) {
+    document.getElementById("result").textContent = t;
+}
+
+function cmd(command) {
+    show("Exécution : " + command + "...");
+    fetch(API + command)
+        .then(r => r.text())
+        .then(t => {
+            if (command === "CONFIG") { show(t); return; }
+            show(command + "\n" + t + "\n\n(l'action tourne sur la box, voir log/watch.log)");
+            if (command === "STATE") { setTimeout(pollState, 2500); }
+        })
+        .catch(e => show("Erreur : " + e));
+}
+
+function pollState(tries) {
+    tries = tries || 0;
+    fetch("/log/state_last.txt", {cache:"no-store"})
+        .then(r => { if (!r.ok) throw 0; return r.text(); })
+        .then(t => {
+            var head = t.slice(0, 40);
+            if (pollState.stamp && head === pollState.stamp && tries < 6) {
+                setTimeout(function(){ pollState(tries + 1); }, 2000);
+                return;
+            }
+            pollState.stamp = head;
+            show("CHECK STATE\n\n" + t);
         })
         .catch(e => {
-            document.getElementById("result").textContent =
-                "Erreur : " + e;
+            if (tries < 6) { setTimeout(function(){ pollState(tries + 1); }, 2000); }
+            else { show("etat non disponible encore (lancer CHECK STATE d'abord)"); }
         });
 }
+
+fetch(API + "CONFIG")
+    .then(r => r.text())
+    .then(t => {
+        var m = t.match(/^IP=(.*)$/m);
+        if (m) document.getElementById("ip").textContent = m[1].trim();
+    })
+    .catch(function(){});
 
 </script>
 

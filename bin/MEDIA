@@ -1,5 +1,21 @@
 #!/system/bin/sh
 
-USB="/mnt/media_rw/4E28-7C59"
+MEDIA_SH=""
 
-sh "$USB/scripts/core/media.sh"
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/scripts/core/media.sh" ]; then
+        MEDIA_SH="$d/scripts/core/media.sh"
+        break
+    fi
+done
+
+if [ -z "$MEDIA_SH" ] && [ -f "/data/scripts/core/media.sh" ]; then
+    MEDIA_SH="/data/scripts/core/media.sh"
+fi
+
+if [ -z "$MEDIA_SH" ]; then
+    echo "[ERREUR] media.sh introuvable"
+    exit 1
+fi
+
+sh "$MEDIA_SH"

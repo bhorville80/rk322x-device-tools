@@ -1,0 +1,30 @@
+name: lint
+
+on: [push, pull_request]
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verification syntaxe sh -n
+        run: |
+          FAIL=0
+          for f in $(git ls-files '*.sh' 'bin/HELP' 'bin/MEDIA'); do
+            if ! sh -n "$f" 2>/dev/null; then
+              echo "ERREUR syntaxe: $f"
+              FAIL=1
+            fi
+          done
+          exit $FAIL
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shellcheck (non bloquant)
+        run: |
+          for f in $(git ls-files '*.sh'); do
+            shellcheck -S warning "$f" || true
+          done

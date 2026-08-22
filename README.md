@@ -26,6 +26,58 @@ adb shell
 su
 ```
 
+> **Note (v3):** `deploy` et `amorce` s'elevent automatiquement via `su` pour les actions privilegiees - plus besoin de taper `su` d'abord.
+
+---
+
+## V3 / DEMARRAGE RAPIDE
+
+La cle est montee en **noexec** : toujours `sh <chemin>`, jamais `./script`.
+
+Premiere fois, depuis le PC :
+
+```bash
+adb shell
+su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
+exit
+```
+
+Le glob `*` detecte seul l'ID de la cle. Ensuite, sur la box :
+
+```bash
+amorce                # etat : versions cle/box + rappel des commandes
+amorce INSTALL        # mise a jour depuis la cle
+amorce EXPOSE         # HTTP 8000 (+ GUI 8081)
+amorce SELFTEST       # tous les outils repondent ?
+```
+
+Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
+
+### Outils v3
+
+| Outil | Role |
+|---|---|
+| `cut_services STATUS/CUT [SAFE\|FULL]/APPS [MAX]/RESTORE` | allègement services init + paquets usine, gain RAM mesure |
+| `system_rw RW/RO/STATUS` | bascule /system lecture-ecriture |
+| `front_led STATUS/LED/TRIGGER/BLINK/OFF/DEMO STOP` | afficheur frontal (leds sysfs + horloge FD655) |
+| `net_diag STATUS/PORTS/PING/THROUGHPUT` | diagnostics reseau |
+| `sys_diag` | sante systeme : horloge 1970, lmkd, entropie, eMMC, securite |
+| `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
+| `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
+| `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
+| `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
+
+### Sequence d'allegement 24/7
+
+```bash
+selftest            # tout repond
+cut_services CUT    # services SAFE + paquets usine
+cut_services APPS   # GMS/Play/katniss/DLNA/usine (UI conservee)
+check_state         # vue globale
+# phase 2 (headless total) :
+cut_services CUT FULL && cut_services APPS MAX
+```
+
 ### Check the current date and time
 
 ```bash
