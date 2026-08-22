@@ -61,6 +61,7 @@ main()
     run_section "thermal"          "$BASE/thermal.sh" STATUS
     run_section "net_diag"         "$BASE/net_diag.sh"
     run_section "sys_diag"         "$BASE/sys_diag.sh"
+    run_section "sd_inspect"       "$BASE/sd_inspect.sh"
     run_section "cut_services"     "$BASE/cut_services.sh" STATUS
     run_section "front_led"        "$BASE/front_led.sh" STATUS
 

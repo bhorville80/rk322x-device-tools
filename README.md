@@ -63,6 +63,7 @@ Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
 | `net_diag STATUS/PORTS/PING/THROUGHPUT` | diagnostics reseau |
 | `vitals STATUS/WATCH [N] [S]` | signes vitaux : temperatures, CPU/charge, RAM, usure eMMC, lien reseau, alimentation |
 | `sys_diag` | sante systeme : horloge 1970, lmkd, entropie, eMMC, securite |
+| `sd_inspect STATUS/DMESG` | carte SD : enumeration mmc, montage/vold, traces du boot bloque |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
 | `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |

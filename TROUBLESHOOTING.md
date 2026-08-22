@@ -346,6 +346,58 @@ date
 
 ---
 
+## SD CARD / BOOT BLOCKED
+
+### Box does not boot when the SD card is inserted at power-on
+
+**Symptômes observés :**
+
+```text
+LED rouge figée, logo bloqué, ou boot très long avec carte SD insérée.
+Sans la carte : la box démarre normalement sur l'eMMC (Android).
+```
+
+**Causes connues sur RK322x :**
+
+1. Le BootROM/loader essaie de démarrer sur la SD avant l'eMMC
+   (carte avec signature de boot, MBR exotique, ou ordre de boot du loader).
+2. Le driver mmc des noyaux 3.10/4.4 se bloque sur certaines cartes
+   (SDXC / UHS-I rapides) pendant l'énumération.
+3. Android (vold) voit la carte mais ne la monte jamais
+   (stockage adopté résiduel, format non supporté).
+
+**Procédure d'investigation :**
+
+```bash
+# 0) après un boot bloqué puis redémarré SANS la carte :
+deploy SEND_LOGS          # capture pstore/last_kmsg + logs sur la clé
+admin/*/logpull           # récupération vers le PC sans débrancher la clé
+
+# 1) état actuel (avec carte insérée à chaud si possible) :
+sd_inspect                # enumeration mmc, montage/vold, traces pstore
+sd_inspect DMESG          # messages noyau live mmc/sdhci
+```
+
+Interprétation :
+
+```text
+Carte absente de l'énumération + blocage au logo  -> stade loader (cause 1)
+Erreurs timeout/crc dans le pstore                -> driver/carte (cause 2)
+Carte vue par le noyau mais rien de monté         -> vold/format (cause 3)
+```
+
+**Contournements / solutions :**
+
+| Cause | Solution |
+|---|---|
+| Loader | Formater la carte en **FAT32, MBR, une seule partition primaire, sans flag boot** ; sinon reflasher le loader via RKDevTool (PC, câble OTG, point reset) |
+| Driver/carte | Essayer une autre carte : SDHC plutôt que SDXC, classe 10 sans UHS, marque connue |
+| vold/format | Format portable FAT32 (pas de "stockage interne") ; vérifier `sd_inspect` section adoption |
+
+**Objectif :** pouvoir laisser la carte insérée au démarrage et l'utiliser comme stockage. La voie logicielle dépend de la cause identifiée par `sd_inspect` ; documenter ici le résultat obtenu.
+
+---
+
 ## Logging Issues
 
 When reporting a problem, collect the following information whenever possible:

@@ -84,6 +84,7 @@ main()
     check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS
     check_rc "net_diag"            "0 1" sh "$BASE/net_diag.sh"
     check_rc "sys_diag"            "0 1" sh "$BASE/sys_diag.sh"
+    check_rc "sd_inspect"          "0 1 2" sh "$BASE/sd_inspect.sh"
     check_rc "set_time STATUS"     "0" sh "$BASE/set_time.sh" STATUS
     check_rc "sync_usb STATUS"     "0 1" sh "$BASE/sync_usb.sh" STATUS
     check_rc "disable_wireless ST" "0" sh "$BASE/disable_wireless.sh" STATUS
