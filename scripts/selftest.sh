@@ -78,11 +78,13 @@ main()
     check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS
     check_rc "thermal STATUS"      "0" sh "$BASE/thermal.sh" STATUS
+    check_rc "vitals STATUS"       "0" sh "$BASE/vitals.sh" STATUS
     check_rc "cut_services STATUS" "0" sh "$BASE/cut_services.sh" STATUS
     check_rc "system_rw STATUS"    "0" sh "$BASE/system_rw.sh" STATUS
     check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS
     check_rc "net_diag"            "0 1" sh "$BASE/net_diag.sh"
     check_rc "sys_diag"            "0 1" sh "$BASE/sys_diag.sh"
+    check_rc "set_time STATUS"     "0" sh "$BASE/set_time.sh" STATUS
     check_rc "sync_usb STATUS"     "0 1" sh "$BASE/sync_usb.sh" STATUS
     check_rc "disable_wireless ST" "0" sh "$BASE/disable_wireless.sh" STATUS
     check_rc "front_led STATUS"    "0" sh "$BASE/front_led.sh" STATUS

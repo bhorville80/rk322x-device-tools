@@ -61,6 +61,7 @@ Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
 | `system_rw RW/RO/STATUS` | bascule /system lecture-ecriture |
 | `front_led STATUS/LED/TRIGGER/BLINK/OFF/DEMO STOP` | afficheur frontal (leds sysfs + horloge FD655) |
 | `net_diag STATUS/PORTS/PING/THROUGHPUT` | diagnostics reseau |
+| `vitals STATUS/WATCH [N] [S]` | signes vitaux : temperatures, CPU/charge, RAM, usure eMMC, lien reseau, alimentation |
 | `sys_diag` | sante systeme : horloge 1970, lmkd, entropie, eMMC, securite |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
 | `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
@@ -150,44 +151,28 @@ The toolkit provides several scripts installed in `/data/bin`.
 
 Changing the system date requires root privileges on the RK322x device.
 
-### Set the date and time
+### Unified command : set_time
 
-Example:
+```bash
+set_time STATUS      # heure actuelle + sources disponibles
+set_time AUTO        # ordre : INIT (codee) -> FILE (cle) -> adb (poussee PC)
+set_time FILE        # force la lecture du fichier SET_HEURE sur la cle
+set_time RTC         # force l'heure depuis l'horloge materielle (manuel)
+set_time INIT        # valeur codee de secours
+set_time SET <v>     # valeur passee par le PC (adb / panneau web)
+```
+
+`SET_HEURE` is written at the USB key root by the PC before deployment (`admin/*/write_set_heure`), one line, for example :
+
+```text
+20260822.143000
+```
+
+### Raw date command (still available)
 
 ```bash
 su -c 'date 080820262026.00'
 ```
-
-### Format
-
-```text
-MMDDhhmmCCYY.ss
-```
-
-Where:
-
-```text
-MM   = Month
-DD   = Day
-hh   = Hour
-mm   = Minute
-CCYY = Year
-ss   = Seconds
-```
-
-Example:
-
-```text
-08 08 20 26 2026 .00
-```
-
-Command:
-
-```text
-080820262026.00
-```
-
-> **Note:** The `date` command must be executed with root privileges.
 
 ---
 
@@ -268,42 +253,25 @@ su -c 'busybox httpd -f -p 0.0.0.0:8000 -h /mnt/media_rw/4E28-7C59'
 /
 ├── README.md
 ├── ROADMAP.md
+├── ROADMAP-fr.md
 ├── TROUBLESHOOTING.md
+├── PACKAGING.md
 │
-├── deploy.sh
-├── set_time.sh
-├── set_network.sh
-├── disable_wireless.sh
-├── index.html
-├── setHEURE_INIT.sh
-├── setHEURE_FILE.sh
+├── AMORCE                  aide-memoire affiche sur la box
+├── deploy.sh               installeur / point d'entree cle USB
 │
-├── scripts/
-│   ├── core/
-│   │   ├── log.sh
-│   │   ├── media.sh
-│   │   └── usb.sh
-│   │
-│   ├── sync_usb.sh
-│   ├── add_script_to_usb.sh
-│   ├── add_to_bin.sh
-│   ├── boxhelp.sh
-│   ├── test.sh
-│   └── disable_wireless.sh
+├── web/
+│   └── index.html          panneau web (copie a la racine de la cle par INSTALL/PKG)
 │
-├── log/
-│   └── log_YYYYMMDD_HHMMSS/
+├── scripts/                tous les outils + core/ (deployes dans /data/scripts)
+├── server/                 httpd 8000, control API 8080, GUI 8081, watch_usb
+├── config/                 device.conf + profiles/
+├── tools/                  build / check / pack / dpk (cote PC)
+├── admin/                  provisioning Windows / Linux
 │
-├── config/
-│   ├── profiles/
-│   └── device.conf
-│
-├── history/
-│   ├── config/
-│   ├── deploy/
-│   └── scripts/
-│
-├── incoming/
+├── dist/                   paquets .dpk construits + latest/
+├── incoming/               fichiers temoins (triggers) - cree a l'usage
+├── log/                    logs ecrits sur la cle - cree a l'usage
 │
 └── manifests/
     ├── history/

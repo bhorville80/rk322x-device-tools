@@ -12,12 +12,7 @@ cd "$REPO" || exit 1
 
 LIST="$(find . -name '*.sh' \
         -not -path './dist/*' \
-        -not -path './history/*' \
         -not -path './.git/*' | sort)"
-for B in bin/HELP bin/MEDIA; do
-    [ -f "$B" ] && LIST="$LIST
-$B"
-done
 
 if [ -z "$LIST" ]; then
     echo "[check] aucun script shell trouve"

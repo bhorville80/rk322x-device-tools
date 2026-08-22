@@ -14,6 +14,7 @@ Each build produces two files in `dist/` plus a copy of the newest one in `dist/
 dist/rk322x-tools_v<version>_<BUILD_ID>.dpk          archive tar.gz du toolkit
 dist/rk322x-tools_v<version>_<BUILD_ID>.dpk.sha256   empreinte de controle
 dist/latest/<même nom>.dpk (+ .sha256)               dernier build seul
+dist/rk322x-cle_v<version>_<BUILD_ID>.zip            cle USB prete a l'emploi
 ```
 
 - `<version>` comes from `DEPLOY_VERSION` in `config/device.conf` (currently `3`).
@@ -22,17 +23,30 @@ dist/latest/<même nom>.dpk (+ .sha256)               dernier build seul
 - `.bak` files are excluded from the archive.
 - A failed build leaves nothing behind in `dist/` (no partial `.dpk`).
 
+### Zip cle USB (`tools/usb_zip.sh`)
+
+Assemble apres chaque build un zip a dezipper directement a la racine de la cle :
+
+```text
+AMORCE  deploy.sh  <dernier>.dpk (+ .sha256)  admin/{linux,windows}/
+```
+
+Le dossier `admin/` sert au PC (Windows ou Linux) avant branchement de la box ; `admin/*/set_box_time` force la remise a l'heure de la box depuis le PC via adb (set_time SET, fallback date -u -s) ; le panneau web n'est pas inclus car il voyage dans le `.dpk` et est copie a la racine de la cle par INSTALL/PKG.
+
+```bash
+tools/usb_zip.sh               # construit dist/rk322x-cle_v<version>_<BUILD_ID>.zip
+```
+
 ### Archive contents
 
 ```text
 AMORCE                 bootstrap quick-start (cat /mnt/media_rw/*/AMORCE)
 deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
-index.html             HTTP server index page (copied to key root on INSTALL)
+web/                   panneau web : index.html copie a la racine de la cle (INSTALL/PKG)
 scripts/               all tools + core modules: cut_services, system_rw,
                        front_led, inspect_all, amorce, motd, net_diag,
-                       disable_wireless, set_network, set_time, setHEURE_*
+                       vitals, disable_wireless, set_network, set_time (AUTO/FILE/RTC/INIT/SET)
 server/                HTTP server + control API + GUI remote + ssh_server (optional)
-bin/                   trigger helpers (HELP / MEDIA)
 config/device.conf     device profile
 BUILD-INFO.txt         build metadata (version, build_id YY.MM.ddHH.MMss, date, git commit + state)
 ```

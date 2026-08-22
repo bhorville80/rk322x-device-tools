@@ -53,7 +53,7 @@ do_time()
         ''|*[!0-9]*) ko "epoch" "illisible" ;;
         *)
             if [ "$EP" -lt 1577836800 ]; then
-                ko "horloge" "perdue (avant 2020) -> setHEURE / provision --fix"
+                ko "horloge" "perdue (avant 2020) -> set_time AUTO / provision --fix"
             else
                 ok "horloge" "coherente"
             fi

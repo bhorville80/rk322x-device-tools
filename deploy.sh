@@ -12,7 +12,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="amorce sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all hdmi check_state help selftest show_key field_mode rotate_logs thermal cut_services system_rw front_led motd net_diag sys_diag set_network setHEURE_FILE setHEURE_INIT"
+INSTALL_LIST="amorce sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all hdmi check_state help selftest show_key field_mode rotate_logs thermal vitals cut_services system_rw front_led motd net_diag sys_diag set_network set_time"
 
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
@@ -173,16 +173,19 @@ install_from()
 
     echo "[3b] Panneau web + AMORCE -> racine de la cle..."
     COPIED=0
-    for F in index.html AMORCE; do
-        [ -f "$SRC/$F" ] || continue
-        if find_usb && cp -f "$SRC/$F" "$USB_DIR/$F" 2>/dev/null; then
-            echo "    [ OK ] $USB_DIR/$F"
+    PANEL="$SRC/web/index.html"
+    [ -f "$PANEL" ] || PANEL="$SRC/index.html"
+    for F in "$PANEL" "$SRC/AMORCE"; do
+        [ -f "$F" ] || continue
+        DEST="$USB_DIR/$(basename "$F")"
+        if find_usb && cp -f "$F" "$DEST" 2>/dev/null; then
+            echo "    [ OK ] $DEST"
             COPIED=1
         else
-            echo "    [ WARN ] cle inaccessible, $F non copie"
+            echo "    [ WARN ] cle inaccessible, $(basename "$F") non copie"
         fi
     done
-    [ "$COPIED" -eq 0 ] && echo "    [ -- ] rien a copier (source sans index.html/AMORCE)"
+    [ "$COPIED" -eq 0 ] && echo "    [ -- ] rien a copier (source sans panneau web/AMORCE)"
 
     link_bin
 

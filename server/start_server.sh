@@ -63,7 +63,7 @@ ensure_index()
         done
         echo '</ul>'
 
-        for D in scripts server bin config; do
+        for D in scripts server config; do
             [ -d "$USB/$D" ] || continue
             echo "<h2>$D/</h2><ul>"
             ls -1 "$USB/$D" 2>/dev/null | while read -r N; do

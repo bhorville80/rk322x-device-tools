@@ -161,7 +161,13 @@ do
 
             MEDIA)
                 log "MEDIA"
-                sh "$USB/bin/MEDIA" >> "$LOG" 2>&1
+                if [ -f "/data/scripts/core/media.sh" ]; then
+                    sh /data/scripts/core/media.sh >> "$LOG" 2>&1
+                elif [ -f "$USB/scripts/core/media.sh" ]; then
+                    sh "$USB/scripts/core/media.sh" >> "$LOG" 2>&1
+                else
+                    log "MEDIA: media.sh introuvable"
+                fi
                 rm -f "$FILE"
                 ;;
 

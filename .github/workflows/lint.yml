@@ -10,7 +10,7 @@ jobs:
       - name: Verification syntaxe sh -n
         run: |
           FAIL=0
-          for f in $(git ls-files '*.sh' 'bin/HELP' 'bin/MEDIA'); do
+          for f in $(git ls-files '*.sh'); do
             if ! sh -n "$f" 2>/dev/null; then
               echo "ERREUR syntaxe: $f"
               FAIL=1

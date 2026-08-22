@@ -140,6 +140,13 @@ RESEAU / DIAGNOSTIC
   sys_diag           Sante systeme : horloge (retour 1970),
                      memoire/lmkd, entropie, ecriture eMMC,
                      securite (adb/token/ssh/wireless)
+  vitals             Signes vitaux : temperatures, CPU/governor/
+                     charge, RAM, usure eMMC + remplissage /data,
+                     lien reseau, alimentation
+  vitals WATCH [N] [S]   N releves toutes les S s (defaut 10x5)
+                     -> suivre une montee en temperature
+  vitals CSV         ligne machine pour collecte PC
+                     (admin/*/vitals_history)
   set_network.sh     Config statique eth0 (IP/route/DNS) depuis
                      config/device.conf
 
@@ -150,11 +157,16 @@ MAINTENANCE
   add_to_bin <s>     Ajoute un script dans /data/bin
   add_script_to_usb  Copie un fichier vers la racine cle
 
-RESEAU / HEURE   (scripts/ de la cle, ou commandes apres INSTALL)
-  set_network.sh     Config statique eth0 (IP/route/DNS)
-  setHEURE_FILE.sh   Heure depuis fichier SET_HEURE sur la cle
-  setHEURE_INIT.sh   Heure fixe codee dans le script
-  set_time.sh        Aides horloge
+RESEAU / HEURE   (commande apres INSTALL)
+  set_time STATUS    Heure actuelle + sources disponibles (verdict)
+  set_time AUTO      Defaut, ordre : INIT (valeur codee) -> FILE
+                     (SET_HEURE sur la cle) -> adb (poussee PC)
+  set_time FILE      Force la lecture de SET_HEURE sur la cle
+  set_time RTC       Force l'heure depuis l'horloge materielle
+  set_time INIT      Valeur codee de secours
+  set_time SET <v>   Applique une valeur passee par le PC
+                     (adb / provision --fix / panneau web)
+                     formats : YYYYMMDD.HHMMSS ou MMDDhhmmCCYY.ss
 
 SERVEURS   (dossier server/ de la cle)
   start_server.sh    HTTP port 8000 servant la cle
