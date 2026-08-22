@@ -61,6 +61,12 @@ VERIFICATION
   run_state          Etat de lancement des outils via log/exec :
                       lances (nb, dernier, rc), installes jamais
                       lances, executions en echec
+  recette            Recette complete en une commande : install,
+                      selftest, conf_check, mem_tune OPTIMIZE,
+                      inspect_all, run_state, expose verifie,
+                      SEND_LOGS puis "CLE PRETE POUR ANALYSE
+                      RETOUR" ; bilan : log/recette_last.txt
+                      (aussi lanceable depuis le panneau web)
   selftest           Verifie que tous les outils repondent
 
 INSPECTION

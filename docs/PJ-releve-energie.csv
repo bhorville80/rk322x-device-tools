@@ -1,0 +1,13 @@
+date_heure,phase,watt,volt,ampere,temp_cpu_c,governor,mhz,ram_dispo_mo,note
+2026-08-23 10:00,N01-boot-usine,,,,,,,,
+2026-08-23 10:01,N01-boot-usine,,,,,,,,
+2026-08-23 10:05,N02-idle-cut-apps,,,,,,,,
+2026-08-23 10:06,N02-idle-cut-apps,,,,,,,,
+2026-08-23 10:15,N03-eco-field-off,,,,,,,,
+2026-08-23 10:16,N03-eco-field-off,,,,,,,,
+2026-08-23 10:25,N04-perf,,,,,,,,
+2026-08-23 10:26,N04-perf,,,,,,,,
+2026-08-23 10:35,N05-hdmi-on,,,,,,,,
+2026-08-23 10:40,N05-hdmi-off,,,,,,,,
+2026-08-23 10:50,N06-serveurs-usb,,,,,,,,
+2026-08-23 10:51,N06-serveurs-usb,,,,,,,,

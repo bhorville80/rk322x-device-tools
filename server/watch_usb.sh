@@ -133,6 +133,13 @@ do
                 rm -f "$FILE"
                 ;;
 
+            RECETTE)
+                log "RECETTE"
+                mkdir -p "$LOG_DIR"
+                sh "$USB/scripts/recette.sh" > "$LOG_DIR/recette_last.txt" 2>&1
+                rm -f "$FILE"
+                ;;
+
             ROTATE_LOGS)
                 log "ROTATE_LOGS"
                 sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1

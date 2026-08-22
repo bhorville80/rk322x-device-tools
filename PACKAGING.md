@@ -42,12 +42,15 @@ tools/usb_zip.sh               # construit dist/rk322x-cle_v<version>_<BUILD_ID>
 ```text
 AMORCE                 bootstrap quick-start (cat /mnt/media_rw/*/AMORCE)
 deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
-web/                   panneau web : index.html copie a la racine de la cle (INSTALL/PKG)
-scripts/               all tools + core modules: cut_services, system_rw,
-                       front_led, inspect_all, amorce, motd, net_diag,
+web/                   panneau web : index/cle/commandes/metriques.html copies a la
+                       racine de la cle (INSTALL/PKG)
+scripts/               all tools + core modules: cut_services, system_rw, mem_tune,
+                       front_led, inspect_all, device_info, amorce, motd, net_diag,
                        vitals, disable_wireless, set_network, set_time (AUTO/FILE/RTC/INIT/SET)
 server/                HTTP server + control API + GUI remote + ssh_server (optional)
-config/device.conf     device profile
+config/device.conf     device profile (+ profiles/ overlay ; secrets.conf jamais embarque)
+docs/                  RECETTE.md (fiche de recette box/linux/win + protocole NRG)
+                       + PJ-releve-energie.csv (gabarit de releves wattmetre)
 BUILD-INFO.txt         build metadata (version, build_id YY.MM.ddHH.MMss, date, git commit + state)
 ```
 

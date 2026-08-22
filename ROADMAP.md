@@ -134,7 +134,7 @@ This document tracks planned features, improvements and technical work for the p
 * [ ] Automate network configuration
 * [ ] Automate script installation
 * [ ] Automate log collection
-* [ ] Add deployment health checks
+* [x] Add deployment health checks (`recette`: end-to-end one-shot - install/selftest/conf_check/mem_tune/inspect_all/run_state/expose verification, GO-NO-GO verdict, SEND_LOGS closure + "cle prete pour analyse retour" ; triggerable from the web panel)
 
 ---
 

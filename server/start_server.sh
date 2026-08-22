@@ -133,6 +133,21 @@ if kill -0 "$PID" 2>/dev/null; then
             echo "GUI SERVER: echec (voir log/gui_server.log)"
         fi
     fi
+
+    if [ -f "$USB/server/control_server.sh" ]; then
+        if sh "$USB/server/control_server.sh" start > /dev/null 2>&1; then
+            echo "CONTROL SERVER: 8080"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
+        else
+            echo "CONTROL SERVER: echec (voir log/control_server.log)"
+        fi
+    fi
+
+    if [ -f "$USB/server/watch_usb.sh" ]; then
+        sh "$USB/server/watch_usb.sh" > /dev/null 2>&1 &
+        echo "USB WATCHER: actif (incoming/)"
+        echo "$(date '+%Y-%m-%d %H:%M:%S') USB WATCHER STARTED" >> "$LOG"
+    fi
 else
     echo "ERREUR: serveur non demarre"
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER FAILED (PORT $PORT)" >> "$LOG"

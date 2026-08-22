@@ -62,6 +62,11 @@ button.danger { background:#933; border-color:#c55; }
 <span class="dim"> profil CPU (24/7 : eco conseille)</span><br>
 <button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
 
+<h2>Recette</h2>
+<button class="warn" onclick="lanceRecette()">LANCER LA RECETTE</button>
+<span class="dim"> install + selftest + conf + mem_tune + analyses + expose + logs,
+     bilan "CLE PRETE POUR ANALYSE RETOUR" (quelques minutes)</span>
+
 <h2>Resultat</h2>
 <div id="result">Pret.</div>
 
@@ -113,6 +118,29 @@ function pollState(tries) {
             if (tries < 6) { setTimeout(function(){ pollState(tries + 1); }, 2000); }
             else { show("etat non disponible encore (relancer CHECK STATE)"); }
         });
+}
+
+function lanceRecette() {
+    if (!confirm("Lancer la recette complete ?\n(install, analyses, expose, logs - quelques minutes)")) return;
+    show("RECETTE lancee...\n(bilan affiche a la fin de l'execution)");
+    fetch(API + "RECETTE")
+        .catch(e => show("Erreur : " + e));
+    var tries = 0;
+    (function poll() {
+        fetch("/log/recette_last.txt", {cache:"no-store"})
+            .then(r => { if (!r.ok) throw 0; return r.text(); })
+            .then(t => {
+                var head = t.slice(0, 60);
+                if (lanceRecette.stamp && head === lanceRecette.stamp && tries < 90) {
+                    setTimeout(poll, 5000);
+                    show("RECETTE en cours... (" + tries + ")");
+                    return;
+                }
+                lanceRecette.stamp = head;
+                show("RECETTE - BILAN\n" + t);
+            })
+            .catch(() => { if (tries++ < 90) setTimeout(poll, 5000); else show("bilan indisponible"); });
+    })();
 }
 
 </script>
