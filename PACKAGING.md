@@ -1,6 +1,6 @@
 # Packaging
 
-> How to build and install the `.dpk` deliverable for `rk322x-device-tools` (version 2).
+> How to build and install the `.dpk` deliverable for `rk322x-device-tools` (version 3).
 
 A `.dpk` package is a single `tar.gz` archive containing the full toolkit. It is readable by both toybox and busybox on the device, so it can be installed without any external dependency.
 
@@ -15,7 +15,7 @@ dist/rk322x-tools_v<version>_<TS>.dpk          archive tar.gz du toolkit
 dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
 ```
 
-- `<version>` comes from `DEPLOY_VERSION` in `config/device.conf` (currently `2`).
+- `<version>` comes from `DEPLOY_VERSION` in `config/device.conf` (currently `3`).
 - `<TS>` is the build timestamp (`YYYYMMDD-HHMMSS`).
 - `.bak` files are excluded from the archive.
 - A failed build leaves nothing behind in `dist/` (no partial `.dpk`).
@@ -23,15 +23,17 @@ dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
 ### Archive contents
 
 ```text
-deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS
+AMORCE                 bootstrap quick-start (cat /mnt/media_rw/*/AMORCE)
+deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
 set_network.sh         static network setup
 set_time.sh            time helpers
 setHEURE_FILE.sh       date from SET_HEURE file
 setHEURE_INIT.sh       fixed date
 disable_wireless.sh    Wi-Fi / BT shutdown
-index.html             HTTP server index page
-scripts/               all tools + core modules
-server/                HTTP server + control API + watcher
+index.html             HTTP server index page (copied to key root on INSTALL)
+scripts/               all tools + core modules (incl. cut_services, system_rw,
+                       front_led, inspect_all, amorce)
+server/                HTTP server + control API + GUI remote + ssh_server (optional)
 bin/                   trigger helpers (HELP / MEDIA)
 config/device.conf     device profile
 BUILD-INFO.txt         build metadata (version, date, git commit + state)

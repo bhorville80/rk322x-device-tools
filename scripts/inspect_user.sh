@@ -126,6 +126,23 @@ fi
 SU_PATH="$(command -v su 2>/dev/null)"
 printf '      %-14s : %s\n' "su" "${SU_PATH:-absent}"
 
+SU_FLAVOR=""
+if [ -n "$SU_PATH" ]; then
+    case "$(ls -l "$SU_PATH" 2>/dev/null | tr -d '\r')" in
+        *daemonsu*|*supersu*|*SuperSU*)  SU_FLAVOR="SuperSU (daemonsu)" ;;
+        *magisk*)                        SU_FLAVOR="Magisk" ;;
+        *)                               SU_FLAVOR="su" ;;
+    esac
+    if ps 2>/dev/null | grep -q "daemonsu"; then
+        SU_FLAVOR="SuperSU (daemonsu actif)"
+    fi
+fi
+printf '      %-14s : %s\n' "Gestion su" "${SU_FLAVOR:-absent}"
+
+SELINUX="$(getprop ro.boot.selinux 2>/dev/null | tr -d '\r')"
+[ -z "$SELINUX" ] && SELINUX="$(getprop ro.build.selinux 2>/dev/null | tr -d '\r')"
+[ -n "$SELINUX" ] && printf '      %-14s : %s\n' "SELinux" "$SELINUX"
+
 if [ -f "/etc/passwd" ]; then
     printf '      %-14s : %s\n' "/etc/passwd" "present"
 else
@@ -150,10 +167,22 @@ if [ "$FOUND_SUDO" -eq 1 ]; then
     echo "      adduser $USER_NAME sudo"
     echo "      ou : echo \"$USER_NAME ALL=(ALL) NOPASSWD: ALL\" > /etc/sudoers.d/$USER_NAME"
 elif [ "$IS_ANDROID" -eq 1 ]; then
-    echo "    Systeme Android : pas de sudo, pas de /etc/sudoers."
-    echo "    Les droits admin passent par root (su)."
-    echo "    Un user Android (pm create-user) est gere par UserManager,"
-    echo "    il n'a pas besoin d'etre ajoute a un sudoers."
+    echo "    Systeme Android : pas de sudo, pas de /etc/passwd."
+    echo ""
+    echo "    VERDICT 'user avec role root pour l'execution' :"
+    if [ -n "$SU_PATH" ]; then
+        echo "      - l'execution root est DEJA disponible partout via su"
+        echo "        ($SU_FLAVOR) : adb shell -> uid shell, su -> uid 0."
+        echo "        Un compte dedie n'apporte rien de plus en local."
+    else
+        echo "      - aucun su detecte : pas de role root obtenuable ici"
+    fi
+    echo "      - pm create-user cree un profil Android ISOLE, SANS root"
+    echo "        (UID 10xxx propre, apps separees : ce n'est pas un role root)"
+    echo "      - utilisateur Linux impossible ici (pas de /etc/passwd)"
+    echo "      - bonne pratique : execution root conservee pour les outils,"
+    echo "        acces distant controle a la place (token API 8080, adb"
+    echo "        limite au LAN, cut_services pour reduire la surface)"
 else
     echo "    Ni sudo ni Android detecte : ajout sudoers manuel requis."
 fi

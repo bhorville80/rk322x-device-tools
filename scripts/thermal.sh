@@ -61,7 +61,7 @@ show_temp()
         C=$((T / 1000))
         FLAG=""
         [ "$C" -ge 75 ] && FLAG="  <-- ELEVEE"
-        printf '      %-22s %3d C%s\n' "${N:-zone}" "$C" "$FLAG"
+        printf '      %-22s %3s C%s\n' "${N:-zone}" "$C" "$FLAG"
     done
 }
 
@@ -97,7 +97,10 @@ do_status()
             printf '      %-12s %s - %s MHz\n' "plage" "$((MIN / 1000))" "$((MAX / 1000))"
         FREQS="$(read_avail_freqs "$D")"
         [ -n "$FREQS" ] && printf '      %-12s %s MHz\n' "paliers" \
-            "$(printf '%s' "$FREQS" | awk '{printf "%s ", int($1/1000)}')"
+            "$(printf '%s\n' "$FREQS" | while read -r F; do
+                case "$F" in ''|*[!0-9]*) continue ;; esac
+                printf '%s ' "$((F / 1000))"
+              done)"
     done
     [ "$SHOWN" -eq 0 ] && echo "      cpufreq non expose par ce noyau"
     echo ""

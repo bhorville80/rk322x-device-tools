@@ -1,0 +1,16 @@
+=== RK322X DEVICE TOOLS - AMORCE ==============================
+
+Cle montee noexec : toujours "sh <chemin>", jamais ./ .
+
+[1] PREMIERE FOIS (depuis le PC)
+
+  adb shell
+  su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
+  exit
+
+[2] ENSUITE (sur la box)
+
+  amorce
+
+Aide : help        Rapport global : inspect_all
+===============================================================

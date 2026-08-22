@@ -39,7 +39,12 @@ config_get()
 require_root()
 {
     if [ "$(id -u 2>/dev/null)" != "0" ]; then
-        echo "[ERREUR] privileges root requis : lancer depuis un shell su"
+        echo "[ERREUR] privileges root requis"
+        if [ -n "$*" ]; then
+            echo "         relancer par exemple : su -c \"sh $0 $*\""
+        else
+            echo "         relancer par exemple : su -c \"sh $0\""
+        fi
         return 1
     fi
     return 0

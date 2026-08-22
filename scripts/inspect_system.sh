@@ -22,6 +22,13 @@ echo "[1] Memoire"
 sed -n '1p;2p;3p' /proc/meminfo | sed 's/^/      /'
 SWAP="$(grep SwapTotal /proc/meminfo 2>/dev/null | sed 's/^/      /')"
 [ -n "$SWAP" ] && echo "$SWAP"
+ZRAM="$(ls -1d /sys/block/zram* 2>/dev/null | head -n 1)"
+if [ -n "$ZRAM" ]; then
+    ZS="$(cat "$ZRAM/disksize" 2>/dev/null | tr -dc '0-9')"
+    printf '      %-14s : %s%s\n' "zRAM" "$(basename "$ZRAM")" "${ZS:+ (disksize $((ZS / 1048576)) Mo)}"
+else
+    echo "      zRAM          : absent"
+fi
 
 echo ""
 echo "[2] CPU"
@@ -64,6 +71,12 @@ done
 echo ""
 echo "[5] Stockage"
 df -h 2>/dev/null | sed -n '1p;/^\/dev/p;/ \/data\b/p;/ \/storage\b/p;/ \/system\b/p' | sed 's/^/      /'
+for LT in /sys/class/mmc_host/mmc*/mmc*:0001/device/life_time /sys/class/mmc_host/mmc*/mmc*:0001/life_time; do
+    [ -f "$LT" ] || continue
+    V="$(tr '\n' ' ' < "$LT" 2>/dev/null | tr -s ' ')"
+    [ -n "$V" ] && printf '      %-14s : %s (usure eMMC type A/B)\n' "eMMC life_time" "$V"
+    break
+done
 
 echo ""
 echo "[6] Affichage / HDMI"
@@ -85,8 +98,11 @@ UP_S="$(cut -d. -f1 /proc/uptime 2>/dev/null)"
 if [ -n "$UP_S" ]; then
     UP_H=$((UP_S / 3600))
     UP_M=$(((UP_S % 3600) / 60))
-    printf '      %-14s : %sh%02dm\n' "Uptime" "$UP_H" "$UP_M"
+    case "$UP_M" in ?) UP_M="0$UP_M" ;; esac
+    printf '      %-14s : %sh%sm\n' "Uptime" "$UP_H" "$UP_M"
 fi
+ENT="$(cat /proc/sys/kernel/random/entropy_avail 2>/dev/null | tr -dc '0-9')"
+[ -n "$ENT" ] && printf '      %-14s : %s\n' "Entropie" "$ENT"
 
 echo ""
 echo "[8] Top RAM (applications)"

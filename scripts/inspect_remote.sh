@@ -66,13 +66,11 @@ done
 echo ""
 echo "[5] Correspondance device -> layout attendu"
 echo "      Vendor_XXXX_Product_XXXX.kl construit depuis les IDs [1] :"
-echo "$IN_OUT" | awk '/^I:/ {
-    for (i = 1; i <= NF; i++) {
-        if ($i ~ /^Vendor=/) v = substr($i, 8)
-        if ($i ~ /^Product=/) p = substr($i, 9)
-    }
-    if (v != "") printf "      Vendor_%s_Product_%s.kl\n", toupper(v), toupper(p)
-}' 
+echo "$IN_OUT" | grep '^I:' | while IFS=' ' read -r _F _BUS VEND PROD _REST; do
+    V="$(printf '%s' "$VEND" | cut -d= -f2 | tr '[:lower:]' '[:upper:]')"
+    P="$(printf '%s' "$PROD" | cut -d= -f2 | tr '[:lower:]' '[:upper:]')"
+    [ -n "$V" ] && [ -n "$P" ] && printf '      Vendor_%s_Product_%s.kl\n' "$V" "$P"
+done
 
 echo ""
 echo "[6] Droits de modification"

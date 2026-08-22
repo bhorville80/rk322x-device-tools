@@ -10,6 +10,7 @@
 #   [5] wireless : Wi-Fi et Bluetooth coupes
 #   [6] horloge  : derive < 5 min (sinon remise a l'heure UTC du PC)
 #   [7] hdmi     : etat framebuffer (informatif)
+#   [8] outils v3: cut_services/system_rw/front_led/inspect_all/amorce
 #
 # Usage:
 #   admin/linux/provision.sh [-t CIBLE] [check]      lecture seule : rapport OK/KO
@@ -354,6 +355,34 @@ check_hdmi()
     esac
 }
 
+# === [8] OUTILS V3 ===========================================================
+V3_TOOLS="amorce cut_services system_rw front_led inspect_all"
+
+check_v3_tools()
+{
+    echo ""
+    echo "--- [8] Outils V3 ---"
+
+    MISSING=""
+    for T in $V3_TOOLS; do
+        if [ "$(trim "$(rget "test -f /data/scripts/$T.sh && echo ok")")" = "ok" ]; then
+            ok "$T"
+        else
+            MISSING="$MISSING $T"
+        fi
+    done
+    case "$MISSING" in
+        "") ;;
+        *)  ko "absents sur la box" "$MISSING (maj : tools/dpk.sh install)" ;;
+    esac
+
+    if [ "$(trim "$(rget 'test -f /data/bin/amorce && echo ok')")" = "ok" ]; then
+        ok "commande amorce (/data/bin)"
+    else
+        info "pas de lien /data/bin/amorce (deploy INSTALL le creera)"
+    fi
+}
+
 summary()
 {
     echo ""
@@ -376,4 +405,5 @@ check_network_cfg
 check_wireless
 check_clock
 check_hdmi
+check_v3_tools
 summary

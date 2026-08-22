@@ -73,7 +73,7 @@ main()
             warn "Ping passerelle" "pas de reponse de $GW"
         fi
     else
-        warn "Passerelle" "absente"
+        warn "Passerelle" "absente (remede : set_network)"
     fi
 
     DNS1="$(getprop net.dns1 2>/dev/null)"
@@ -163,9 +163,9 @@ main()
     MEM_TOTAL="$(sed -n 's/MemTotal: *\([0-9]*\) kB/\1/p' /proc/meminfo 2>/dev/null)"
     if [ -n "$MEM_TOTAL" ]; then
         if [ -n "$MEM_AVAIL" ]; then
-            info "RAM" "${MEM_AVAIL} Mo dispo / ${MEM_TOTAL} Mo"
+            info "RAM" "$((MEM_AVAIL / 1024)) Mo dispo / $((MEM_TOTAL / 1024)) Mo"
         else
-            info "RAM" "total ${MEM_TOTAL} Mo"
+            info "RAM" "total $((MEM_TOTAL / 1024)) Mo"
         fi
     fi
 
@@ -196,7 +196,7 @@ main()
 
     echo ""
     echo "=== RESUME ==="
-    printf '  OK : %-4d KO : %-4d WARN : %d\n' "$PASS" "$FAIL" "$WARN"
+    printf '  OK : %-4s KO : %-4s WARN : %s\n' "$PASS" "$FAIL" "$WARN"
     echo ""
 
     if [ "$FAIL" -eq 0 ]; then

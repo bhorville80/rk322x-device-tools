@@ -78,6 +78,12 @@ main()
     check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS
     check_rc "thermal STATUS"      "0" sh "$BASE/thermal.sh" STATUS
+    check_rc "cut_services STATUS" "0" sh "$BASE/cut_services.sh" STATUS
+    check_rc "system_rw STATUS"    "0" sh "$BASE/system_rw.sh" STATUS
+    check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS
+    check_rc "front_led STATUS"    "0" sh "$BASE/front_led.sh" STATUS
+    check_rc "ssh_server STATUS"   "0 1" sh "$BASE/../server/ssh_server.sh" STATUS
+    check_rc "amorce"              "0" sh "$BASE/amorce.sh"
     check_rc "rotate_logs"         "0 1" sh "$BASE/rotate_logs.sh"
     check_rc "media"               "0" sh "$BASE/core/media.sh"
     check_rc "hdmi STATUS"         "0" sh "$BASE/hdmi.sh" STATUS
@@ -95,7 +101,7 @@ main()
 
     echo ""
     echo "=== RESUME ==="
-    printf '  PASS : %-4d FAIL : %d\n' "$PASS" "$FAIL"
+    printf '  PASS : %-4s FAIL : %s\n' "$PASS" "$FAIL"
     echo ""
 
     if [ "$FAIL" -eq 0 ]; then

@@ -27,7 +27,7 @@ adb shell
 su
 ```
 
-> **Note:** All commands are expected to run from a root shell. The scripts do not elevate privileges internally.
+> **Note:** Since v3, `deploy` elevates itself automatically via `su` for privileged actions (adb shell arrives as uid 2000). The `amorce` command does the same.
 
 ### Check the Ethernet interface
 
@@ -39,6 +39,53 @@ Expected IP address:
 
 ```text
 192.168.50.20
+```
+
+---
+
+## V3 QUICK START (bootstrap)
+
+The USB key is mounted **noexec**: always run scripts with `sh <path>`, never `./script`.
+
+First time, from the PC:
+
+```bash
+adb shell
+su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
+exit
+```
+
+The glob `*` auto-detects the key ID. After that first INSTALL, the box has a permanent entry point:
+
+```bash
+amorce                # state: key/versions + command reminder
+amorce INSTALL        # update from the key
+amorce EXPOSE         # HTTP 8000 (+ GUI 8081)
+amorce SELFTEST       # all tools respond?
+```
+
+`cat /mnt/media_rw/*/AMORCE` prints the same cheat sheet from the key root.
+
+### V3 tools overview
+
+| Tool | Purpose |
+|---|---|
+| `cut_services STATUS/CUT [SAFE\|FULL]/APPS [MAX]/RESTORE` | stop useless init services + disable factory packages, measured RAM gain |
+| `system_rw RW/RO/STATUS` | toggle /system read-write (keylayout/bootanimation edits) |
+| `front_led STATUS/LED/TRIGGER/BLINK/OFF/DEMO STOP` | front display customization (sysfs LEDs, FD655 clock daemon) |
+| `inspect_all` | runs every inspect/check tool, per-tool rc summary |
+| `ssh_server START/STOP/STATUS` | optional dropbear SSH (binary not shipped, never auto-started; adb stays the primary access) |
+| `deploy VERSION` | installed version vs key version diagnostic |
+
+Recommended 24/7 slimming sequence:
+
+```bash
+selftest            # everything responds
+cut_services CUT    # SAFE services + factory packages
+cut_services APPS   # GMS/Play/katniss/DLNA/factory apps (UI kept)
+check_state         # global view
+# optional phase 2 (fully headless):
+cut_services CUT FULL && cut_services APPS MAX
 ```
 
 ---

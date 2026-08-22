@@ -12,7 +12,20 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote hdmi check_state help selftest show_key field_mode rotate_logs thermal"
+INSTALL_LIST="amorce sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all hdmi check_state help selftest show_key field_mode rotate_logs thermal cut_services system_rw front_led motd"
+
+# adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
+# actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
+case "$1" in
+    ""|HELP|help|-h|--help|VERSION|version)
+        ;;
+    *)
+        if [ "$(id -u 2>/dev/null)" != "0" ] && command -v su > /dev/null 2>&1; then
+            echo "[*] uid non root : relance automatique via su..."
+            exec su -c "sh $0 $*"
+        fi
+        ;;
+esac
 
 find_usb()
 {
@@ -157,6 +170,19 @@ install_from()
     else
         echo "    [ ERREUR ] $SCRIPTS_DIR/deploy.sh"
     fi
+
+    echo "[3b] Panneau web + AMORCE -> racine de la cle..."
+    COPIED=0
+    for F in index.html AMORCE; do
+        [ -f "$SRC/$F" ] || continue
+        if find_usb && cp -f "$SRC/$F" "$USB_DIR/$F" 2>/dev/null; then
+            echo "    [ OK ] $USB_DIR/$F"
+            COPIED=1
+        else
+            echo "    [ WARN ] cle inaccessible, $F non copie"
+        fi
+    done
+    [ "$COPIED" -eq 0 ] && echo "    [ -- ] rien a copier (source sans index.html/AMORCE)"
 
     link_bin
 
@@ -320,6 +346,73 @@ do_stop()
     fi
 }
 
+conf_version()
+{
+    sed -n 's/^DEPLOY_VERSION=//p' "$1" 2>/dev/null | head -n 1 | tr -d '\r'
+}
+
+do_version()
+{
+    echo ""
+    echo "=== RK322X VERSIONS ==="
+
+    echo ""
+    echo "Script en cours : $0"
+
+    INSTALLED=""
+    [ -f "$SCRIPTS_DIR/config/device.conf" ] && INSTALLED="$(conf_version "$SCRIPTS_DIR/config/device.conf")"
+    printf '  %-18s : %s\n' "Installee (/data)" "${INSTALLED:-absente}"
+
+    if [ -f "$SCRIPTS_DIR/VERSION" ]; then
+        sed 's/^/      /' "$SCRIPTS_DIR/VERSION"
+    fi
+
+    KEY_VER=""
+    if find_usb && [ -f "$USB_DIR/config/device.conf" ]; then
+        KEY_VER="$(conf_version "$USB_DIR/config/device.conf")"
+        printf '  %-18s : %s (%s)\n' "Sur la cle" "${KEY_VER:-absente}" "$USB_DIR"
+    else
+        printf '  %-18s : %s\n' "Sur la cle" "aucune cle detectee"
+    fi
+
+    echo ""
+    case "$INSTALLED" in
+        "")
+            echo "[ -- ] rien d'installe : lancer depuis la cle :"
+            echo "       su -c \"sh /mnt/media_rw/<ID>/deploy.sh INSTALL\""
+            ;;
+        *)
+            case "$KEY_VER" in
+                "") echo "[ -- ] pas de cle : impossible de comparer" ;;
+                "$INSTALLED")
+                    echo "[ OK ] a jour (v$INSTALLED)"
+                    ;;
+                *)
+                    case "$KEY_VER" in
+                        ''|*[!0-9]*) CMP="" ;;
+                        *) case "$INSTALLED" in
+                               ''|*[!0-9]*) CMP="" ;;
+                               *) if [ "$KEY_VER" -gt "$INSTALLED" ]; then CMP=">"; else CMP="<>"; fi ;;
+                           esac ;;
+                    esac
+                    case "$CMP" in
+                        ">")
+                            echo "[WARN] cle v$KEY_VER plus recente que l'installee v$INSTALLED"
+                            echo "       -> deploy INSTALL"
+                            ;;
+                        *)
+                            echo "[WARN] installee v$INSTALLED != cle v$KEY_VER"
+                            echo "       -> deploy INSTALL pour aligner (ou sync_usb depuis la box)"
+                            ;;
+                    esac
+                    ;;
+            esac
+            ;;
+    esac
+    echo ""
+    return 0
+}
+
 case "$1" in
 
     INSTALL)
@@ -340,6 +433,10 @@ case "$1" in
 
     STOP)
         do_stop
+        ;;
+
+    VERSION|version)
+        do_version
         ;;
 
     SEND_LOGS)
@@ -397,6 +494,7 @@ case "$1" in
         echo "  EXPOSE       Exposer la cle (HTTP port 8000)"
         echo "  STOP         Arreter les serveurs"
         echo "  SEND_LOGS    Collecter les logs sur la cle"
+        echo "  VERSION      Versions installee / cle (diagnostic mise a jour)"
         echo ""
         if [ -f "/data/scripts/help.sh" ]; then
             echo "Aide complete des outils : help"

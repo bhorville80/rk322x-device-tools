@@ -30,7 +30,16 @@ DEPLOIEMENT   (depuis la cle : sh /mnt/media_rw/<ID>/deploy.sh <cmd>)
   STOP         Arrete les serveurs HTTP actifs
   SEND_LOGS    Collecte logcat/dmesg/getprop/ip/mount/ps
                dans log/log_<TS>/ sur la cle
+  VERSION      Version installee vs cle (diagnostic mise a jour)
   HELP         Aide rapide deploy
+
+AMORCE (demarrage rapide, apres le premier INSTALL)
+  amorce             Etat cle/versions + rappel des commandes
+  amorce INSTALL     Met a jour depuis la cle
+  amorce EXPOSE      Serveurs HTTP/GUI sur la cle
+  amorce SELFTEST    Verifie tous les outils
+  1ere fois          voir le fichier AMORCE a la racine de la cle
+                     (su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL')
 
 VERIFICATION
   check_state        Etat IP / wireless / bluetooth / HDMI
@@ -39,9 +48,12 @@ VERIFICATION
   selftest           Verifie que tous les outils repondent
 
 INSPECTION
+  inspect_all        Rapport global : lance TOUS les inspect_* +
+                     check_state + thermal + cut_services/front_led
+                     STATUS, synthese rc par outil en fin de rapport
   inspect_user       Methodes de creation utilisateur dispo
-                     (pm create-user, cmd user, busybox...)
-                     option : nom d'utilisateur exemple
+                      (pm create-user, cmd user, busybox...)
+                      option : nom d'utilisateur exemple
   inspect_system     Rapport materiel : RAM, CPU freq/governor,
                      GPU Mali, temperatures, stockage,
                      affichage/HDMI, charge, top RAM
@@ -61,11 +73,52 @@ ACTIONS
   hdmi STATUS        Etat noeuds sysfs display
   disable_wireless   Coupe Wi-Fi, Bluetooth, wlan0/p2p0/hci0
   media              Liste medias montes (USB/SD) et types
-  field_mode OFF     Mode exploitation sans ecran : wireless + HDMI
-                     + serveurs + services de SERVICES_STOP
-                     (config/device.conf)
-  field_mode ON      Retour ecran + redemarre les services surveilles
-  field_mode STATUS  Etat HDMI / wireless / services
+   field_mode OFF     Mode exploitation sans ecran : wireless + HDMI
+                      + serveurs + services de SERVICES_STOP
+                      (config/device.conf)
+   field_mode ON      Retour ecran + redemarre les services surveilles
+   field_mode STATUS  Etat HDMI / wireless / services
+
+ALLEGEMENT (24/7)
+  cut_services STATUS Inventaire services init + paquets usine,
+                      candidats [CUT]/[safe]/[opt], RAM dispo
+  cut_services CUT    Coupe la liste SAFE : services (perfprofd,
+                      bootanim, cameraserver, debuggerd, console)
+                      + paquets usine (stresstest, devicetest, OTA,
+                      katniss), mesure le gain RAM
+  cut_services CUT FULL   Phase 2 : ajoute les services media/audio
+                      (serveur de fichiers pur, aucune lecture locale)
+  cut_services APPS   Preset finalite serveur : GMS/Play/katniss/
+                      DLNA/mediacenter/changeled/tests/OTA desactives
+                      (launcher/UI/clavier/apps perso conserves)
+  cut_services APPS MAX   Phase 2 extreme : coupe aussi l'interface TV
+                      (headless total jusqu'a RESTORE/reboot)
+  cut_services RESTORE  Remet l'etat d'origine
+                      Personnalisation : SERVICES_CUT / PACKAGES_DISABLE
+                      dans config/device.conf
+
+SYSTEME
+  system_rw STATUS   Etat du montage /system (device/type/options)
+  system_rw RW       Passe /system en lecture-ecriture (probe incluse)
+                     requis avant : edition .kl (inspect_remote),
+                     bootanimation, fichiers systeme
+  system_rw RO       Retour lecture-seule (defaut au reboot)
+
+AFFICHEUR FRONTAL
+  front_led STATUS   Leds sysfs + noeud fd655 + daemon FD655_Demo
+  front_led LED <n> <v>     luminosite (ex : front_led LED green 255)
+  front_led TRIGGER <n> <t> heartbeat / timer / none...
+  front_led BLINK <n> <on> <off>  clignotement ms (trigger timer)
+  front_led ON|OFF   toutes les leds au max / a zero
+  front_led DEMO STOP  arrete l'horloge FD655_Demo (reboot la relance)
+
+ACCES / ACCUEIL
+  motd STATUS        Message affiche a l'ouverture d'un adb shell
+                     (equivalent MOTD ssh)
+  motd DEFAULT       Genere la banniere (device/ip/outils)
+  motd SET <texte>   Definit le message (ou : motd FILE <fichier>)
+  motd ON|OFF        Pose/retire le crochet dans /system/etc/mkshrc
+                     (remount rw/ro automatique via system_rw)
 
 MAINTENANCE
   sync_usb           Synchronise /data/scripts -> cle USB
@@ -80,8 +133,12 @@ RESEAU / HEURE   (racine de la cle)
 SERVEURS   (dossier server/ de la cle)
   start_server.sh    HTTP port 8000 servant la cle
   control_server.sh  API port 8080 (HELP/SEND_LOGS/PURGE_LOG/SYNC)
-                     + watch_usb.sh execute les fichiers temoins
-                     poses dans incoming/
+                      + watch_usb.sh execute les fichiers temoins
+                      poses dans incoming/
+  ssh_server.sh      SSH via dropbear port 2222 (binaire a deposer,
+                      cf. ssh_server STATUS) ; OPTIONNEL, jamais lance
+                      automatiquement : l'acces de reference reste adb
+                      arret inclus dans deploy STOP (server/ssh.pid)
   Securite : si server/token existe, l'API exige ?token=<valeur>
 
 LOGS

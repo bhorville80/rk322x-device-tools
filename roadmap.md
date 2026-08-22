@@ -154,9 +154,23 @@ Investigation leads for the headless Leelbox MXQ (24/7 operation):
 * [x] Time sync: `/api/TIME_SYNC?t=` pushes PC UTC time to the box (web panel button); `provision.sh --fix` resyncs via ADB
 * [ ] CPU / thermal profile: read governors + thermal zones, define eco (frequency cap) vs perf profiles for 24/7 use
 * [x] Thermal: `thermal` tool (STATUS/ECO/PERF), temperature + governor reported in `check_state`, ECO/PERF buttons on the web panel
-* [ ] Service slimming: identify stoppable init services (bootanim, media scanner, OTA...) and fill `SERVICES_STOP`, measure RAM/CPU gains
+* [x] Service slimming: `cut_services` tool (STATUS/CUT/RESTORE) - stops useless init services (perfprofd, bootanim, cameraserver, debuggerd, console), disables factory packages (stresstest, devicetest, OTA, katniss) with RAM gain measurement; customization via `SERVICES_CUT` / `PACKAGES_DISABLE` in device.conf
+* [x] Server preset: `cut_services APPS` disables GMS/Play/katniss/DLNA/mediacenter/changeled/factory tests per headless purpose (launcher, UI, keyboard and user apps kept)
+* [x] Front display control: `front_led` tool (STATUS/LED/TRIGGER/BLINK/ON/OFF, FD655_Demo clock daemon stop + init service detection for persistent stop)
+* [x] Root execution verdict: `inspect_user` detects su manager flavor + SELinux mode; on rooted boxes the uid-0 role is already global - dedicated "root user" is not needed, remote access control is the real lever
+* [x] Global inspection: `inspect_all` runs every check/inspect tool with per-tool rc summary
+* [x] /system read-write toggle: `system_rw RW|RO|STATUS` (probe included, auto-ro on reboot)
+* [x] ADB welcome banner: `motd` tool - MOTD-like message for interactive adb shells via /system/etc/mkshrc hook, text kept in /data/etc/motd
+* [x] Bootstrap: `AMORCE` file at key root (2-step quick start) + permanent `amorce` command on box (key detection, version compare, auto-su passthrough)
+* [x] deploy hardening: automatic su elevation, `deploy VERSION` diagnostic, web panel + AMORCE copied to key root on INSTALL/PKG
+* [x] EXPOSE 404 fix: fallback index generated at key root when panel missing; URL printed at start
+* [x] Box compatibility fixes: printf integer conversions broken on this firmware (%d -> %s), awk absent (POSIX sed/cut/tr rewrites), RAM kB shown as Mo
+* [x] PC provisioning stage 8 (linux/windows): V3 tools presence + amorce link; dpk install prints installed version
+* [ ] zRAM substitute: kernel exposes no zram block device yet - probe `modprobe zram`, then `zram_setup STATUS|ON|OFF` tool (~512-768 Mo compressed); swap on eMMC/USB rejected for a 24/7 box (wear/reliability)
+* [ ] logd buffers: `logcat -G 256K` to trim ring buffers after cut_services validation
+* [ ] lmkd thresholds: earlier kills once APPS/MAX baseline measured
 * [ ] Memory pressure: zRAM presence/size, lowmemorykiller thresholds, top consumers report
-* [ ] eMMC wear: read `life_time` estimates, reduce flash writes (log rotation, fewer manifest writes)
+* [x] eMMC wear: `life_time` estimates reported in `inspect_system` [5]; flash-write reduction still open (log rotation and manifest caps already in place)
 * [ ] Supervision: auto-restart of httpd + USB watcher after crash/reboot (watchdog loop)
 * [x] Web panel: active config exposure (`/api/CONFIG`) + full action set from the index (state, sync, logs, HDMI, field mode, TV display, reboot)
 * [x] Dedicated GUI remote port 8081 (`server/gui_server.sh`): fullscreen URL/text display, key/tap injection, live TV screenshot

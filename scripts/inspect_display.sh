@@ -44,7 +44,14 @@ echo "[2] Noeuds /dev candidats afficheur"
 FOUND=0
 for P in /dev/vfd* /dev/led* /dev/seg* /dev/fd6* /dev/tm1* /dev/display* /dev/rtc*; do
     [ -e "$P" ] || continue
-    printf '      %-16s %s\n' "$(basename "$P")" "$(ls -l "$P" 2>/dev/null | awk '{print $1, $5}')"
+    L="$(ls -l "$P" 2>/dev/null | sed 's/  */ /g')"
+    INFO="$(printf '%s' "$L" | cut -d' ' -f1)"
+    F2="$(printf '%s' "$L" | cut -d' ' -f2)"
+    case "$F2" in
+        ''|*[!0-9]*) SZ="$(printf '%s' "$L" | cut -d' ' -f4)" ;;
+        *)           SZ="$(printf '%s' "$L" | cut -d' ' -f5)" ;;
+    esac
+    printf '      %-16s %s\n' "$(basename "$P")" "$INFO${SZ:+ $SZ}"
     FOUND=1
 done
 [ "$FOUND" -eq 0 ] && echo "      [ -- ] aucun noeud vfd/led/seg detecte"
@@ -53,7 +60,9 @@ echo ""
 echo "[3] Drivers noyau (/proc/modules + dmesg)"
 MOD_OUT="$(grep -iE 'fd6|tm16|vfd|seg|gpio.*led|leds' /proc/modules 2>/dev/null)"
 if [ -n "$MOD_OUT" ]; then
-    echo "$MOD_OUT" | awk '{printf "      %-20s %s\n", $1, $3}' 
+    echo "$MOD_OUT" | while read -r M SZ C _REST; do
+        printf '      %-20s %s\n' "$M" "$C"
+    done
 else
     echo "      [ -- ] aucun module led charge (peut-etre built-in)"
 fi

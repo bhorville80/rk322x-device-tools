@@ -55,7 +55,7 @@ do_shot()
 
     echo "[*] capture -> $OUT ..."
     screencap -p "$OUT" 2>/dev/null || { echo "[ERREUR] capture echouee"; return 1; }
-    SIZE="$(ls -l "$OUT" 2>/dev/null | awk '{print $5}')"
+    SIZE="$(wc -c < "$OUT" 2>/dev/null | tr -dc '0-9')"
     echo "[ OK ] $OUT ($SIZE octets)"
     case "$OUT" in
         /data/local/tmp/*) echo "[ -- ] recuperation : adb pull $OUT" ;;
@@ -116,7 +116,7 @@ echo "[3] Rendu sans ecran (screencap)"
 if command -v screencap >/dev/null 2>&1; then
     T="/data/local/tmp/.probe_gui_$$.png"
     if screencap -p "$T" 2>/dev/null && [ -s "$T" ]; then
-        S="$(ls -l "$T" | awk '{print $5}')"
+        S="$(wc -c < "$T" 2>/dev/null | tr -dc '0-9')"
         echo "      [ OK ] screencap fonctionne meme ecran coupe (${S:-?} octets)"
         echo "             -> boucle de controle visuel a distance possible (inspect_gui.sh SHOT)"
         rm -f "$T"
@@ -154,7 +154,8 @@ echo "      peripheriques /dev/input : ${NBIN:-0}"
 echo ""
 echo "[6] Visuels de demarrage (personnalisation possible ?)"
 if [ -f /system/media/bootanimation.zip ]; then
-    echo "      bootanimation.zip : present $(ls -l /system/media/bootanimation.zip | awk '{print $1, $5}')"
+    BA_PERM="$(ls -l /system/media/bootanimation.zip 2>/dev/null | sed 's/ .*//')"
+    echo "      bootanimation.zip : present $BA_PERM ($(wc -c < /system/media/bootanimation.zip 2>/dev/null | tr -dc '0-9') octets)"
 else
     echo "      bootanimation.zip : absent"
 fi

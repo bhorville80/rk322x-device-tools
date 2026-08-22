@@ -191,7 +191,7 @@ get_ip()
                 if command -v screencap > /dev/null 2>&1; then
                     OUT="$SHOTS_DIR/latest.png"
                     if screencap -p "$OUT" 2>/dev/null && [ -s "$OUT" ]; then
-                        SIZE="$(ls -l "$OUT" 2>/dev/null | awk '{print $5}')"
+                        SIZE="$(wc -c < "$OUT" 2>/dev/null | tr -dc '0-9')"
                         log "SHOT -> $OUT ($SIZE octets)"
                         reply 200 OK "{\"status\":\"ok\",\"action\":\"SHOT\",\"file\":\"/log/gui_shots/latest.png\",\"size\":${SIZE:-0}}"
                     else

@@ -193,7 +193,9 @@ do_install()
         say "nettoyage..."
         adb_run shell rm -f "$DEPLOY_REMOTE" "$REMOTE_PKG" > /dev/null 2>&1 || true
         say "TERMINE : $NAME installe"
-        say "controle box : show_key | selftest | cat /data/scripts/VERSION"
+        V_BOX="$(adb_run shell 'su -c grep -h ^DEPLOY_VERSION /data/scripts/config/device.conf' 2>/dev/null | tr -d '\r' | tr -d ' ')"
+        [ -n "$V_BOX" ] && say "version sur la box : ${V_BOX}"
+        say "controle box : amorce | selftest | show_key | deploy VERSION"
     else
         say "nettoyage..."
         adb_run shell rm -f "$DEPLOY_REMOTE" > /dev/null 2>&1 || true

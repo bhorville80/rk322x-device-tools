@@ -12,6 +12,7 @@ Miroir de admin/linux/provision.sh. Chaque etape est verifiee puis validee
   [5] wireless : Wi-Fi et Bluetooth coupes
   [6] horloge  : derive < 5 min (sinon remise a l'heure UTC du PC)
   [7] hdmi     : etat framebuffer (informatif)
+  [8] outils v3: cut_services/system_rw/front_led/inspect_all/amorce
 
 Usage:
   powershell -ExecutionPolicy Bypass -File admin\windows\provision.ps1 [-Target cible]
@@ -336,6 +337,29 @@ switch ($blank) {
     "0"  { InfoMsg "framebuffer actif" }
     ""   { InfoMsg "fb0/blank illisible" }
     default { InfoMsg "framebuffer : $blank" }
+}
+
+# === [8] OUTILS V3 ===========================================================
+Write-Host ""
+Write-Host "--- [8] Outils V3 ---"
+
+$V3Tools = @("amorce", "cut_services", "system_rw", "front_led", "inspect_all")
+$missing = @()
+foreach ($t in $V3Tools) {
+    if ((Rget "test -f /data/scripts/$t.sh && echo ok") -eq "ok") {
+        Ok $t
+    } else {
+        $missing += $t
+    }
+}
+if ($missing.Count -gt 0) {
+    Ko "absents sur la box" (($missing -join " ") + " (maj : tools/dpk.sh install)")
+}
+
+if ((Rget "test -f /data/bin/amorce && echo ok") -eq "ok") {
+    Ok "commande amorce (/data/bin)"
+} else {
+    InfoMsg "pas de lien /data/bin/amorce (deploy INSTALL le creera)"
 }
 
 # === RESUME ==================================================================
