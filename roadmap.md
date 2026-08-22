@@ -99,7 +99,8 @@ This document tracks planned features, improvements and technical work for the p
 
 ## Diagnostics
 
-* [x] Add automated device diagnostics
+* [x] Automated device diagnostics suite: `inspect_all` (global) + `net_diag` (network) + `sys_diag` (clock-loss detection, memory/lmkd pressure, entropy, eMMC write speed, security posture: adb/token/ssh/wireless)
+* [ ] Add network-specific deep diagnostics (packet capture, route tracking) if field issues appear
 * [x] Add hardware information collection
 * [x] Add Android system information
 * [x] Add storage diagnostics
@@ -108,7 +109,8 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Digital display (front LED/VFD) inspection + modification paths
 * [x] Graphical interface inspection (HDMI/fb stack, headless screencap, display-capable apps, input injection, boot visual paths, fullscreen URL action)
 * [x] IR remote inspection + key remap procedure
-* [ ] Add network diagnostics
+* [x] Network diagnostics (`net_diag`: link speed/duplex, addresses auto-detect, routes, DNS, connectivity, ports, throughput; deep packet capture if field issues appear)
+* [x] System health diagnostics (`sys_diag`: clock-loss 1970 detection, memory pressure + lmkd, entropy, eMMC write speed, security posture)
 
 ---
 
@@ -153,9 +155,9 @@ Potential future features:
 
 Investigation leads for the headless Leelbox MXQ (24/7 operation):
 
-* [ ] Time reliability: box clock resets on power loss (1970 timestamps in `history/`) - evaluate busybox ntpd against a LAN server, or push the PC date during install
+* [x] Time reliability: `sys_diag` detects the 1970 clock-reset condition; sync paths exist (`/api/TIME_SYNC`, `provision --fix`, `setHEURE`) - busybox ntpd against a LAN server stays open for unattended sites
 * [x] Time sync: `/api/TIME_SYNC?t=` pushes PC UTC time to the box (web panel button); `provision.sh --fix` resyncs via ADB
-* [ ] CPU / thermal profile: read governors + thermal zones, define eco (frequency cap) vs perf profiles for 24/7 use
+* [x] CPU / thermal profile: `thermal` tool (STATUS/ECO/PERF) + governors reported in `check_state` and `inspect_all`
 * [x] Thermal: `thermal` tool (STATUS/ECO/PERF), temperature + governor reported in `check_state`, ECO/PERF buttons on the web panel
 * [x] Service slimming: `cut_services` tool (STATUS/CUT/RESTORE) - stops useless init services (perfprofd, bootanim, cameraserver, debuggerd, console), disables factory packages (stresstest, devicetest, OTA, katniss) with RAM gain measurement; customization via `SERVICES_CUT` / `PACKAGES_DISABLE` in device.conf
 * [x] Server preset: `cut_services APPS` disables GMS/Play/katniss/DLNA/mediacenter/changeled/factory tests per headless purpose (launcher, UI, keyboard and user apps kept)
@@ -172,14 +174,14 @@ Investigation leads for the headless Leelbox MXQ (24/7 operation):
 * [ ] zRAM substitute: kernel exposes no zram block device yet - probe `modprobe zram`, then `zram_setup STATUS|ON|OFF` tool (~512-768 Mo compressed); swap on eMMC/USB rejected for a 24/7 box (wear/reliability)
 * [ ] logd buffers: `logcat -G 256K` to trim ring buffers after cut_services validation
 * [ ] lmkd thresholds: earlier kills once APPS/MAX baseline measured
-* [ ] Memory pressure: zRAM presence/size, lowmemorykiller thresholds, top consumers report
+* [x] Memory pressure report: `sys_diag` (MemAvailable %, zRAM presence, lmkd minfree/props) + top consumers in `inspect_system` / `inspect_services`
 * [x] eMMC wear: `life_time` estimates reported in `inspect_system` [5]; flash-write reduction still open (log rotation and manifest caps already in place)
 * [ ] Supervision: auto-restart of httpd + USB watcher after crash/reboot (watchdog loop)
 * [x] Web panel: active config exposure (`/api/CONFIG`) + full action set from the index (state, sync, logs, HDMI, field mode, TV display, reboot)
 * [x] Dedicated GUI remote port 8081 (`server/gui_server.sh`): fullscreen URL/text display, key/tap injection, live TV screenshot
 * [x] Network depth: `net_diag` - link speed/duplex, DNS latency (ping), internet connectivity checks, throughput test sender-side (`dd` over `nc`, receiver command printed)
 * [ ] Security: restrict adb (5555) and HTTP (8000) to the LAN subnet via iptables
-* [ ] Entropy: check `entropy_avail`, feed rngd if TLS stalls are observed
+* [x] Entropy: `entropy_avail` reported in `sys_diag` + `inspect_system` (rngd feed only if TLS stalls observed in the field)
 
 ---
 

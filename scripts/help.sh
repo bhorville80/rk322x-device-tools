@@ -137,6 +137,9 @@ RESEAU / DIAGNOSTIC
                      8081 GUI, 5555 adb, 2222 ssh...)
   net_diag PING <h>  Latence detaillee vers un hote
   net_diag THROUGHPUT <ip>   Debit sortant dd->nc (receveur requis)
+  sys_diag           Sante systeme : horloge (retour 1970),
+                     memoire/lmkd, entropie, ecriture eMMC,
+                     securite (adb/token/ssh/wireless)
   set_network.sh     Config statique eth0 (IP/route/DNS) depuis
                      config/device.conf
 
