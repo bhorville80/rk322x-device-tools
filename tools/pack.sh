@@ -93,6 +93,7 @@ mkdir -p "$DIST" || die "dist/ inaccessible"
 say "construction : $OUT"
 if ! tar --exclude='*.bak' --exclude='*.swp' --exclude='*~' \
          --exclude='*.pid' --exclude='*.log' \
+         --exclude='config/secrets.conf' \
          -czf "$OUT" BUILD-INFO.txt $INPUTS; then
     die "echec tar (voir messages ci-dessus)"
 fi

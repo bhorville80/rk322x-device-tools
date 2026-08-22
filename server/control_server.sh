@@ -100,6 +100,29 @@ fi
                 fi
                 ;;
 
+            # reponse synchrone : validation de la configuration active (conf_check)
+            CONF_CHECK)
+                CHK=""
+                if [ -f /data/scripts/conf_check.sh ]; then
+                    CHK="/data/scripts/conf_check.sh"
+                elif [ -f "$USB/scripts/conf_check.sh" ]; then
+                    CHK="$USB/scripts/conf_check.sh"
+                fi
+
+                if [ -n "$CHK" ]; then
+                    OUT="$(sh "$CHK" 2>&1)"
+                    RC=$?
+                    log "COMMANDE ACCEPTED: CONF_CHECK (rc=$RC)"
+                    printf 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#OUT}" "$OUT"
+                else
+                    log "COMMANDE REJECTED: CONF_CHECK introuvable"
+                    BODY='{"status":"error","message":"conf_check introuvable"}'
+                    printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                fi
+                ;;
+
             # reponse synchrone : remise a l'heure de la box (t=YYYYMMDD.HHMMSS, UTC)
             TIME_SYNC)
                 V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
@@ -123,7 +146,7 @@ fi
                 fi
                 ;;
 
-            HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE)
+            HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE|VITALS)
                 touch "$INCOMING/$COMMAND"
                 log "COMMANDE ACCEPTED: $COMMAND"
 

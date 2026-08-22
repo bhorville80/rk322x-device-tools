@@ -4,6 +4,9 @@ dist/
 *.dpk.sha256
 BUILD-INFO.txt
 
+# Secrets (mots de passe ssh...) - jamais diffuses
+config/secrets.conf
+
 # Fichiers runtime remontes de la box / de la cle USB
 *.pid
 *.lock

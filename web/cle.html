@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RK322X - Cle USB</title>
+
+<style>
+body { font-family:Arial,sans-serif; background:#111; color:#eee; margin:0; padding:25px; }
+.panel { max-width:860px; margin:auto; }
+h1 { margin-top:0; } h2 { font-size:18px; color:#9cf; margin-bottom:6px; }
+nav a { color:#eee; background:#333; border:1px solid #555; border-radius:6px;
+        padding:8px 14px; margin-right:6px; text-decoration:none; font-size:14px; }
+nav a.here { background:#9cf; color:#000; border-color:#9cf; }
+nav { margin:12px 0 20px; }
+.card { background:#1b1b1b; border:1px solid #333; border-radius:8px;
+        padding:12px 14px; margin:10px 0; line-height:1.55; }
+.card h3 { margin:0 0 8px; font-size:15px; color:#9cf; }
+code, .mono { font-family:monospace; color:#cf9; font-size:13px; }
+.dim { font-size:12px; color:#888; }
+a { color:#9cf; }
+ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+
+<h1>Cle USB</h1>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="cle.html" class="here">Cle</a>
+  <a href="commandes.html">Commandes</a>
+  <a href="metriques.html">Metriques</a>
+</nav>
+
+<div class="card">
+  <h3>Premier demarrage</h3>
+  <span class="mono">su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'</span><br>
+  <span class="dim">installe les outils dans /data/scripts + liens /data/bin (backup auto).
+  Ensuite tout se pilote depuis la box : commande <b>deploy</b> ou <b>amorce</b>.</span>
+</div>
+
+<div class="card">
+  <h3>Contenu de la cle</h3>
+  <ul>
+    <li><span class="mono">deploy.sh</span> - installeur / point d'entree (INSTALL, PKG, RESTORE,
+        EXPOSE, STOP, SEND_LOGS, VERSION, STATUS, CLEAN)</li>
+    <li><span class="mono">AMORCE</span> - aide-memoire 2 etapes</li>
+    <li><span class="mono">rk322x-tools_v*.dpk (+.sha256)</span> - paquet d'installation
+        (<span class="mono">deploy PKG</span>)</li>
+    <li><span class="mono">config/device.conf</span> - profil cible (reseau, ssh, services) -
+        <a href="/config/device.conf">voir la copie servie</a></li>
+    <li><span class="mono">scripts/</span> - tous les outils + core/</li>
+    <li><span class="mono">server/</span> - httpd 8000, control 8080, gui 8081, watcher USB</li>
+    <li><span class="mono">manifests/</span> - traces d'installation (current/history)</li>
+    <li><span class="mono">log/</span> - collectes SEND_LOGS, exec, gui_shots, state_last.txt</li>
+    <li><span class="mono">admin/</span> - outillage PC (provision, set_box_time, logpull, vitals_history)</li>
+    <li><span class="mono">index/cle/commandes/metriques.html</span> - ce panneau web</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Catalogue des outils (par fonction)</h3>
+  <ul>
+    <li><b>Bilan</b> : amorce (etat + raccourcis), check_state (etat cible vs reel),
+        selftest, conf_check (validation config), show_key</li>
+    <li><b>Materiel / inspection</b> : inspect_all (global), inspect_system, device_info
+        (puces par fonctionnalite), inspect_services, inspect_gui, inspect_display,
+        inspect_remote, inspect_user, sd_inspect</li>
+    <li><b>Metriques</b> : vitals (STATUS/WATCH/CSV), thermal (ECO/PERF), net_diag, sys_diag</li>
+    <li><b>Actions</b> : hdmi ON|OFF, disable_wireless, field_mode ON|OFF|STATUS,
+        cut_services (CUT/APPS/RESTORE), front_led, system_rw RW|RO, motd, media</li>
+    <li><b>Reseau / temps</b> : set_network, set_time</li>
+    <li><b>Maintenance</b> : deploy (INSTALL/PKG/RESTORE/CLEAN/VERSION/STATUS),
+        sync_usb, rotate_logs</li>
+    <li><b>Serveurs</b> : EXPOSE (httpd+gui+control+watcher), STOP, ssh_server (dropbear)</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Serveurs exposes sur le reseau</h3>
+  <ul>
+    <li><span class="mono">8000</span> HTTP - cette interface + fichiers de la cle (logs, config)</li>
+    <li><span class="mono">8080</span> CONTROL - API commandes (token si server/token present)</li>
+    <li><span class="mono">8081</span> GUI - affichage TV plein ecran, touches, screenshot</li>
+    <li><span class="mono">5555</span> adb tcpip &nbsp;|&nbsp; <span class="mono">2222</span> dropbear (si lance)</li>
+  </ul>
+  <span class="dim">arret global : deploy STOP ou bouton correspondant page Commandes</span>
+</div>
+
+</div>
+
+</body>
+</html>

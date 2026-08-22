@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RK322X - Commandes</title>
+
+<style>
+body { font-family:Arial,sans-serif; background:#111; color:#eee; margin:0; padding:25px; }
+.panel { max-width:860px; margin:auto; }
+h1 { margin-top:0; } h2 { font-size:18px; color:#9cf; margin-bottom:6px; }
+nav a { color:#eee; background:#333; border:1px solid #555; border-radius:6px;
+        padding:8px 14px; margin-right:6px; text-decoration:none; font-size:14px; }
+nav a.here { background:#9cf; color:#000; border-color:#9cf; }
+nav { margin:12px 0 20px; }
+button { padding:12px 18px; margin:4px; font-size:15px; cursor:pointer;
+         border-radius:6px; border:1px solid #555; background:#333; color:#eee; }
+button:hover  { background:#444; }
+button.warn   { background:#7a33; border-color:#a63; }
+button.danger { background:#933; border-color:#c55; }
+#result { white-space:pre-wrap; background:#000; padding:15px; min-height:120px;
+          max-height:420px; overflow:auto; border-radius:8px;
+          font-family:monospace; font-size:13px; }
+.dim { font-size:12px; color:#888; }
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+
+<h1>Commandes</h1>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="cle.html">Cle</a>
+  <a href="commandes.html" class="here">Commandes</a>
+  <a href="metriques.html">Metriques</a>
+</nav>
+
+<h2>Base</h2>
+<button onclick="timeSync()">SYNC HORLOGE</button>
+<button onclick="cmd('STATE')">CHECK STATE</button>
+<button class="warn" onclick="cmd('SYNC')">SYNC CLE</button>
+<span class="dim"> horloge UTC du PC -> box ; sync = box vers cle</span>
+
+<h2>Logs</h2>
+<button class="warn" onclick="cmd('SEND_LOGS')">SEND LOGS</button>
+<button class="warn" onclick="cmd('ROTATE_LOGS')">ROTATE LOGS</button>
+<button class="warn" onclick="if(confirm('Purger les logs ?'))cmd('PURGE_LOG')">PURGE LOG</button>
+
+<h2>Affichage TV</h2>
+<button onclick="cmd('PANEL')">AFFICHER LE PANNEAU SUR LA TV</button>
+<button onclick="cmd('HDMI_OFF')">HDMI OFF</button>
+<button onclick="cmd('HDMI_ON')">HDMI ON</button>
+<button class="warn" onclick="cmd('FIELD_OFF')">FIELD MODE OFF</button>
+<button onclick="cmd('FIELD_ON')">FIELD MODE ON</button>
+
+<h2>Systeme</h2>
+<button onclick="cmd('ECO_MODE')">MODE ECO</button>
+<button onclick="cmd('PERF_MODE')">MODE PERF</button>
+<span class="dim"> profil CPU (24/7 : eco conseille)</span><br>
+<button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
+
+<h2>Resultat</h2>
+<div id="result">Pret.</div>
+
+</div>
+
+<script>
+
+var API = "http://" + location.hostname + ":8080/api/";
+
+function show(t) { document.getElementById("result").textContent = t; }
+
+function cmd(command) {
+    show("Execution : " + command + "...");
+    fetch(API + command)
+        .then(r => r.text())
+        .then(t => {
+            show(command + "\n" + t + "\n\n(l'action tourne sur la box, voir log/watch.log)");
+            if (command === "STATE") { setTimeout(pollState, 2500); }
+        })
+        .catch(e => show("Erreur : " + e));
+}
+
+function timeSync() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    var v = "" + d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) +
+            "." + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
+    show("SYNC HORLOGE : envoi " + v + " (UTC)...");
+    fetch(API + "TIME_SYNC?t=" + v)
+        .then(r => r.text())
+        .then(t => show("SYNC HORLOGE\n" + t))
+        .catch(e => show("Erreur : " + e));
+}
+
+function pollState(tries) {
+    tries = tries || 0;
+    fetch("/log/state_last.txt", {cache:"no-store"})
+        .then(r => { if (!r.ok) throw 0; return r.text(); })
+        .then(t => {
+            var head = t.slice(0, 40);
+            if (pollState.stamp && head === pollState.stamp && tries < 6) {
+                setTimeout(function(){ pollState(tries + 1); }, 2000);
+                return;
+            }
+            pollState.stamp = head;
+            show("CHECK STATE\n\n" + t);
+        })
+        .catch(e => {
+            if (tries < 6) { setTimeout(function(){ pollState(tries + 1); }, 2000); }
+            else { show("etat non disponible encore (relancer CHECK STATE)"); }
+        });
+}
+
+</script>
+
+</body>
+</html>

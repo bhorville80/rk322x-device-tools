@@ -126,6 +126,13 @@ do
                 rm -f "$FILE"
                 ;;
 
+            VITALS)
+                log "VITALS"
+                mkdir -p "$LOG_DIR"
+                sh "$USB/scripts/vitals.sh" STATUS > "$LOG_DIR/vitals_last.txt" 2>&1
+                rm -f "$FILE"
+                ;;
+
             ROTATE_LOGS)
                 log "ROTATE_LOGS"
                 sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1

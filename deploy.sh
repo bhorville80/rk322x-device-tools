@@ -173,9 +173,7 @@ install_from()
 
     echo "[3b] Panneau web + AMORCE -> racine de la cle..."
     COPIED=0
-    PANEL="$SRC/web/index.html"
-    [ -f "$PANEL" ] || PANEL="$SRC/index.html"
-    for F in "$PANEL" "$SRC/AMORCE"; do
+    for F in "$SRC"/web/*.html "$SRC/AMORCE"; do
         [ -f "$F" ] || continue
         DEST="$USB_DIR/$(basename "$F")"
         if find_usb && cp -f "$F" "$DEST" 2>/dev/null; then

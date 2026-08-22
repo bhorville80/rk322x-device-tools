@@ -1,6 +1,8 @@
 #!/system/bin/sh
 
 CONFIG_FILE=""
+PROFILE_FILE=""
+SECRETS_FILE=""
 
 find_config()
 {
@@ -11,13 +13,33 @@ find_config()
         "/data/scripts/config/device.conf" ; do
         if [ -f "$c" ]; then
             CONFIG_FILE="$c"
-            return 0
+            break
         fi
     done
-    return 1
+    [ -n "$CONFIG_FILE" ] || return 1
+
+    D="$(dirname "$CONFIG_FILE")"
+
+    S="$D/secrets.conf"
+    [ -f "$S" ] && SECRETS_FILE="$S"
+
+    P="$(sed -n 's/^PROFILE=//p' "$CONFIG_FILE" 2>/dev/null | head -n 1 | tr -d '\r')"
+    if [ -n "$P" ] && [ -f "$D/profiles/$P.conf" ]; then
+        PROFILE_FILE="$D/profiles/$P.conf"
+    fi
+
+    return 0
 }
 
 find_config
+
+cfg_read()
+{
+    F="$1"
+    KEY="$2"
+    [ -n "$F" ] && [ -f "$F" ] || return 0
+    sed -n "s/^${KEY}=//p" "$F" 2>/dev/null | head -n 1 | tr -d '\r'
+}
 
 config_get()
 {
@@ -25,9 +47,9 @@ config_get()
     DEF="${2:-}"
 
     VAL=""
-    if [ -n "$CONFIG_FILE" ]; then
-        VAL="$(sed -n "s/^${KEY}=//p" "$CONFIG_FILE" 2>/dev/null | head -n 1 | tr -d '\r')"
-    fi
+    [ -z "$VAL" ] && VAL="$(cfg_read "$PROFILE_FILE" "$KEY")"
+    [ -z "$VAL" ] && VAL="$(cfg_read "$CONFIG_FILE" "$KEY")"
+    [ -z "$VAL" ] && VAL="$(cfg_read "$SECRETS_FILE" "$KEY")"
 
     if [ -n "$VAL" ]; then
         echo "$VAL"

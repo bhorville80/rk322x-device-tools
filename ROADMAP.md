@@ -52,10 +52,11 @@ This document tracks planned features, improvements and technical work for the p
 
 ### Configuration
 
-* [ ] Improve device profiles
-* [ ] Centralize device configuration
-* [ ] Add configuration validation
-* [ ] Support multiple device profiles
+* [x] Centralize device configuration (`config/device.conf` single source, consumed everywhere via `core/config.sh`; network target completed: GATEWAY/DNS/PREFIX/ADB_PORT + hardware reference facts block)
+* [x] Improve device profiles (enriched key set with documented sections; `PROFILE=` key)
+* [x] Support multiple device profiles (`config/profiles/<name>.conf` overlay - values there take priority over the base profile; secrets in a third layer `config/secrets.conf`)
+* [x] Add configuration validation (`conf_check`: required keys, IP/netmask/prefix/port formats, enum values NETWORK/SSH_MODE/WIRELESS_AIRPLANE, overlay presence, unknown-key warnings; rc=1 on error, wired into selftest)
+* [x] Secrets hygiene: passwords live only in `config/secrets.conf` (gitignored, excluded from `.dpk` packaging and USB sync); web panel exposes config summary + live `conf_check` (`CONF_CHECK` API)
 
 ### Logging
 

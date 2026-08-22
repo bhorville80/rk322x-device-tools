@@ -59,11 +59,11 @@ list_files()
     # fichiers reguliers de $1, chemins relatifs
     for E in "$1"/*; do
         [ -e "$E" ] || continue
-        case "$(basename "$E")" in *.log|VERSION) continue ;; esac
+        case "$(basename "$E")" in *.log|VERSION|secrets.conf) continue ;; esac
         if [ -f "$E" ]; then
             printf '%s\n' "$(basename "$E")"
         elif [ -d "$E" ]; then
-            find "$E" -type f 2>/dev/null | sed "s|^$1/||"
+            find "$E" -type f 2>/dev/null | grep -v '/secrets\.conf$' | sed "s|^$1/||"
         fi
     done | sort -u
 }
@@ -129,7 +129,7 @@ do_sync()
     for f in "$DATA_DIR"/*; do
         [ -e "$f" ] || continue
         NAME="$(basename "$f")"
-        case "$NAME" in VERSION) continue ;; esac
+        case "$NAME" in VERSION|secrets.conf) continue ;; esac
         N=$((N+1))
 
         if cp -rf "$f" "$DST/" 2>/dev/null; then

@@ -50,8 +50,12 @@ AMORCE (demarrage rapide, apres le premier INSTALL)
 
 VERIFICATION
   check_state        Etat IP / wireless / bluetooth / HDMI
-                     compare a la config cible
-                     exit 1 si au moins un KO
+                      compare a la config cible
+                      exit 1 si au moins un KO
+  conf_check         Validation config/device.conf (+ overlay
+                      profiles/<PROFILE>.conf, secrets.conf) :
+                      cles requises, formats IP/prefix/ports,
+                      valeurs autorisees ; exit 1 si invalide
   selftest           Verifie que tous les outils repondent
 
 INSPECTION
