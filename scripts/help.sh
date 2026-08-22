@@ -66,7 +66,9 @@ VERIFICATION
                       inspect_all, run_state, expose verifie,
                       SEND_LOGS puis "CLE PRETE POUR ANALYSE
                       RETOUR" ; bilan : log/recette_last.txt
-                      (aussi lanceable depuis le panneau web)
+                      Phases separees possibles : recette P1..P7
+                      ou RETOUR (etat par phase dans
+                      log/recette_phases.txt, boutons IHM)
   selftest           Verifie que tous les outils repondent
 
 INSPECTION

@@ -18,6 +18,9 @@ button { padding:12px 18px; margin:4px; font-size:15px; cursor:pointer;
 button:hover  { background:#444; }
 button.warn   { background:#7a33; border-color:#a63; }
 button.danger { background:#933; border-color:#c55; }
+button:disabled { background:#222; color:#666; border-color:#333;
+                  cursor:default; }
+button.done   { background:#2a4a2a; border-color:#3a6a3a; color:#bfb; }
 #result { white-space:pre-wrap; background:#000; padding:15px; min-height:120px;
           max-height:420px; overflow:auto; border-radius:8px;
           font-family:monospace; font-size:13px; }
@@ -63,9 +66,27 @@ button.danger { background:#933; border-color:#c55; }
 <button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
 
 <h2>Recette</h2>
-<button class="warn" onclick="lanceRecette()">LANCER LA RECETTE</button>
-<span class="dim"> install + selftest + conf + mem_tune + analyses + expose + logs,
-     bilan "CLE PRETE POUR ANALYSE RETOUR" (quelques minutes)</span>
+<div style="margin:4px 0">
+  <button id="rP1" onclick="lancePhase('P1')">P1 INSTALL</button>
+  <button id="rP2" onclick="lancePhase('P2')">P2 SELFTEST</button>
+  <button id="rP3" onclick="lancePhase('P3')">P3 CONF</button>
+  <button id="rP4" onclick="lancePhase('P4')">P4 MEM TUNE</button>
+</div>
+<div style="margin:4px 0">
+  <button id="rP5" onclick="lancePhase('P5')">P5 ANALYSES</button>
+  <button id="rP6" onclick="lancePhase('P6')">P6 RUN STATE</button>
+  <button id="rP7" onclick="lancePhase('P7')">P7 EXPOSE</button>
+  <button id="rRETOUR" class="warn" onclick="lancePhase('RETOUR')">RETOUR LOGS</button>
+</div>
+<div style="margin:8px 0">
+  <button id="rALL" class="warn" onclick="lanceGlobal()">RECETTE COMPLETE (P1-&gt;RETOUR)</button>
+  <span id="rstate" style="font-size:12px;color:#888">etat : chargement...</span>
+</div>
+<div id="rmanifest" style="display:none;margin:8px 0">
+  <button id="rMANIFEST" class="done" onclick="lancePhase('MANIFEST')">GENERER MANIFEST</button>
+  <a href="/manifests/recette/latest.manifest" target="_blank"
+     style="font-size:12px;color:#9cf">voir le dernier manifest</a>
+</div>
 
 <h2>Resultat</h2>
 <div id="result">Pret.</div>
@@ -120,28 +141,80 @@ function pollState(tries) {
         });
 }
 
-function lanceRecette() {
-    if (!confirm("Lancer la recette complete ?\n(install, analyses, expose, logs - quelques minutes)")) return;
-    show("RECETTE lancee...\n(bilan affiche a la fin de l'execution)");
+function lancePhase(ph) {
+    var b = document.getElementById("r" + ph);
+    if (b && b.disabled && ph !== "RETOUR") return;
+    show("RECETTE " + ph + " lancee...\n(resultat affiche a la fin)");
+    fetch(API + "RECETTE_" + ph)
+        .catch(e => show("Erreur : " + e));
+    pollRecette(b);
+}
+
+function lanceGlobal() {
+    if (!confirm("Lancer la recette complete ?\n(P1 -> RETOUR, quelques minutes)")) return;
+    ["P1","P2","P3","P4","P5","P6","P7"].forEach(function(p) {
+        var b = document.getElementById("r" + p);
+        if (b) { b.disabled = true; }
+    });
+    document.getElementById("rALL").disabled = true;
+    show("RECETTE COMPLETE lancee...\n(bilan affiche a la fin, quelques minutes)");
     fetch(API + "RECETTE")
         .catch(e => show("Erreur : " + e));
+    pollRecette(document.getElementById("rALL"));
+}
+
+function pollRecette(btn) {
     var tries = 0;
     (function poll() {
         fetch("/log/recette_last.txt", {cache:"no-store"})
             .then(r => { if (!r.ok) throw 0; return r.text(); })
             .then(t => {
                 var head = t.slice(0, 60);
-                if (lanceRecette.stamp && head === lanceRecette.stamp && tries < 90) {
+                if (pollRecette.stamp && head === pollRecette.stamp && tries < 90) {
                     setTimeout(poll, 5000);
                     show("RECETTE en cours... (" + tries + ")");
                     return;
                 }
-                lanceRecette.stamp = head;
-                show("RECETTE - BILAN\n" + t);
+                pollRecette.stamp = head;
+                show("RECETTE\n" + t);
+                refreshRecetteState();
             })
             .catch(() => { if (tries++ < 90) setTimeout(poll, 5000); else show("bilan indisponible"); });
     })();
 }
+
+var RPHASES = ["P1","P2","P3","P4","P5","P6","P7"];
+
+function refreshRecetteState() {
+    fetch("/log/recette_phases.txt", {cache:"no-store"})
+        .then(r => r.ok ? r.text() : Promise.reject())
+        .then(t => {
+            var st = {};
+            t.trim().split("\n").forEach(function(l) {
+                var p = l.trim().split(/\s+/);
+                if (p.length >= 2) st[p[0]] = p[1];
+            });
+            var okN = 0;
+            RPHASES.forEach(function(p) {
+                var b = document.getElementById("r" + p);
+                if (!b) return;
+                if (st[p] === "OK")   { b.disabled = true; b.className = "done"; okN++; }
+                else                  { b.disabled = false; b.className = ""; }
+            });
+            var all = okN === RPHASES.length;
+            var g = document.getElementById("rALL");
+            g.disabled = all;
+            g.className = all ? "" : "warn";
+            var rm = document.getElementById("rmanifest");
+            rm.style.display = all ? "block" : "none";
+            document.getElementById("rstate").textContent =
+                "etat : " + okN + "/7 phases OK" +
+                (all ? " - recette terminee, manifest disponible" : " - global actif");
+        })
+        .catch(() => {});
+}
+
+refreshRecetteState();
 
 </script>
 

@@ -119,11 +119,11 @@ This document tracks planned features, improvements and technical work for the p
 
 ## Manifests
 
-* [ ] Define deployment manifests
-* [ ] Add manifest validation
-* [ ] Add manifest versioning
-* [ ] Store deployment history
-* [ ] Support reproducible deployments
+* [x] Define deployment manifests (`recette MANIFEST`: certification de fin de recette - phases P1..P7, verdict conf_check, empreintes sha256 des scripts deployes)
+* [x] Add manifest validation (generation bloquee tant que les 7 phases ne sont pas OK dans log/recette_phases.txt)
+* [x] Add manifest versioning (horodatage + version installee + empreintes)
+* [x] Store deployment history (manifests/recette/ cumulatif + latest.manifest expose sur l'HTTP ; bouton IHM apparait a 7/7)
+* [ ] Support reproducible deployments (les empreintes sont posees ; reste a rejouabilite complete)
 
 ---
 

@@ -140,6 +140,14 @@ do
                 rm -f "$FILE"
                 ;;
 
+            RECETTE_P[1-7]|RECETTE_RETOUR|RECETTE_MANIFEST)
+                log "RECETTE $NAME"
+                mkdir -p "$LOG_DIR"
+                PH="${NAME#RECETTE_}"
+                sh "$USB/scripts/recette.sh" "$PH" >> "$LOG_DIR/recette_last.txt" 2>&1
+                rm -f "$FILE"
+                ;;
+
             ROTATE_LOGS)
                 log "ROTATE_LOGS"
                 sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1
