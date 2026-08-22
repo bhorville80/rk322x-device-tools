@@ -83,6 +83,7 @@ main()
     check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS
     check_rc "net_diag"            "0 1" sh "$BASE/net_diag.sh"
     check_rc "sync_usb STATUS"     "0 1" sh "$BASE/sync_usb.sh" STATUS
+    check_rc "disable_wireless ST" "0" sh "$BASE/disable_wireless.sh" STATUS
     check_rc "front_led STATUS"    "0" sh "$BASE/front_led.sh" STATUS
     check_rc "ssh_server STATUS"   "0 1" sh "$BASE/../server/ssh_server.sh" STATUS
     check_rc "amorce"              "0" sh "$BASE/amorce.sh"

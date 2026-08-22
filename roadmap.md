@@ -43,6 +43,7 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Improve `deploy.sh` command handling
 * [x] Fix `deploy.sh` root/busybox guards (source `core/config.sh` before `require_root`)
 * [x] PC provisioning script with per-step verification/validation (`admin/linux/provision.sh`, `admin/windows/provision.ps1`)
+* [x] Layout cleanup: every tool lives in `scripts/` - repo root keeps only `deploy.sh` (+ index.html / AMORCE); duplicate `disable_wireless` removed; `set_network` / `set_time` / `setHEURE_*` now deployed to `/data/scripts` with `/data/bin` links
 * [ ] Add deployment status reporting
 * [ ] Add deployment validation
 * [ ] Add automatic error detection
@@ -87,10 +88,11 @@ This document tracks planned features, improvements and technical work for the p
 
 ## Wireless
 
-* [ ] Improve Wi-Fi shutdown handling
-* [ ] Improve Bluetooth shutdown handling
+* [x] Improve Wi-Fi shutdown handling (`disable_wireless OFF`: svc + persistent `wifi_on=0`, residual init services scan, interface down with retry, rfkill best-effort, optional airplane mode via `WIRELESS_AIRPLANE`)
+* [x] Improve Bluetooth shutdown handling (persistent `bluetooth_on=0`, running bt/wpa/hci service detection and stop, hci0 verification)
 * [x] Add wireless state detection
-* [x] Add verification after disabling interfaces
+* [x] Add verification after disabling interfaces (per-interface verify with 2 attempts, rc reflects residual radios)
+* [x] Root helper scripts now installed to /data/scripts (disable_wireless/set_* were key-only before - field_mode ON/OFF failed when run installed)
 
 ---
 

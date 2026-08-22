@@ -71,7 +71,9 @@ ACTIONS
   hdmi OFF           Coupe sortie HDMI + blank framebuffer
   hdmi ON            Reactive la sortie HDMI
   hdmi STATUS        Etat noeuds sysfs display
-  disable_wireless   Coupe Wi-Fi, Bluetooth, wlan0/p2p0/hci0
+  disable_wireless   Coupe Wi-Fi/BT (persistant au reboot) + verifie
+                     STATUS : etat des radios ; ON : restauration
+                     option WIRELESS_AIRPLANE=1 (device.conf)
   media              Liste medias montes (USB/SD) et types
    field_mode OFF     Mode exploitation sans ecran : wireless + HDMI
                       + serveurs + services de SERVICES_STOP
@@ -138,10 +140,11 @@ MAINTENANCE
   add_to_bin <s>     Ajoute un script dans /data/bin
   add_script_to_usb  Copie un fichier vers la racine cle
 
-RESEAU / HEURE   (racine de la cle)
+RESEAU / HEURE   (scripts/ de la cle, ou commandes apres INSTALL)
   set_network.sh     Config statique eth0 (IP/route/DNS)
   setHEURE_FILE.sh   Heure depuis fichier SET_HEURE sur la cle
   setHEURE_INIT.sh   Heure fixe codee dans le script
+  set_time.sh        Aides horloge
 
 SERVEURS   (dossier server/ de la cle)
   start_server.sh    HTTP port 8000 servant la cle

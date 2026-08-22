@@ -25,14 +25,10 @@ dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
 ```text
 AMORCE                 bootstrap quick-start (cat /mnt/media_rw/*/AMORCE)
 deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
-set_network.sh         static network setup
-set_time.sh            time helpers
-setHEURE_FILE.sh       date from SET_HEURE file
-setHEURE_INIT.sh       fixed date
-disable_wireless.sh    Wi-Fi / BT shutdown
 index.html             HTTP server index page (copied to key root on INSTALL)
-scripts/               all tools + core modules (incl. cut_services, system_rw,
-                       front_led, inspect_all, amorce)
+scripts/               all tools + core modules: cut_services, system_rw,
+                       front_led, inspect_all, amorce, motd, net_diag,
+                       disable_wireless, set_network, set_time, setHEURE_*
 server/                HTTP server + control API + GUI remote + ssh_server (optional)
 bin/                   trigger helpers (HELP / MEDIA)
 config/device.conf     device profile

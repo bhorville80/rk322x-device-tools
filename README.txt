@@ -481,7 +481,7 @@ ps | grep -iE 'bluetooth|wpa|wifi'
 Configures `eth0` with static IP, default route and DNS:
 
 ```bash
-sh /mnt/media_rw/<USB_ID>/set_network.sh
+sh /mnt/media_rw/<USB_ID>/scripts/set_network.sh
 ```
 
 Target values:
@@ -585,34 +585,35 @@ DEPLOY_VERSION=1
 
 ```text
 /
+├── AMORCE                   quick-start cheat sheet (cat it from the key)
 ├── README.md
 ├── README.txt
 ├── PACKAGING.md            build + install du livrable .dpk
 ├── roadmap.md
 │
-├── deploy.sh            INSTALL | EXPOSE | STOP | SEND_LOGS
-├── set_network.sh
-├── setHEURE_FILE.sh
-├── setHEURE_INIT.sh
-├── disable_wireless.sh
-├── index.html
+├── deploy.sh               INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
+├── index.html              web panel (copied to key root by INSTALL)
 │
-├── scripts/
+├── scripts/                all tools (installed to /data/scripts)
 │   ├── help.sh
 │   ├── check_state.sh
-│   ├── inspect_user.sh
-│   ├── inspect_system.sh
-│   ├── inspect_services.sh
-│   ├── hdmi.sh
-│   ├── sync_usb.sh
-│   ├── disable_wireless.sh
-│   ├── field_mode.sh
-│   ├── add_script_to_usb.sh
-│   ├── add_to_bin.sh
-│   ├── boxhelp.sh
+│   ├── inspect_all.sh      runs every inspect/check tool
+│   ├── inspect_user.sh / inspect_system.sh / inspect_services.sh
+│   ├── inspect_display.sh / inspect_gui.sh / inspect_remote.sh
+│   ├── cut_services.sh     service/package slimming (RAM gains)
+│   ├── system_rw.sh        /system read-write toggle
+│   ├── front_led.sh        front display LEDs + FD655 clock daemon
+│   ├── motd.sh             adb shell welcome banner
+│   ├── net_diag.sh         network diagnostics / ports / throughput
+│   ├── disable_wireless.sh Wi-Fi/BT OFF|STATUS|ON
+│   ├── hdmi.sh / field_mode.sh / thermal.sh / rotate_logs.sh
+│   ├── set_network.sh / set_time.sh / setHEURE_FILE.sh / setHEURE_INIT.sh
+│   ├── sync_usb.sh / amorce.sh / selftest.sh / show_key.sh
+│   ├── add_script_to_usb.sh / add_to_bin.sh / boxhelp.sh / media? (core)
 │   │
 │   └── core/
-│       ├── runlog.sh    shared per-execution logging module
+│       ├── runlog.sh       shared per-execution logging module
+│       ├── config.sh       device.conf reader + guards
 │       ├── log.sh
 │       ├── media.sh
 │       └── usb.sh
