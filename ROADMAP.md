@@ -65,6 +65,7 @@ This document tracks planned features, improvements and technical work for the p
 * [ ] Add error levels
 * [ ] Improve log collection
 * [x] Add log rotation (`rotate_logs`, auto-run after SEND_LOGS, ROTATE_LOGS trigger)
+* [x] Tool execution state report (`run_state`: launched vs never-launched per installed script, derived from `log/exec` traces - count, last timestamp, last rc, failures)
 
 ---
 

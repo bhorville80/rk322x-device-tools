@@ -5,11 +5,14 @@
 # Controles :
 #   [1] cles requises presentes et non vides
 #   [2] formats : IP / netmask / gateway / DNS, PREFIX, ports, RAM_MB
-#   [3] valeurs autorisees : NETWORK, SSH_MODE, WIRELESS_AIRPLANE
+#   [3] valeurs autorisees : NETWORK, SSH_MODE, WIRELESS_AIRPLANE, memoire
 #   [4] overlay du profil present si PROFILE renseigne
 #   [5] cles inconnues -> simple avertissement
+#   [6] application effective des optimisations memoire (mem_tune) :
+#       cible configuree vs etat reellement actif sur la box
 #
-# rc = 0 si tout est conforme, 1 sinon.
+# rc = 0 si la configuration est conforme, 1 sinon
+# (la section [6] est informative : elle ne fait pas echouer le check).
 
 SCRIPT_ID="$(basename "$0" .sh)"
 
@@ -247,6 +250,76 @@ if [ -n "$UNK" ]; then
     warn "cles non reconnues :$UNK"
 else
     ok "aucune cle inconnue"
+fi
+
+# ------------------------------------------------------------- [6] application
+sec_num=6
+echo ""
+echo "[6] Application des optimisations (mem_tune)"
+if [ ! -e /proc/swaps ] && [ ! -e /proc/sys/vm/swappiness ]; then
+    warn "etat runtime disponible uniquement sur la box"
+else
+    APP_N=0 ; TOT_N=0
+
+    ZM="$(gv MEM_ZRAM_MB)" ; case "$ZM" in '') ZM=512 ;; esac
+    if [ "$ZM" = "0" ]; then
+        printf '  [ N/A      ] %-26s cible=desactive\n' "zram (MEM_ZRAM_MB)"
+    else
+        TOT_N=$((TOT_N+1))
+        if grep -q zram0 /proc/swaps 2>/dev/null; then
+            printf '  [ APPLIQUE ] %-26s zram0 actif (%s Mo)\n' "zram (MEM_ZRAM_MB)" "$ZM"
+            APP_N=$((APP_N+1))
+        else
+            printf '  [ PAS LANCE] %-26s cible=%s Mo\n' "zram (MEM_ZRAM_MB)" "$ZM"
+        fi
+    fi
+
+    SWV="$(gv MEM_SWAPPINESS)" ; case "$SWV" in '') SWV=100 ;; esac
+    TOT_N=$((TOT_N+1))
+    CUR_SW="$(cat /proc/sys/vm/swappiness 2>/dev/null)"
+    if [ "$CUR_SW" = "$SWV" ]; then
+        printf '  [ APPLIQUE ] %-26s swappiness=%s\n' "vm tunable" "$SWV"
+        APP_N=$((APP_N+1))
+    else
+        printf '  [ PAS LANCE] %-26s cible=%s actuel=%s\n' "vm tunable" "$SWV" "${CUR_SW:-?}"
+    fi
+
+    LE="$(gv MEM_LMK_EARLY)" ; case "$LE" in '') LE=0 ;; esac
+    if [ "$LE" = "1" ]; then
+        TOT_N=$((TOT_N+1))
+        ORIG_F="/data/etc/mem_tune.orig"
+        if [ -f "$ORIG_F" ] && [ -e /sys/module/lowmemorykiller/parameters/minfree ]; then
+            printf '  [ APPLIQUE ] %-26s minfree modifie (origine sauvegardee)\n' "lmk early (MEM_LMK_EARLY)"
+            APP_N=$((APP_N+1))
+        else
+            printf '  [ PAS LANCE] %-26s minfree d origine ou non sauvegarde\n' "lmk early (MEM_LMK_EARLY)"
+        fi
+    else
+        printf '  [ N/A      ] %-26s cible=desactive\n' "lmk early (MEM_LMK_EARLY)"
+    fi
+
+    LG="$(gv LOGD_SIZE_KB)" ; case "$LG" in '') LG=256 ;; esac
+    if is_num "$LG" && [ "$LG" -gt 0 ]; then
+        TOT_N=$((TOT_N+1))
+        CUR_LG="$(getprop persist.logd.size 2>/dev/null)"
+        if [ "$CUR_LG" = "${LG}K" ] || logcat -g 2>/dev/null | grep -q "${LG}K"; then
+            printf '  [ APPLIQUE ] %-26s buffers=%sK\n' "logd (LOGD_SIZE_KB)" "$LG"
+            APP_N=$((APP_N+1))
+        else
+            printf '  [ PAS LANCE] %-26s cible=%sK actuel=%s\n' "logd (LOGD_SIZE_KB)" "$LG" "${CUR_LG:-defaut}"
+        fi
+    else
+        printf '  [ N/A      ] %-26s cible=defaut firmware\n' "logd (LOGD_SIZE_KB)"
+    fi
+
+    echo ""
+    if [ "$TOT_N" -eq 0 ]; then
+        warn "rien a appliquer (toutes les optimisations desactivees)"
+    elif [ "$APP_N" -eq "$TOT_N" ]; then
+        ok "optimisations appliquees ($APP_N/$TOT_N)"
+    else
+        warn "$((TOT_N - APP_N)) optimisation(s) non lancee(s) sur $TOT_N -> mem_tune OPTIMIZE"
+    fi
 fi
 
 echo ""

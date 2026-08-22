@@ -55,7 +55,12 @@ VERIFICATION
   conf_check         Validation config/device.conf (+ overlay
                       profiles/<PROFILE>.conf, secrets.conf) :
                       cles requises, formats IP/prefix/ports,
-                      valeurs autorisees ; exit 1 si invalide
+                      valeurs autorisees ; etat d'application
+                      des optimisations memoire (lance/pas lance)
+                      ; exit 1 si invalide
+  run_state          Etat de lancement des outils via log/exec :
+                      lances (nb, dernier, rc), installes jamais
+                      lances, executions en echec
   selftest           Verifie que tous les outils repondent
 
 INSPECTION
