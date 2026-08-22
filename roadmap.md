@@ -44,9 +44,10 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Fix `deploy.sh` root/busybox guards (source `core/config.sh` before `require_root`)
 * [x] PC provisioning script with per-step verification/validation (`admin/linux/provision.sh`, `admin/windows/provision.ps1`)
 * [x] Layout cleanup: every tool lives in `scripts/` - repo root keeps only `deploy.sh` (+ index.html / AMORCE); duplicate `disable_wireless` removed; `set_network` / `set_time` / `setHEURE_*` now deployed to `/data/scripts` with `/data/bin` links
-* [ ] Add deployment status reporting
-* [ ] Add deployment validation
-* [ ] Add automatic error detection
+* [x] Add deployment status reporting (`deploy STATUS`: tools present/missing, bin links, backups, manifest, key version comparison, live servers)
+* [x] Add deployment validation (end of INSTALL/PKG: `sh -n` on every deployed script + `/data/bin` links check; result traced in `VERSION`, rc=1 on failure)
+* [x] Add automatic error detection (validation fails loudly and propagates through dpk install)
+* [x] Add deployment cleanup (`deploy CLEAN [DRY]`: keeps 3 backups + 10 manifests + 11 gui_shots, purges dpk staging/tmp residuals/tombstones, rotates exec logs)
 * [ ] Improve rollback capabilities
 
 ### Configuration

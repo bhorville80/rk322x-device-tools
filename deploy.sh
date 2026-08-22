@@ -17,7 +17,7 @@ INSTALL_LIST="amorce sync_usb disable_wireless boxhelp media inspect_user inspec
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
 case "$1" in
-    ""|HELP|help|-h|--help|VERSION|version)
+    ""|HELP|help|-h|--help|VERSION|version|STATUS|status)
         ;;
     *)
         if [ "$(id -u 2>/dev/null)" != "0" ] && command -v su > /dev/null 2>&1; then
@@ -186,18 +186,29 @@ install_from()
 
     link_bin
 
+    echo "[3c] Validation..."
+    VAL_NOTE="OK"
+    if ! verify_install; then
+        VAL_NOTE="ECHEC"
+    fi
+
     echo "[4] Trace..."
     {
         echo "version : $(sed -n 's/^DEPLOY_VERSION=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | tr -d '\r')"
         echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
         echo "source  : $INSTALL_SRC_TYPE : $INSTALL_SRC_ID"
+        echo "validation : $VAL_NOTE"
     } > "$SCRIPTS_DIR/VERSION"
     echo "    [ OK ] $SCRIPTS_DIR/VERSION"
     write_manifest
 
     echo ""
     echo "=== TERMINE ==="
-    echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | HELP"
+    if [ "$VALID_RC" != "0" ]; then
+        echo "[ ERREUR ] installation incomplete : verifier ci-dessus (deploy STATUS)"
+        return 1
+    fi
+    echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | VERSION | STATUS | CLEAN | HELP"
 }
 
 do_install()
@@ -351,6 +362,127 @@ conf_version()
     sed -n 's/^DEPLOY_VERSION=//p' "$1" 2>/dev/null | head -n 1 | tr -d '\r'
 }
 
+verify_install()
+{
+    MISS_S=0; SYNTAX=0; MISS_L=0
+
+    for NAME in $INSTALL_LIST deploy; do
+        F=""
+        [ -f "$SCRIPTS_DIR/$NAME.sh" ] && F="$SCRIPTS_DIR/$NAME.sh"
+        [ -z "$F" ] && [ -f "$SCRIPTS_DIR/core/$NAME.sh" ] && F="$SCRIPTS_DIR/core/$NAME.sh"
+        if [ -z "$F" ]; then
+            echo "    [ KO ] script manquant : $NAME"
+            MISS_S=$((MISS_S+1))
+            continue
+        fi
+        if ! sh -n "$F" 2>/dev/null; then
+            echo "    [ KO ] syntaxe : $(basename "$F") (copie tronquee ?)"
+            SYNTAX=$((SYNTAX+1))
+        fi
+    done
+
+    for NAME in $INSTALL_LIST deploy; do
+        [ -e "$BIN_DIR/$NAME" ] || { echo "    [ KO ] lien absent : $BIN_DIR/$NAME"; MISS_L=$((MISS_L+1)); }
+    done
+
+    NB_SH="$(ls -1 "$SCRIPTS_DIR"/*.sh 2>/dev/null | grep -c .)"
+    NB_CORE="$(ls -1 "$SCRIPTS_DIR/core"/*.sh 2>/dev/null | grep -c .)"
+    NB_LK="$(ls -1 "$BIN_DIR" 2>/dev/null | grep -c .)"
+    echo "    scripts : $NB_SH (+$NB_CORE core)   liens bin : $NB_LK"
+
+    if [ "$((MISS_S + SYNTAX + MISS_L))" -eq 0 ]; then
+        echo "    [ OK ] installation coherente ($((NB_SH + NB_CORE)) scripts, $NB_LK liens)"
+        return 0
+    fi
+    echo "    [ ERREUR ] $MISS_S manquant(s), $SYNTAX syntaxe, $MISS_L lien(s)"
+    return 1
+}
+
+trim_newest()
+{
+    # $1 rep  $2 motif  $3 keep  $4 label : supprime les plus anciens au-dela de KEEP
+    DIR="$1"; PAT="$2"; KEEP="$3"; LABEL="$4"
+
+    [ -d "$DIR" ] || return 0
+    LIST="$(ls -1d "$DIR"/$PAT 2>/dev/null | sort)"
+    TOT="$(printf '%s\n' "$LIST" | grep -c .)"
+    [ -z "$TOT" ] && TOT=0
+
+    OVER=$((TOT - KEEP))
+    if [ "$OVER" -le 0 ]; then
+        printf '  %-26s %s element(s) (limite %s)\n' "$LABEL" "$TOT" "$KEEP"
+        return 0
+    fi
+    if [ "$DRY" = "1" ]; then
+        printf '  %-26s supprimerait %s element(s)\n' "$LABEL" "$OVER"
+    else
+        printf '%s\n' "$LIST" | head -n "$OVER" | while read -r F; do
+            rm -rf "$F" 2>/dev/null
+        done
+        printf '  %-26s %s supprime(s) (garde %s)\n' "$LABEL" "$OVER" "$KEEP"
+    fi
+    return 0
+}
+
+do_clean()
+{
+    DRY=0
+    case "$1" in DRY|dry|-n) DRY=1 ;; esac
+
+    if ! require_root; then
+        return 1
+    fi
+
+    echo ""
+    echo "=== RK322X CLEAN (assainissement)${DRY:+ -- SIMULATION} ==="
+
+    trim_newest "$BACKUP_DIR" "scripts_*" 3 "backups install"
+
+    if find_usb; then
+        trim_newest "$USB_DIR/manifests/history" "install_*.manifest" 10 "manifests history"
+        trim_newest "$USB_DIR/log/gui_shots" "*.png" 11 "gui_shots (latest inclus)"
+
+        RL=""
+        [ -f "$USB_DIR/scripts/rotate_logs.sh" ] && RL="$USB_DIR/scripts/rotate_logs.sh"
+        [ -z "$RL" ] && [ -f "$SCRIPTS_DIR/rotate_logs.sh" ] && RL="$SCRIPTS_DIR/rotate_logs.sh"
+        if [ -n "$RL" ]; then
+            if [ "$DRY" = "1" ]; then
+                echo "  rotation logs exec         (serait lancee)"
+            else
+                sh "$RL" > /dev/null 2>&1 && echo "  rotation logs exec         OK"
+            fi
+        fi
+    else
+        echo "  cle absente : nettoyage cote box uniquement"
+    fi
+
+    TMPD="/data/local/tmp"
+    for D in "$TMPD"/dpk_* "$TMPD/rk322x_logs"; do
+        [ -e "$D" ] || continue
+        if [ "$DRY" = "1" ]; then
+            echo "  staging/tmp                supprimerait $(basename "$D")"
+        else
+            rm -rf "$D" 2>/dev/null
+            echo "  staging/tmp                $(basename "$D") supprime"
+        fi
+    done
+    for P in "$TMPD"/.probe_gui_*.png "$TMPD"/*.pid; do
+        [ -e "$P" ] || continue
+        if [ "$DRY" = "1" ]; then
+            echo "  residus tmp                supprimerait $(basename "$P")"
+        else
+            rm -f "$P" 2>/dev/null
+            echo "  residus tmp                $(basename "$P") supprime"
+        fi
+    done
+
+    trim_newest "/data/tombstones" "*" 5 "tombstones crash"
+
+    echo ""
+    echo "[ OK ] assainissement termine${DRY:+ (simulation : relancer sans DRY)}"
+    return 0
+}
+
 do_version()
 {
     echo ""
@@ -413,6 +545,79 @@ do_version()
     return 0
 }
 
+do_deploy_status()
+{
+    echo ""
+    echo "=== RK322X DEPLOY STATUS ==="
+
+    echo ""
+    echo "--- Installation sur la box ---"
+    if [ -f "$SCRIPTS_DIR/VERSION" ]; then
+        sed 's/^/  /' "$SCRIPTS_DIR/VERSION"
+    else
+        echo "  [ -- ] aucune trace d'installation ($SCRIPTS_DIR/VERSION absent)"
+    fi
+    IV="$(conf_version "$SCRIPTS_DIR/config/device.conf")"
+    printf '  %-12s : %s\n' "version box" "${IV:-absente}"
+
+    echo ""
+    echo "--- Outils attendus ---"
+    PRESENT=0; MISS=0; MISSING=""
+    for NAME in $INSTALL_LIST deploy; do
+        if [ -f "$SCRIPTS_DIR/$NAME.sh" ] || [ -f "$SCRIPTS_DIR/core/$NAME.sh" ]; then
+            PRESENT=$((PRESENT+1))
+        else
+            MISSING="$MISSING $NAME"
+            MISS=$((MISS+1))
+        fi
+    done
+    echo "  presents     : $PRESENT"
+    echo "  manquants    : $MISS${MISSING:+ =>$MISSING}"
+    LK="$(ls -1 "$BIN_DIR" 2>/dev/null | grep -c .)"
+    echo "  liens bin    : $LK ($BIN_DIR)"
+
+    echo ""
+    echo "--- Sauvegardes / manifests ---"
+    NBB="$(ls -1d "$BACKUP_DIR"/scripts_* 2>/dev/null | grep -c .)"
+    LASTB="$(ls -1d "$BACKUP_DIR"/scripts_* 2>/dev/null | sort | tail -n 1)"
+    echo "  backups      : $NBB (dernier : $(basename "${LASTB:-aucun}"))"
+
+    if find_usb; then
+        MAN="$(ls -1 "$USB_DIR/manifests/current"/install_*.manifest 2>/dev/null | sort | tail -n 1)"
+        [ -n "$MAN" ] && echo "  manifest     : $(basename "$MAN")"
+        NH="$(ls -1 "$USB_DIR/manifests/history" 2>/dev/null | grep -c .)"
+        echo "  history      : $NH entree(s)"
+
+        KV="$(conf_version "$USB_DIR/config/device.conf")"
+        echo ""
+        echo "--- Cle USB ---"
+        echo "  chemin       : $USB_DIR"
+        echo "  version cle  : ${KV:-absente}"
+        if [ -n "$IV" ] && [ -n "$KV" ] && [ "$IV" != "$KV" ]; then
+            echo "  verdict      : divergent -> deploy INSTALL"
+        elif [ -z "$IV" ]; then
+            echo "  verdict      : rien installe -> deploy INSTALL"
+        else
+            echo "  verdict      : a jour"
+        fi
+
+        ALIVE=0
+        for P in "$USB_DIR"/server/*.pid; do
+            [ -f "$P" ] || continue
+            PID="$(cat "$P" 2>/dev/null)"
+            kill -0 "$PID" 2>/dev/null && ALIVE=$((ALIVE+1))
+        done
+        echo "  serveurs actifs : $ALIVE pidfile(s)"
+    else
+        echo ""
+        echo "--- Cle USB ---"
+        echo "  absente (verdict limite a la box)"
+    fi
+
+    echo ""
+    return 0
+}
+
 case "$1" in
 
     INSTALL)
@@ -437,6 +642,14 @@ case "$1" in
 
     VERSION|version)
         do_version
+        ;;
+
+    STATUS|status)
+        do_deploy_status
+        ;;
+
+    CLEAN|clean)
+        do_clean "$2"
         ;;
 
     SEND_LOGS)
@@ -495,6 +708,8 @@ case "$1" in
         echo "  STOP         Arreter les serveurs"
         echo "  SEND_LOGS    Collecter les logs sur la cle"
         echo "  VERSION      Versions installee / cle (diagnostic mise a jour)"
+        echo "  STATUS       Etat du deploiement : outils, liens, backups, cle"
+        echo "  CLEAN [DRY]  Assainissement : backups/manifests/shots/staging"
         echo ""
         if [ -f "/data/scripts/help.sh" ]; then
             echo "Aide complete des outils : help"

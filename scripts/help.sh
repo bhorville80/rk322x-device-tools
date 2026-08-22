@@ -31,6 +31,13 @@ DEPLOIEMENT   (depuis la cle : sh /mnt/media_rw/<ID>/deploy.sh <cmd>)
   SEND_LOGS    Collecte logcat/dmesg/getprop/ip/mount/ps
                dans log/log_<TS>/ sur la cle
   VERSION      Version installee vs cle (diagnostic mise a jour)
+  STATUS       Etat du deploiement : outils presents, liens bin,
+               backups, manifest, version vs cle, serveurs actifs
+               (validation automatique a la fin de chaque INSTALL :
+               sh -n sur chaque script + liens, tracee dans VERSION)
+  CLEAN [DRY]  Assainissement : garde 3 backups + 10 manifests,
+               purge staging dpk/tmp residuels et tombstones,
+               rotation logs exec ; DRY = simulation seule
   HELP         Aide rapide deploy
 
 AMORCE (demarrage rapide, apres le premier INSTALL)
