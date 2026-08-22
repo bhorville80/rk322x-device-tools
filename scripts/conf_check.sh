@@ -161,6 +161,18 @@ case "$SM" in keys|password|any|"") ok "SSH_MODE = ${SM:-<vide, defaut keys>}" ;
 WA="$(gv WIRELESS_AIRPLANE)"
 case "$WA" in 0|1|"") ok "WIRELESS_AIRPLANE = ${WA:-<vide, defaut 0>}" ;; *) ko "WIRELESS_AIRPLANE '$WA' (attendu : 0|1)" ;; esac
 
+ZM="$(gv MEM_ZRAM_MB)"
+case "$ZM" in "") ok "MEM_ZRAM_MB = <vide, defaut 512>" ;; *) is_num "$ZM" && ok "MEM_ZRAM_MB = $ZM" || ko "MEM_ZRAM_MB '$ZM' (attendu : Mo, nombre)" ;; esac
+
+SWV="$(gv MEM_SWAPPINESS)"
+case "$SWV" in "") ok "MEM_SWAPPINESS = <vide, defaut 100>" ;; *) is_num "$SWV" && [ "$SWV" -le 200 ] && ok "MEM_SWAPPINESS = $SWV" || ko "MEM_SWAPPINESS '$SWV' (attendu : 0..200)" ;; esac
+
+LE="$(gv MEM_LMK_EARLY)"
+case "$LE" in ""|0|1) ok "MEM_LMK_EARLY = ${LE:-<vide, defaut 0>}" ;; *) ko "MEM_LMK_EARLY '$LE' (attendu : 0|1)" ;; esac
+
+LG="$(gv LOGD_SIZE_KB)"
+case "$LG" in "") ok "LOGD_SIZE_KB = <vide, defaut 256>" ;; *) is_num "$LG" && { [ "$LG" -eq 0 ] || { [ "$LG" -ge 64 ] && [ "$LG" -le 4096 ]; } } && ok "LOGD_SIZE_KB = $LG" || ko "LOGD_SIZE_KB '$LG' (attendu : 0 ou 64..4096)" ;; esac
+
 echo ""
 echo "[4] Profil"
 PF="$(gv PROFILE)"
@@ -206,6 +218,10 @@ SERVICES_CUT
 SERVICES_CUT_KEEP
 PACKAGES_DISABLE
 PACKAGES_DISABLE_KEEP
+MEM_ZRAM_MB
+MEM_SWAPPINESS
+MEM_LMK_EARLY
+LOGD_SIZE_KB
 SSH_PORT
 SSH_MODE
 SSH_BIN

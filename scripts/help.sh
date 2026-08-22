@@ -110,9 +110,17 @@ ALLEGEMENT (24/7)
                       (launcher/UI/clavier/apps perso conserves)
   cut_services APPS MAX   Phase 2 extreme : coupe aussi l'interface TV
                       (headless total jusqu'a RESTORE/reboot)
-  cut_services RESTORE  Remet l'etat d'origine
-                      Personnalisation : SERVICES_CUT / PACKAGES_DISABLE
-                      dans config/device.conf
+   cut_services RESTORE  Remet l'etat d'origine
+                       Personnalisation : SERVICES_CUT / PACKAGES_DISABLE
+                       dans config/device.conf
+   mem_tune STATUS    Memoire : zram/swap, swappiness, lmk minfree,
+                       buffers logd, profil cible
+   mem_tune OPTIMIZE  Profil optimise : zram (si kernel expose),
+                       swappiness adapte, kills plus tot (option),
+                       buffers logd reduits ; ORIGINE sauvegardee
+   mem_tune RESTORE   Remet les valeurs d'origine
+                       Pilotage : MEM_ZRAM_MB / MEM_SWAPPINESS /
+                       MEM_LMK_EARLY / LOGD_SIZE_KB (device.conf)
 
 SYSTEME
   system_rw STATUS   Etat du montage /system (device/type/options)

@@ -81,6 +81,7 @@ main()
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS
     check_rc "thermal STATUS"      "0" sh "$BASE/thermal.sh" STATUS
     check_rc "vitals STATUS"       "0" sh "$BASE/vitals.sh" STATUS
+    check_rc "mem_tune STATUS"     "0" sh "$BASE/mem_tune.sh" STATUS
     check_rc "cut_services STATUS" "0" sh "$BASE/cut_services.sh" STATUS
     check_rc "system_rw STATUS"    "0" sh "$BASE/system_rw.sh" STATUS
     check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS

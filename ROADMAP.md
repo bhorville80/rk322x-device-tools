@@ -173,9 +173,9 @@ Investigation leads for the headless Leelbox MXQ (24/7 operation):
 * [x] EXPOSE 404 fix: fallback index generated at key root when panel missing; URL printed at start
 * [x] Box compatibility fixes: printf integer conversions broken on this firmware (%d -> %s), awk absent (POSIX sed/cut/tr rewrites), RAM kB shown as Mo
 * [x] PC provisioning stage 8 (linux/windows): V3 tools presence + amorce link; dpk install prints installed version
-* [ ] zRAM substitute: kernel exposes no zram block device yet - probe `modprobe zram`, then `zram_setup STATUS|ON|OFF` tool (~512-768 Mo compressed); swap on eMMC/USB rejected for a 24/7 box (wear/reliability)
-* [ ] logd buffers: `logcat -G 256K` to trim ring buffers after cut_services validation
-* [ ] lmkd thresholds: earlier kills once APPS/MAX baseline measured
+* [x] zRAM substitute: `mem_tune OPTIMIZE` probes `modprobe zram` then activates swap compresse (MEM_ZRAM_MB, prio 10) + swappiness adapte; swap on eMMC/USB rejected for a 24/7 box (wear/reliability); settings volatile - re-run after reboot
+* [x] logd buffers: `mem_tune` trims ring buffers (`logcat -G` + persist.logd.size, LOGD_SIZE_KB in device.conf) to limit eMMC wear after cut_services validation
+* [ ] lmkd thresholds: earlier kills via MEM_LMK_EARLY=1 implemented in `mem_tune`; tune the factor once APPS/MAX baseline measured
 * [x] Memory pressure report: `sys_diag` (MemAvailable %, zRAM presence, lmkd minfree/props) + top consumers in `inspect_system` / `inspect_services`
 * [x] eMMC wear: `life_time` estimates reported in `inspect_system` [5]; flash-write reduction still open (log rotation and manifest caps already in place)
 * [ ] Supervision: auto-restart of httpd + USB watcher after crash/reboot (watchdog loop)
