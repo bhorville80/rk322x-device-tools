@@ -169,6 +169,31 @@ main()
         fi
     fi
 
+    TEMP="$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | tr -dc '0-9')"
+    ZTYPE="$(cat /sys/class/thermal/thermal_zone0/type 2>/dev/null)"
+    case "$TEMP" in
+        ''|*[!0-9]*) ;;
+        *)
+            C=$((TEMP / 1000))
+            if [ "$C" -ge 75 ]; then
+                warn "Temperature" "${ZTYPE:-cpu} ${C}C (elevee, voir thermal)"
+            else
+                ok "Temperature" "${ZTYPE:-cpu} ${C}C"
+            fi
+            ;;
+    esac
+
+    GOV="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null | tr -d '\r')"
+    CURF="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null | tr -dc '0-9')"
+    if [ -n "$GOV" ]; then
+        FREQ_S=""
+        case "$CURF" in
+            ''|*[!0-9]*) ;;
+            *) FREQ_S=" $((CURF / 1000))MHz" ;;
+        esac
+        info "CPU" "$GOV$FREQ_S"
+    fi
+
     echo ""
     echo "=== RESUME ==="
     printf '  OK : %-4d KO : %-4d WARN : %d\n' "$PASS" "$FAIL" "$WARN"

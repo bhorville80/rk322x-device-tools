@@ -70,11 +70,13 @@ The toolkit is packaged as a single `.dpk` file (a tar.gz archive readable by to
 Build the package on the PC (from a git-bash/POSIX shell):
 
 ```bash
-tools/pack.sh
-tools/dpk.sh build
+tools/build.sh                # full pipeline: shell checks -> pack -> verify
+tools/check.sh                # static checks only (sh -n, shellcheck if present)
+tools/pack.sh                 # package only
+tools/dpk.sh build            # same thing, through the dpk front controller
 ```
 
-Output: `dist/rk322x-tools_v<version>_<TS>.dpk` (+ `.sha256`).
+Output: `dist/rk322x-tools_v<version>_<TS>.dpk` (+ `.sha256`, `BUILD-INFO.txt` inside).
 
 Manage builds:
 
@@ -150,6 +152,34 @@ Collected logs are stored in:
 
 ---
 
+## PC ADMIN
+
+Provisioning scripts that run on the PC (Linux, or Windows with PowerShell) and drive the box over ADB. Each step reads the actual value, compares it against `config/device.conf`, optionally fixes it, then re-verifies.
+
+Steps: subnet reachability of the box (optional address add on the PC), ADB connection, root access, installed version vs profile, interface/IP/gateway/DNS, Wi-Fi/Bluetooth off, clock drift (< 5 min, auto-resync from PC UTC clock), HDMI state (informational).
+
+### Linux
+
+Requires `adb` in PATH (root/sudo only for `--net`):
+
+```bash
+admin/linux/provision.sh                     # read-only report
+admin/linux/provision.sh --fix               # apply fixes then re-validate each step
+admin/linux/provision.sh --net --fix         # also add <subnet>.1/24 to the PC if missing
+admin/linux/provision.sh -t 192.168.50.20:5555 check
+admin/linux/provision.sh help
+```
+
+### Windows
+
+```powershell
+powershell -ExecutionPolicy Bypass -File admin\windows\provision.ps1           # check
+powershell -ExecutionPolicy Bypass -File admin\windows\provision.ps1 -Fix      # corrections
+powershell -ExecutionPolicy Bypass -File admin\windows\provision.ps1 -Net -Fix # + adresse PC (console admin)
+```
+
+---
+
 ## TOOLS
 
 After `INSTALL`, the following commands are available in `/data/bin`.
@@ -219,6 +249,16 @@ Front LED/VFD display inventory: sysfs LEDs (brightness/trigger + writability), 
 inspect_display
 ```
 
+### Graphical interface inspection
+
+On-screen (HDMI) capability inventory: framebuffer devices + blank state, window manager (resolution, focused activity), headless rendering proof via `screencap`, apps able to display content (launcher/browser/kodi), remote input injection (`input keyevent|tap`), boot visual customization paths (bootanimation.zip, logo partition) — plus two explicit actions:
+
+```bash
+inspect_gui                 # inventory + synthesis of what can be added on screen
+inspect_gui SHOT            # screenshot -> USB key (works even with screen cut)
+inspect_gui URL http://192.168.50.20:8000   # fullscreen page on the TV
+```
+
 ### IR remote inspection
 
 Input devices and IR receiver detection, `.kl` keylayout inventory with scancode-to-keycode content, expected `Vendor_Product.kl` name per device, `/system` remount status and the full key-remap procedure:
@@ -286,6 +326,23 @@ Copy a file to the USB key root:
 ```bash
 add_script_to_usb <file>
 ```
+
+Rotate/prune USB key logs (active `.log` files > 512 KB, `log/exec/`, SEND_LOGS collections, manifest history):
+
+```bash
+rotate_logs          # keep 5 generations by default
+rotate_logs 10       # custom keep count
+```
+
+CPU temperatures and profiles (24/7 operation):
+
+```bash
+thermal              # STATUS: temperatures, governor, frequency steps
+thermal ECO          # cap max freq + powersave/conservative governor
+thermal PERF         # native max freq + performance governor
+```
+
+`ECO` is the recommended profile for headless 24/7 use; the profile resets to firmware default on reboot. Temperatures and CPU state are also part of `check_state`.
 
 ---
 
@@ -414,15 +471,42 @@ sh /mnt/media_rw/<USB_ID>/server/control_server.sh start
 Trigger commands from a PC:
 
 ```bash
+curl http://192.168.50.20:8080/api/CONFIG      # configuration active (reponse synchrone)
 curl http://192.168.50.20:8080/api/HELP
 curl http://192.168.50.20:8080/api/SEND_LOGS
 curl http://192.168.50.20:8080/api/PURGE_LOG
 curl http://192.168.50.20:8080/api/SYNC
+curl http://192.168.50.20:8080/api/STATE       # check_state -> log/state_last.txt
+curl http://192.168.50.20:8080/api/PANEL       # affiche l'index en plein ecran sur la TV
+curl http://192.168.50.20:8080/api/HDMI_OFF    # ou HDMI_ON
+curl http://192.168.50.20:8080/api/FIELD_OFF   # ou FIELD_ON (field_mode)
+curl http://192.168.50.20:8080/api/REBOX       # reboot de la box
+curl http://192.168.50.20:8080/api/ROTATE_LOGS # rotation/purge des logs de la cle
+curl "http://192.168.50.20:8080/api/TIME_SYNC?t=20260822.171500"  # remise a l'heure (UTC, root)
+curl http://192.168.50.20:8080/api/ECO_MODE    # profil CPU eco (24/7)
+curl http://192.168.50.20:8080/api/PERF_MODE   # profil CPU performance
 ```
 
-Each request drops a trigger file in `incoming/`. The watcher (`watch_usb.sh`, 1 s polling) executes the matching action and logs to `log/watch.log`.
+Each request drops a trigger file in `incoming/`. The watcher (`watch_usb.sh`, 1 s polling) executes the matching action and logs to `log/watch.log`. `STATE` writes its report to `log/state_last.txt` (fetchable over HTTP). `CONFIG` answers synchronously with the active `/data/scripts/config/device.conf` content.
+
+The web index (`http://192.168.50.20:8000`) exposes all of these as buttons: state view, active config viewer, maintenance actions, TV display control (panel/HDMI/field mode) and reboot.
 
 All requests are recorded with timestamps in `log/control_server.log`.
+
+### GUI control API (port 8081)
+
+Dedicated remote control of what is displayed on the TV (`server/gui_server.sh`, auto-started by `deploy EXPOSE`, stopped by `deploy STOP`):
+
+```bash
+curl http://192.168.50.20:8081/gui/INDEX                # panneau web plein ecran sur la TV
+curl "http://192.168.50.20:8081/gui/URL?u=https://example.org"
+curl "http://192.168.50.20:8081/gui/TEXT?texte%20a%20afficher"   # param t= (message plein ecran)
+curl "http://192.168.50.20:8081/gui/KEY?k=KEYCODE_DPAD_RIGHT"    # injection touche
+curl "http://192.168.50.20:8081/gui/TAP?x=960&y=540"             # tap ecran
+curl http://192.168.50.20:8081/gui/SHOT                 # capture -> /log/gui_shots/latest.png (HTTP 8000)
+```
+
+`TEXT` renders the message as a local fullscreen page (no app install needed). `URL` accepts only `http:`/`https:`/`file:` schemes. Same optional token protection as the control API. The web index has a matching remote section: URL/text display boxes, DPAD/Home/Back buttons and an inline TV screenshot viewer.
 
 Optional security: if the file `server/token` exists on the key, every API call must carry the token:
 
@@ -506,7 +590,16 @@ DEPLOY_VERSION=1
 ├── incoming/                 watcher trigger files
 ├── history/
 ├── manifests/
+│
+├── admin/                    outils cote PC
+│   ├── linux/
+│   │   └── provision.sh      provisioning box : reseau, adb, controles par etape
+│   └── windows/
+│       └── provision.ps1     equivalent Windows PowerShell
+│
 └── tools/
+    ├── build.sh            pipeline complet : check -> pack -> verify
+    ├── check.sh            controle statique des scripts shell (sh -n)
     ├── pack.sh             construit dist/*.dpk (+ sha256)
     └── dpk.sh              build|list|latest|verify|push|install (adb)
 ```

@@ -46,6 +46,15 @@ if kill -0 "$PID" 2>/dev/null; then
     echo "PORT: $PORT"
     echo "ROOT: $USB"
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER STARTED (PID $PID, PORT $PORT, ROOT $USB)" >> "$LOG"
+
+    if [ -f "$USB/server/gui_server.sh" ]; then
+        if sh "$USB/server/gui_server.sh" start > /dev/null 2>&1; then
+            echo "GUI SERVER: 8081"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER STARTED (PORT 8081)" >> "$LOG"
+        else
+            echo "GUI SERVER: echec (voir log/gui_server.log)"
+        fi
+    fi
 else
     echo "ERREUR: serveur non démarré"
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER FAILED (PORT $PORT)" >> "$LOG"

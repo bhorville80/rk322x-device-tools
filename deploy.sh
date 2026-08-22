@@ -1,10 +1,18 @@
 #!/system/bin/sh
 
+# gardes partages (require_root, require_busybox)
+for B in "$(dirname "$0")/scripts" "$(dirname "$0")" /data/scripts; do
+    if [ -f "$B/core/config.sh" ]; then
+        . "$B/core/config.sh"
+        break
+    fi
+done
+
 SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_remote hdmi check_state help selftest show_key field_mode"
+INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote hdmi check_state help selftest show_key field_mode rotate_logs thermal"
 
 find_usb()
 {

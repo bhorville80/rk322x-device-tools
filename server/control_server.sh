@@ -74,7 +74,56 @@ fi
         log "REQUEST: ${COMMAND:-<inconnu>}"
 
         case "$COMMAND" in
-            HELP|SEND_LOGS|PURGE_LOG|SYNC)
+
+            # reponse synchrone : contenu de la configuration active
+            CONFIG)
+                CONF=""
+                if [ -f /data/scripts/config/device.conf ]; then
+                    CONF="/data/scripts/config/device.conf"
+                elif [ -f "$USB/scripts/config/device.conf" ]; then
+                    CONF="$USB/scripts/config/device.conf"
+                fi
+
+                if [ -n "$CONF" ]; then
+                    VER_LINE="version installee : inconnue"
+                    [ -f /data/scripts/VERSION ] && \
+                        VER_LINE="$(grep '^version' /data/scripts/VERSION 2>/dev/null | head -n 1)"
+                    BODY="### configuration active ($CONF)\n$VER_LINE\n\n$(cat "$CONF" 2>/dev/null)"
+                    log "COMMANDE ACCEPTED: CONFIG -> $CONF"
+                    printf 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                else
+                    log "COMMANDE REJECTED: CONFIG introuvable"
+                    BODY='{"status":"error","message":"config introuvable"}'
+                    printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                fi
+                ;;
+
+            # reponse synchrone : remise a l'heure de la box (t=YYYYMMDD.HHMMSS, UTC)
+            TIME_SYNC)
+                V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
+                if [ "$(id -u 2>/dev/null)" != "0" ]; then
+                    log "COMMANDE REJECTED: TIME_SYNC (root requis)"
+                    BODY='{"status":"error","message":"root requis"}'
+                    printf 'HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                elif [ -z "$V" ]; then
+                    log "COMMANDE REJECTED: TIME_SYNC (parametre manquant)"
+                    BODY='{"status":"error","message":"t=YYYYMMDD.HHMMSS attendu"}'
+                    printf 'HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                else
+                    date -u -s "$V" > /dev/null 2>&1
+                    NEW="$(date '+%Y-%m-%d %H:%M:%S')"
+                    log "TIME_SYNC -> $NEW (UTC)"
+                    BODY="{\"status\":\"ok\",\"box_time_utc\":\"$NEW\"}"
+                    printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+                        "${#BODY}" "$BODY"
+                fi
+                ;;
+
+            HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE)
                 touch "$INCOMING/$COMMAND"
                 log "COMMANDE ACCEPTED: $COMMAND"
 

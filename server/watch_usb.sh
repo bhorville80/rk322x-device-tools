@@ -77,6 +77,7 @@ do
             SEND_LOGS)
                 log "SEND_LOGS"
                 sh "$USB/deploy.sh" SEND_LOGS >> "$LOG" 2>&1
+                sh "$USB/scripts/rotate_logs.sh" > /dev/null 2>&1
                 rm -f "$FILE"
                 ;;
 
@@ -84,6 +85,70 @@ do
                 log "SYNC"
                 sh "$USB/scripts/sync_usb.sh" >> "$LOG" 2>&1
                 rm -f "$FILE"
+                ;;
+
+            FIELD_OFF)
+                log "FIELD_OFF"
+                sh "$USB/scripts/field_mode.sh" OFF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            FIELD_ON)
+                log "FIELD_ON"
+                sh "$USB/scripts/field_mode.sh" ON >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            HDMI_OFF)
+                log "HDMI_OFF"
+                sh "$USB/scripts/hdmi.sh" OFF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            HDMI_ON)
+                log "HDMI_ON"
+                sh "$USB/scripts/hdmi.sh" ON >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            PANEL)
+                log "PANEL"
+                IP="$(sed -n 's/^IP=//p' "$USB/scripts/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+                [ -n "$IP" ] || IP="192.168.50.20"
+                sh "$USB/scripts/inspect_gui.sh" URL "http://$IP:8000" >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            STATE)
+                log "STATE"
+                mkdir -p "$LOG_DIR"
+                sh "$USB/scripts/check_state.sh" > "$LOG_DIR/state_last.txt" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            ROTATE_LOGS)
+                log "ROTATE_LOGS"
+                sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            ECO_MODE)
+                log "ECO_MODE"
+                sh "$USB/scripts/thermal.sh" ECO >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            PERF_MODE)
+                log "PERF_MODE"
+                sh "$USB/scripts/thermal.sh" PERF >> "$LOG" 2>&1
+                rm -f "$FILE"
+                ;;
+
+            REBOX)
+                log "REBOOT demande"
+                rm -f "$FILE"
+                sync
+                reboot || setprop sys.powerctl reboot
                 ;;
 
             PURGE_LOG)

@@ -18,6 +18,7 @@ dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
 - `<version>` comes from `DEPLOY_VERSION` in `config/device.conf` (currently `2`).
 - `<TS>` is the build timestamp (`YYYYMMDD-HHMMSS`).
 - `.bak` files are excluded from the archive.
+- A failed build leaves nothing behind in `dist/` (no partial `.dpk`).
 
 ### Archive contents
 
@@ -33,6 +34,7 @@ scripts/               all tools + core modules
 server/                HTTP server + control API + watcher
 bin/                   trigger helpers (HELP / MEDIA)
 config/device.conf     device profile
+BUILD-INFO.txt         build metadata (version, date, git commit + state)
 ```
 
 ---
@@ -42,9 +44,13 @@ config/device.conf     device profile
 From a git-bash / POSIX shell, at the repository root:
 
 ```bash
-tools/pack.sh                 # build only
+tools/build.sh                # full pipeline: lint (sh -n) -> pack -> verify
+tools/check.sh                # static checks only (sh -n, shellcheck if present)
+tools/pack.sh                 # package only
 tools/dpk.sh build            # same thing, through the dpk front controller
 ```
+
+A failed check aborts the pipeline before anything is written to `dist/`.
 
 Manage builds with `tools/dpk.sh`:
 

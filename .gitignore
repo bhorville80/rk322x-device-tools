@@ -1,2 +1,18 @@
+# Sorties de build
 dist/
 *.dpk
+*.dpk.sha256
+BUILD-INFO.txt
+
+# Fichiers runtime remontes de la box / de la cle USB
+*.pid
+*.lock
+/log/
+/incoming/
+/history/
+/manifests/
+
+# Editeurs / sauvegardes
+*.bak
+*.swp
+*~
