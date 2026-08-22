@@ -76,6 +76,7 @@ main()
     check_rc "check_state"         "0 1" sh "$BASE/check_state.sh"
     check_rc "inspect_system"      "0" sh "$BASE/inspect_system.sh"
     check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"
+    check_rc "device_info"         "0" sh "$BASE/device_info.sh"
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS
     check_rc "thermal STATUS"      "0" sh "$BASE/thermal.sh" STATUS
     check_rc "vitals STATUS"       "0" sh "$BASE/vitals.sh" STATUS
