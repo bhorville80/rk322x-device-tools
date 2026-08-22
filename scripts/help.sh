@@ -120,8 +120,21 @@ ACCES / ACCUEIL
   motd ON|OFF        Pose/retire le crochet dans /system/etc/mkshrc
                      (remount rw/ro automatique via system_rw)
 
+RESEAU / DIAGNOSTIC
+  net_diag           Diagnostic complet : lien (vitesse/duplex),
+                     adresses auto-detectees, routes, DNS,
+                     ping passerelle + internet, resume ok/ko/warn
+  net_diag PORTS     Services en ecoute (8000 cle, 8080 API,
+                     8081 GUI, 5555 adb, 2222 ssh...)
+  net_diag PING <h>  Latence detaillee vers un hote
+  net_diag THROUGHPUT <ip>   Debit sortant dd->nc (receveur requis)
+  set_network.sh     Config statique eth0 (IP/route/DNS) depuis
+                     config/device.conf
+
 MAINTENANCE
   sync_usb           Synchronise /data/scripts -> cle USB
+                     + validation post-copie (cmp octet a octet)
+  sync_usb STATUS    Compare sans copier : identiques/divergents
   add_to_bin <s>     Ajoute un script dans /data/bin
   add_script_to_usb  Copie un fichier vers la racine cle
 

@@ -67,21 +67,21 @@ This document tracks planned features, improvements and technical work for the p
 
 ## Network
 
-* [ ] Improve network configuration scripts
-* [ ] Add network diagnostics
-* [ ] Add connectivity checks
-* [ ] Add automatic IP detection
-* [ ] Improve HTTP server management
+* [x] Improve network configuration scripts (`set_network` driven by device.conf GATEWAY/DNS; `check_state` suggests remediation on WARN)
+* [x] Add network diagnostics (`net_diag`: link speed/duplex from sysfs, MAC, routes, DNS servers)
+* [x] Add connectivity checks (ping gateway / DNS / 8.8.8.8 / domain resolution, per-check verdicts + summary)
+* [x] Add automatic IP detection (`net_diag` scans all interfaces, flags subnet mismatches vs profile)
+* [x] Improve HTTP server management (`net_diag PORTS` labels listeners 8000/8080/8081/5555/2222; EXPOSE prints URL; STOP unified via pidfiles)
 
 ---
 
 ## USB
 
 * [x] Improve USB detection
-* [ ] Improve USB synchronization
-* [ ] Add synchronization status
-* [ ] Add synchronization validation
-* [ ] Improve handling of missing USB storage
+* [x] Improve USB synchronization (`sync_usb` post-copy validation pass, size report, explicit key path argument)
+* [x] Add synchronization status (`sync_usb STATUS`: identical/different/missing file diff without copying)
+* [x] Add synchronization validation (byte-to-byte `cmp` verification after copy, ecarts reported)
+* [x] Improve handling of missing USB storage (explicit error + hint, multi-key safe pick deploy.sh+LOST.DIR first)
 
 ---
 
@@ -174,7 +174,7 @@ Investigation leads for the headless Leelbox MXQ (24/7 operation):
 * [ ] Supervision: auto-restart of httpd + USB watcher after crash/reboot (watchdog loop)
 * [x] Web panel: active config exposure (`/api/CONFIG`) + full action set from the index (state, sync, logs, HDMI, field mode, TV display, reboot)
 * [x] Dedicated GUI remote port 8081 (`server/gui_server.sh`): fullscreen URL/text display, key/tap injection, live TV screenshot
-* [ ] Network depth: link speed/duplex, DNS latency, throughput test (`dd` over `nc`), internet connectivity check
+* [x] Network depth: `net_diag` - link speed/duplex, DNS latency (ping), internet connectivity checks, throughput test sender-side (`dd` over `nc`, receiver command printed)
 * [ ] Security: restrict adb (5555) and HTTP (8000) to the LAN subnet via iptables
 * [ ] Entropy: check `entropy_avail`, feed rngd if TLS stalls are observed
 
