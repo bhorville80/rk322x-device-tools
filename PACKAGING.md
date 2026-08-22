@@ -8,15 +8,17 @@ A `.dpk` package is a single `tar.gz` archive containing the full toolkit. It is
 
 ## Deliverable
 
-Each build produces two files in `dist/`:
+Each build produces two files in `dist/` plus a copy of the newest one in `dist/latest/`:
 
 ```text
-dist/rk322x-tools_v<version>_<TS>.dpk          archive tar.gz du toolkit
-dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
+dist/rk322x-tools_v<version>_<BUILD_ID>.dpk          archive tar.gz du toolkit
+dist/rk322x-tools_v<version>_<BUILD_ID>.dpk.sha256   empreinte de controle
+dist/latest/<même nom>.dpk (+ .sha256)               dernier build seul
 ```
 
 - `<version>` comes from `DEPLOY_VERSION` in `config/device.conf` (currently `3`).
-- `<TS>` is the build timestamp (`YYYYMMDD-HHMMSS`).
+- `<BUILD_ID>` is the build timestamp at format **YY.MM.ddHH.MMss** (ex : `26.08.2221.4320`) - fixed-width fields keep lexicographic sort chronological.
+- `dist/latest/` is overwritten on every build; `dist/` root keeps the full history.
 - `.bak` files are excluded from the archive.
 - A failed build leaves nothing behind in `dist/` (no partial `.dpk`).
 
@@ -32,7 +34,7 @@ scripts/               all tools + core modules: cut_services, system_rw,
 server/                HTTP server + control API + GUI remote + ssh_server (optional)
 bin/                   trigger helpers (HELP / MEDIA)
 config/device.conf     device profile
-BUILD-INFO.txt         build metadata (version, date, git commit + state)
+BUILD-INFO.txt         build metadata (version, build_id YY.MM.ddHH.MMss, date, git commit + state)
 ```
 
 ---

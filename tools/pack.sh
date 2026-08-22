@@ -6,10 +6,12 @@
 #   tools/pack.sh help        cette aide
 #
 # Sorties:
-#   dist/rk322x-tools_v<version>_<TS>.dpk          archive tar.gz du toolkit
-#   dist/rk322x-tools_v<version>_<TS>.dpk.sha256   empreinte de controle
+#   dist/rk322x-tools_v<version>_<BUILD_ID>.dpk          archive tar.gz du toolkit
+#   dist/rk322x-tools_v<version>_<BUILD_ID>.dpk.sha256   empreinte de controle
+#   dist/latest/                                         copie du dernier build
 #
-# Le paquet embarque un BUILD-INFO.txt (version, date, etat git).
+# BUILD_ID au format YY.MM.ddHH.MMss (ex : 26.08.2221.4320).
+# Le paquet embarque un BUILD-INFO.txt (version, build_id, date, etat git).
 # En cas d'echec, aucune archive partielle n'est laissee dans dist/.
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -51,20 +53,23 @@ done
 [ -z "$MISSING" ] || die "entrees manquantes :$MISSING"
 
 # --- metadonnees de construction -------------------------------------------
-TS="$(date '+%Y%m%d-%H%M%S')"
-NAME="${NAME_BASE}_v${VERSION}_${TS}.dpk"
+# BUILD_ID horodate au format YY.MM.ddHH.MMss (ex : 26.08.2221.4320)
+BUILD_ID="$(date '+%y.%m.%d%H.%M%S')"
+NAME="${NAME_BASE}_v${VERSION}_${BUILD_ID}.dpk"
 OUT="$DIST/$NAME"
+LATEST_DIR="$DIST/latest"
 
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo inconnu)"
 GIT_STATE="clean"
 [ -n "$(git status --porcelain 2>/dev/null | head -n 1)" ] && GIT_STATE="modifie"
 
 {
-    echo "paquet  : $NAME"
-    echo "version : $VERSION"
-    echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
-    echo "git     : $GIT_SHA ($GIT_STATE)"
-    echo "hote    : $(uname -s -r 2>/dev/null)"
+    echo "paquet   : $NAME"
+    echo "version  : $VERSION"
+    echo "build_id : $BUILD_ID"
+    echo "date     : $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "git      : $GIT_SHA ($GIT_STATE)"
+    echo "hote     : $(uname -s -r 2>/dev/null)"
 } > "$BUILD_INFO" || die "ecriture BUILD-INFO.txt impossible"
 
 mkdir -p "$DIST" || die "dist/ inaccessible"
@@ -90,10 +95,17 @@ fi
 NFILES="$(tar -tzf "$OUT" | wc -l)"
 SIZE="$(du -h "$OUT" | cut -f1)"
 
+# --- dernier build isole dans dist/latest/ ----------------------------------
+mkdir -p "$LATEST_DIR" || die "dist/latest inaccessible"
+rm -f "$LATEST_DIR"/*.dpk "$LATEST_DIR"/*.sha256 2>/dev/null
+cp -f "$OUT" "$LATEST_DIR/" || die "copie vers dist/latest echouee"
+[ -f "$OUT.sha256" ] && cp -f "$OUT.sha256" "$LATEST_DIR/"
+
 OK=1
 echo ""
 echo "Package : $OUT"
 [ -f "$OUT.sha256" ] && echo "Somme   : $(cat "$OUT.sha256")"
+echo "Latest  : $LATEST_DIR/$NAME (historique conserve dans dist/)"
 echo "Git     : $GIT_SHA ($GIT_STATE)"
 echo "Contenu :"
 tar -tzf "$OUT" | sed 's/^/  /'

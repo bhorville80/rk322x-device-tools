@@ -193,8 +193,10 @@ install_from()
     fi
 
     echo "[4] Trace..."
+    BUILD_ID_SRC="$(sed -n 's/^build_id *: *//p' "$SRC/BUILD-INFO.txt" 2>/dev/null | head -n 1 | tr -d '\r')"
     {
         echo "version : $(sed -n 's/^DEPLOY_VERSION=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | tr -d '\r')"
+        echo "build   : ${BUILD_ID_SRC:-inconnu}"
         echo "date    : $(date '+%Y-%m-%d %H:%M:%S')"
         echo "source  : $INSTALL_SRC_TYPE : $INSTALL_SRC_ID"
         echo "validation : $VAL_NOTE"
