@@ -8,4 +8,6 @@ The toolkit is designed to be used directly from a USB drive connected to the de
 
 Full documentation: **[README.txt](README.txt)**
 
+Packaging & deliverable: **[PACKAGING.md](PACKAGING.md)**
+
 Planned improvements: **[roadmap.md](roadmap.md)**

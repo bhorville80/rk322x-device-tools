@@ -17,8 +17,18 @@ This document tracks planned features, improvements and technical work for the p
 * [x] USB synchronization
 * [x] Script deployment
 * [x] Wi-Fi / Bluetooth management
+* [x] HDMI cut (headless field mode)
 * [x] Logging
 * [x] BusyBox HTTP file server
+
+### Packaging
+
+* [x] `.dpk` deliverable (`tools/pack.sh`, tar.gz readable by toybox/busybox)
+* [x] Package integrity via `.sha256`
+* [x] PC front controller `tools/dpk.sh` (build/list/latest/verify/push/install over ADB)
+* [x] On-device install from package (`deploy PKG`)
+* [ ] Signed packages
+* [ ] Delta updates
 
 ---
 
@@ -86,6 +96,8 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Add storage diagnostics
 * [x] Add memory diagnostics
 * [x] Add process diagnostics
+* [x] Digital display (front LED/VFD) inspection + modification paths
+* [x] IR remote inspection + key remap procedure
 * [ ] Add network diagnostics
 
 ---

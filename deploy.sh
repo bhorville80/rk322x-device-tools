@@ -4,7 +4,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services hdmi check_state help selftest show_key"
+INSTALL_LIST="sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_remote hdmi check_state help selftest show_key field_mode"
 
 find_usb()
 {
@@ -65,6 +65,11 @@ backup_existing()
 
 write_manifest()
 {
+    [ -n "$USB_DIR" ] && { [ -d "$USB_DIR" ] || USB_DIR=""; }
+    if [ -z "$USB_DIR" ]; then
+        find_usb || { echo "[ WARN ] manifest non ecrit (pas de cle)"; return 0; }
+    fi
+
     MAN_DIR="$USB_DIR/manifests/current"
     HIS_DIR="$USB_DIR/manifests/history"
 

@@ -48,6 +48,12 @@ INSPECTION
   inspect_services   Services init (running/stopped), packages
                      systeme/tiers/desactives, top RAM,
                      cout SurfaceFlinger
+  inspect_display    Afficheur digital frontal : leds sysfs,
+                     noeuds /dev, drivers fd65x/tm16x, daemons,
+                     moyens de modification
+  inspect_remote     Telecommande IR : recepteur input, layouts
+                     .kl (scancode->keycode), droits /system,
+                     procedure de remap
 
 ACTIONS
   hdmi OFF           Coupe sortie HDMI + blank framebuffer
@@ -55,6 +61,11 @@ ACTIONS
   hdmi STATUS        Etat noeuds sysfs display
   disable_wireless   Coupe Wi-Fi, Bluetooth, wlan0/p2p0/hci0
   media              Liste medias montes (USB/SD) et types
+  field_mode OFF     Mode exploitation sans ecran : wireless + HDMI
+                     + serveurs + services de SERVICES_STOP
+                     (config/device.conf)
+  field_mode ON      Retour ecran + redemarre les services surveilles
+  field_mode STATUS  Etat HDMI / wireless / services
 
 MAINTENANCE
   sync_usb           Synchronise /data/scripts -> cle USB
@@ -80,13 +91,16 @@ LOGS
 
 PACKAGING
   Cote PC    : tools/pack.sh construit dist/rk322x-tools_v<ver>_<TS>.dpk
-               (archive tar.gz du toolkit complet)
+                (+ .sha256), archive tar.gz du toolkit complet
+  Cote PC    : tools/dpk.sh build|list|latest|verify|push|install
+                push/install = adb vers la box (-t ip:5555 ou DPK_TARGET)
   Cote box   : deploy PKG [fichier.dpk]
-               extraction + installation traquee comme INSTALL
+                extraction + installation traquee comme INSTALL
   show_key     Liste les paquets .dpk de la cle, marque celui
-               que deploy PKG prendra, compare a la version
-               installee, etat incoming/logs/manifests
+                que deploy PKG prendra, compare a la version
+                installee, etat incoming/logs/manifests
   Le .dpk se pose simplement a la racine de la cle
+  Doc complete : PACKAGING.md a la racine du depot
 
 EXEMPLES D'USAGE SUR SITE
   adb shell                 puis su

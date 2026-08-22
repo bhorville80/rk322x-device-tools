@@ -65,15 +65,24 @@ The list of commands exposed in `/data/bin` is defined by `INSTALL_LIST` at the 
 
 ### Install from a package
 
-The toolkit can be packaged as a single `.dpk` file (a tar.gz archive readable by toybox and busybox).
+The toolkit is packaged as a single `.dpk` file (a tar.gz archive readable by toybox and busybox), with a `.sha256` sidecar for integrity checks.
 
 Build the package on the PC (from a git-bash/POSIX shell):
 
 ```bash
 tools/pack.sh
+tools/dpk.sh build
 ```
 
-Output: `dist/rk322x-tools_v<version>_<TS>.dpk`
+Output: `dist/rk322x-tools_v<version>_<TS>.dpk` (+ `.sha256`).
+
+Manage builds:
+
+```bash
+tools/dpk.sh list             # list dist/ packages, latest marked
+tools/dpk.sh latest           # path of the latest package
+tools/dpk.sh verify [f]       # archive + deploy.sh + sha256 check
+```
 
 Drop the `.dpk` at the root of the USB key (or anywhere) and install:
 
@@ -82,7 +91,16 @@ deploy PKG
 deploy PKG /path/to/file.dpk
 ```
 
-Installation from a package goes through the same tracked path as `INSTALL` (backup, manifest, links).
+Or push and install straight over ADB:
+
+```bash
+tools/dpk.sh install                          # build output -> device, then cleanup
+tools/dpk.sh install -t 192.168.50.20:5555    # explicit adb target
+DPK_TARGET=192.168.50.20:5555 tools/dpk.sh install
+tools/dpk.sh push                             # push only (install manually later)
+```
+
+Installation from a package goes through the same tracked path as `INSTALL` (backup, manifest, links). Full workflow documented in **[PACKAGING.md](PACKAGING.md)**.
 
 ### Show what is available on the key
 
@@ -193,6 +211,22 @@ Init services with running/stopped states, package inventory (system/third-party
 inspect_services
 ```
 
+### Digital display inspection
+
+Front LED/VFD display inventory: sysfs LEDs (brightness/trigger + writability), candidate `/dev` nodes, kernel drivers (`fd65x`/`tm16x`), related daemons and device-tree nodes — with the actionable ways to modify what it shows:
+
+```bash
+inspect_display
+```
+
+### IR remote inspection
+
+Input devices and IR receiver detection, `.kl` keylayout inventory with scancode-to-keycode content, expected `Vendor_Product.kl` name per device, `/system` remount status and the full key-remap procedure:
+
+```bash
+inspect_remote
+```
+
 ### HDMI control
 
 Cuts or restores the HDMI output using Rockchip sysfs nodes, with framebuffer blank fallback:
@@ -212,6 +246,18 @@ disable_wireless
 ```
 
 Verify afterwards with `check_state`.
+
+### Field mode (headless operation)
+
+One-shot preparation for unattended use: wireless + HDMI + servers + optional init services, in sequence:
+
+```bash
+field_mode OFF      # cut everything
+field_mode ON       # restore display + restart watched services
+field_mode STATUS   # HDMI / wireless / services summary
+```
+
+Services to stop are defined by `SERVICES_STOP` in `config/device.conf` (init.rc names, space separated; empty by default — pick them from `inspect_services`). `eth0` and ADB are kept for remote control.
 
 ### Media listing
 
@@ -410,6 +456,7 @@ DEPLOY_VERSION=1
 /
 ├── README.md
 ├── README.txt
+├── PACKAGING.md            build + install du livrable .dpk
 ├── roadmap.md
 │
 ├── deploy.sh            INSTALL | EXPOSE | STOP | SEND_LOGS
@@ -428,6 +475,7 @@ DEPLOY_VERSION=1
 │   ├── hdmi.sh
 │   ├── sync_usb.sh
 │   ├── disable_wireless.sh
+│   ├── field_mode.sh
 │   ├── add_script_to_usb.sh
 │   ├── add_to_bin.sh
 │   ├── boxhelp.sh
@@ -457,7 +505,10 @@ DEPLOY_VERSION=1
 │
 ├── incoming/                 watcher trigger files
 ├── history/
-└── manifests/
+├── manifests/
+└── tools/
+    ├── pack.sh             construit dist/*.dpk (+ sha256)
+    └── dpk.sh              build|list|latest|verify|push|install (adb)
 ```
 
 ---

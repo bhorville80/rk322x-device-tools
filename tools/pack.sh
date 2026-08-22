@@ -24,6 +24,12 @@ tar --exclude='*.bak' -czf "$OUT" \
     bin \
     config 2>/dev/null || exit 1
 
+if command -v sha256sum >/dev/null 2>&1; then
+    ( cd dist && sha256sum "$NAME" > "$NAME.sha256" )
+    echo "Somme   : $(cat "$OUT.sha256")"
+fi
+
+echo ""
 echo "Package : $OUT"
 echo "Contenu :"
 tar -tzf "$OUT" | sed 's/^/  /'
