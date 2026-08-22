@@ -53,6 +53,7 @@ main()
 
     run_section "check_state"      "$BASE/check_state.sh"
     run_section "inspect_system"   "$BASE/inspect_system.sh"
+    run_section "device_info"      "$BASE/device_info.sh"
     run_section "inspect_services" "$BASE/inspect_services.sh"
     run_section "inspect_gui"      "$BASE/inspect_gui.sh" STATUS
     run_section "inspect_display"  "$BASE/inspect_display.sh"

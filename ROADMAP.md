@@ -111,6 +111,7 @@ This document tracks planned features, improvements and technical work for the p
 * [x] IR remote inspection + key remap procedure
 * [x] Network diagnostics (`net_diag`: link speed/duplex, addresses auto-detect, routes, DNS, connectivity, ports, throughput; deep packet capture if field issues appear)
 * [x] System health diagnostics (`sys_diag`: clock-loss 1970 detection, memory pressure + lmkd, entropy, eMMC write speed, security posture)
+* [x] Chip-level hardware inventory (`device_info`: dynamic sysfs/procfs/getprop/dmesg detection sorted by function - SOC/CPU, RAM/DDR, GPU, eMMC, eth/wireless chips, USB, audio, HDMI, inputs/IR, regulators/RTC, thermal - with init services grouped per function)
 
 ---
 

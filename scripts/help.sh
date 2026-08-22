@@ -61,6 +61,10 @@ INSPECTION
   inspect_user       Methodes de creation utilisateur dispo
                       (pm create-user, cmd user, busybox...)
                       option : nom d'utilisateur exemple
+  device_info        Inventaire puces / materiel trie par fonctionnalite
+                      (SOC/CPU, RAM, GPU, stockage, reseau, wireless,
+                      USB, audio, HDMI, entrees/IR, alim/RTC, thermique)
+                      + services init rattaches a chaque fonction
   inspect_system     Rapport materiel : RAM, CPU freq/governor,
                      GPU Mali, temperatures, stockage,
                      affichage/HDMI, charge, top RAM
