@@ -1,0 +1,20 @@
+# Fins de ligne : LF obligatoire par defaut pour tout ce qui est execute sur la box
+# (Android/mksh : un \r dans le shebang donne "tmp-mksh: ... No such file or directory")
+*          text=auto eol=lf
+*.sh       text eol=lf
+deploy.sh  text eol=lf
+AMORCE     text eol=lf
+*.conf     text eol=lf
+*.md       text eol=lf
+*.html     text eol=lf
+*.yml      text eol=lf
+
+# Scripts cote PC Windows : CRLF
+*.ps1      text eol=crlf
+*.bat      text eol=crlf
+
+# Binaires / artefacts
+*.dpk      binary
+*.zip      binary
+*.png      binary
+*.pid      -text

@@ -52,6 +52,21 @@ for F in $INPUTS; do
 done
 [ -z "$MISSING" ] || die "entrees manquantes :$MISSING"
 
+# --- garde-fou fins de ligne -------------------------------------------------
+# Un \r (CRLF Windows) casse l'execution sur la box :
+#   tmp-mksh: ... not found / syntax error: 'do' unexpected
+# On refuse tout build dont les scripts seraient contamines.
+CR_LIST=""
+for F in $(find $INPUTS -type f \
+        ! -name '*.ps1' ! -name '*.bat' \
+        ! -name '*.pid' ! -name '*.log' \
+        ! -name '*.bak' ! -name '*.swp' ! -name '*~' 2>/dev/null | sort); do
+    if [ -n "$(tr -dc '\r' < "$F" 2>/dev/null)" ]; then
+        CR_LIST="$CR_LIST $F"
+    fi
+done
+[ -z "$CR_LIST" ] || die "fins de ligne CRLF detectees dans :$CR_LIST (convertir en LF)"
+
 # --- metadonnees de construction -------------------------------------------
 # BUILD_ID horodate au format YY.MM.ddHH.MMss (ex : 26.08.2221.4320)
 BUILD_ID="$(date '+%y.%m.%d%H.%M%S')"

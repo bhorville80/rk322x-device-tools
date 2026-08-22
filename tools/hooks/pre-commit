@@ -1,0 +1,52 @@
+#!/bin/sh
+# tools/hooks/pre-commit - gate de commit : fins de ligne LF + syntaxe sh
+#
+# Actif via : git config core.hooksPath tools/hooks
+#
+# Pour chaque fichier texte stagé (cible box) :
+#   1. CRLF detecte -> conversion auto en LF + restage (le commit reste propre)
+#   2. *.sh         -> sh -n ; erreur de syntaxe = commit refuse
+#
+# Contournement exceptionnel : git commit --no-verify
+
+REPO="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 1
+cd "$REPO" || exit 1
+
+STAGED="$(git diff --cached --name-only --diff-filter=ACMR)"
+[ -z "$STAGED" ] && exit 0
+
+FIXED=""
+SYNTAX=""
+
+for F in $STAGED; do
+    case "$F" in
+        *.sh|AMORCE|*.conf|*.md|*.html|*.yml|*.txt) ;;
+        *) continue ;;
+    esac
+    [ -f "$F" ] || continue
+
+    # [1] CRLF -> LF (auto-correction + restage)
+    if [ -n "$(tr -dc '\r' < "$F")" ]; then
+        tr -d '\r' < "$F" > "$F.hk.tmp" && mv "$F.hk.tmp" "$F"
+        git add -f -- "$F" 2>/dev/null
+        FIXED="$FIXED $F"
+    fi
+
+    # [2] syntaxe des scripts shells stages
+    case "$F" in
+        *.sh)
+            sh -n "$F" 2>/dev/null || SYNTAX="$SYNTAX $F"
+            ;;
+    esac
+done
+
+if [ -n "$FIXED" ]; then
+    echo "[hook] CRLF->LF corrige et restage :$FIXED"
+fi
+
+if [ -n "$SYNTAX" ]; then
+    echo "[hook] ERREUR syntaxe (sh -n), commit refuse :$SYNTAX"
+    exit 1
+fi
+
+exit 0

@@ -66,6 +66,15 @@ tools/dpk.sh build            # same thing, through the dpk front controller
 
 A failed check aborts the pipeline before anything is written to `dist/`.
 
+### Pre-commit hook
+
+A git hook guards every commit (`git config core.hooksPath tools/hooks`, already set on the dev machine):
+
+1. CRLF found in a staged text file -> auto-converted to LF and re-staged;
+2. `sh -n` runs on staged `*.sh` -> syntax error blocks the commit.
+
+Bypass in exceptional cases: `git commit --no-verify`.
+
 Manage builds with `tools/dpk.sh`:
 
 ```bash
