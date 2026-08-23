@@ -167,7 +167,7 @@ handle_post()
         SHA_GOT=""
         if command -v sha256sum > /dev/null 2>&1; then
             SHA_GOT="$(sha256sum "$PART" 2>/dev/null | cut -d' ' -f1)"
-        elif command -v busybox > /dev/null 2>&1 && busybox sha256sum >/dev/null 2>&1 <<<''; then
+        elif command -v busybox > /dev/null 2>&1 && echo | busybox sha256sum > /dev/null 2>&1; then
             SHA_GOT="$(busybox sha256sum "$PART" 2>/dev/null | cut -d' ' -f1)"
         fi
         if [ -z "$SHA_GOT" ]; then
