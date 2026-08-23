@@ -31,6 +31,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | boot | hook init persistant (INSTALL/REMOVE/STATUS/TEST) |
 | amorce | bilan demarrage + raccourcis |
 | sd_boot | carte SD examinee en dernier au boot |
+| preflight | verif commandes critiques box + verdicts features (autonome) |
 
 ## Configuration
 

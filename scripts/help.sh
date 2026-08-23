@@ -130,6 +130,10 @@ VERIFICATION
                       SWITCH <nom> / OFF / SAVE <nom> ; un profil
                       surcharge les cles de device.conf quand
                       PROFILE=<nom> est actif
+  preflight          Verif des commandes critiques de la box
+                     (busybox applets, tcpsvd, swap, panneau,
+                     telecommande, logs) + VERDICTS par feature ;
+                     autonome, a lancer AVANT le Checkpoint A
   rampre             Empreinte memoire AVANT installation (box vierge,
                       adb push puis su sh) : echantillonne /proc/meminfo
                       120 s par defaut, top PSS debut/fin, pressions
