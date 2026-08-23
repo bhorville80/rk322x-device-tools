@@ -15,6 +15,7 @@ and non-regression, all driven from a single USB key.
 | Want to... | Read |
 |---|---|
 | Prepare the PC + key and install from a factory reset | [docs/SETUP.md](docs/SETUP.md) |
+| Beginner walkthrough (FR, step by step) | [docs/GUIDE-NOVICE.md](docs/GUIDE-NOVICE.md) |
 | Install from scratch on a virgin box | [docs/STARTUP.md](docs/STARTUP.md) |
 | Use the web panel (pages, buttons, console) | [docs/IHM.md](docs/IHM.md) |
 | Find a tool / the full catalogue by theme | [docs/TOOLS.md](docs/TOOLS.md) |
