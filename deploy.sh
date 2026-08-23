@@ -48,7 +48,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="amorce boot reboot remote_map front_digit investigate stress_ram net_watch capture crowdsec sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect set_network set_time"
+INSTALL_LIST="amorce boot reboot remote_map front_digit investigate stress_ram net_watch capture crowdsec sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect set_network set_time menu"
 
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
@@ -195,9 +195,13 @@ install_from()
         echo "    [ ERREUR ] $SCRIPTS_DIR/core"
     fi
     # server/ installe aussi cote box : EXPOSE et selftest ne dependent
-    # plus du contenu de la cle (serveurs web/gui/control/ssh/watcher)
+    # plus du contenu de la cle (serveurs web/gui/control/ssh/watcher).
+    # Deux layouts acceptes : cle/server (depot/dpk) ou cle/scripts/server
+    # (cle construite par sync_usb)
     NSRV=0
-    for F in "$SRC"/server/*.sh; do
+    SRV_SRC="$SRC/server"
+    [ -d "$SRV_SRC" ] || SRV_SRC="$SRC/scripts/server"
+    for F in "$SRV_SRC"/*.sh; do
         [ -f "$F" ] || continue
         cp -f "$F" "$SCRIPTS_DIR/server/" 2>/dev/null && NSRV=$((NSRV+1))
     done
@@ -265,6 +269,20 @@ install_from()
 do_install()
 {
     require_usb || return 1
+
+    # layout zip officiel : deploy.sh + .dpk a la racine, sans scripts/ ->
+    # bascule automatique sur l'installation par paquet (sinon install
+    # incomplete : scripts manquants + server/ vide)
+    if ! ls "$USB_DIR"/scripts/*.sh > /dev/null 2>&1; then
+        if ls "$USB_DIR"/*.dpk > /dev/null 2>&1; then
+            echo "[*] scripts/ absent sur la cle -> installation via le .dpk"
+            do_pkg ""
+            return $?
+        fi
+        echo "[ERREUR] ni scripts/ ni .dpk sur la cle : rien a installer"
+        return 1
+    fi
+
     install_from "$USB_DIR" usb "$(basename "$USB_DIR")"
 }
 
@@ -283,7 +301,9 @@ find_pkg()
 
     require_usb || return 1
 
-    LATEST="$(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort | tail -n 1)"
+    # BUILD_ID (3e champ _) a largeur fixe : le tri lexical du nom complet
+    # placerait v9 apres v13
+    LATEST="$(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort -t_ -k3 | tail -n 1)"
     if [ -n "$LATEST" ]; then
         PKG_FILE="$LATEST"
         return 0
@@ -384,6 +404,8 @@ do_expose()
         require_usb || return 1
         if [ -f "$USB_DIR/server/start_server.sh" ]; then
             STARTER="$USB_DIR/server/start_server.sh"
+        elif [ -f "$USB_DIR/scripts/server/start_server.sh" ]; then
+            STARTER="$USB_DIR/scripts/server/start_server.sh"
         else
             echo "[ERREUR] start_server.sh introuvable (ni $SCRIPTS_DIR/server/ ni cle)"
             echo "         relancer : deploy INSTALL"

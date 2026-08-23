@@ -138,20 +138,28 @@ p_runstate()
     return "$RC"
 }
 
-port_listening()
+port_up()
 {
-    # $1 port decimal ; netstat sinon /proc/net/tcp (port hexa, etat 0A=LISTEN)
+    # $1 port decimal, $2 chemin HTTP a sonder (defaut /)
+    # netstat -> /proc/net/tcp (port hexa, etat 0A=LISTEN) ->
+    # sonde wget fonctionnelle (une reponse non vide = service actif,
+    # indispensable quand netstat est absent ou muet sur vieux firmware)
+    P_="$1"
+    EP_="${2:-/}"
+
     if command -v netstat > /dev/null 2>&1; then
-        netstat -tln 2>/dev/null | grep -q ":$1 " && return 0
+        netstat -tln 2>/dev/null | grep -q ":$P_ " && return 0
     fi
     # busybox printf : %04X garanti (builtin mksh incertain sur vieux firmware)
     if command -v busybox > /dev/null 2>&1; then
-        PH="$(busybox printf '%04X' "$1" 2>/dev/null)"
+        PH="$(busybox printf '%04X' "$P_" 2>/dev/null)"
     else
-        PH="$(printf '%04X' "$1" 2>/dev/null)"
+        PH="$(printf '%04X' "$P_" 2>/dev/null)"
     fi
     [ -n "$PH" ] && grep -qi ":$PH .* 0A " /proc/net/tcp 2>/dev/null && return 0
     grep -qi ":$PH .* 0A " /proc/net/tcp6 2>/dev/null && return 0
+
+    [ -n "$(busybox wget -qO- -T 3 "http://127.0.0.1:$P_$EP_" 2>/dev/null)" ] && return 0
     return 1
 }
 
@@ -164,9 +172,9 @@ p_expose()
     sleep 3
 
     PORTS=0
-    for p in 8000 8080 8081; do
-        port_listening "$p" && PORTS=$((PORTS+1))
-    done
+    port_up 8000 /index.html && PORTS=$((PORTS+1))
+    port_up 8080 /api/HELP   && PORTS=$((PORTS+1))
+    port_up 8081             && PORTS=$((PORTS+1))
     IDX="$(busybox wget -qO- http://127.0.0.1:8000/index.html 2>/dev/null | grep -c RK322X)"
     API_NOTE="api CONFIG : non verifiee"
     API_OK=1

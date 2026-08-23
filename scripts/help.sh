@@ -101,6 +101,12 @@ VERIFICATION
                       ou RETOUR (etat par phase dans
                       log/recette_phases.txt, boutons IHM)
   selftest           Verifie que tous les outils repondent
+  menu               Dispatcher par sujet : install recette optim
+                       inspect diag logs serveur cle
+                       menu <sujet> = aide + actions
+                       menu <sujet> <action> = lancement
+                       ex : menu optim mem / menu recette tout /
+                       menu inspect all / menu serveur expose
 
 INSPECTION
   inspect_all        Rapport global : lance TOUS les inspect_* +

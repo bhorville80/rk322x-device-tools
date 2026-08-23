@@ -22,6 +22,15 @@ LOG="$USB/log/http_server.log"
 
 mkdir -p "$USB/server" "$USB/log"
 
+# serveurs annexes : installation locale d'abord (/data/scripts/server),
+# puis repertoire du script (cle layout depot), puis cle/scripts/server
+# (cle construite par sync_usb), cle/server en dernier recours
+SRV=""
+[ -f "/data/scripts/server/gui_server.sh" ] && SRV="/data/scripts/server"
+[ -z "$SRV" ] && [ -f "$(dirname "$0")/gui_server.sh" ] && SRV="$(dirname "$0")"
+[ -z "$SRV" ] && [ -f "$USB/scripts/server/gui_server.sh" ] && SRV="$USB/scripts/server"
+[ -z "$SRV" ] && SRV="$USB/server"
+
 box_ip()
 {
     IP=""
@@ -125,8 +134,8 @@ if kill -0 "$PID" 2>/dev/null; then
 
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER STARTED (PID $PID, PORT $PORT, ROOT $USB)" >> "$LOG"
 
-    if [ -f "$USB/server/gui_server.sh" ]; then
-        if sh "$USB/server/gui_server.sh" start > /dev/null 2>&1; then
+    if [ -f "$SRV/gui_server.sh" ]; then
+        if sh "$SRV/gui_server.sh" start > /dev/null 2>&1; then
             echo "GUI SERVER: 8081"
             echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER STARTED (PORT 8081)" >> "$LOG"
         else
@@ -134,8 +143,8 @@ if kill -0 "$PID" 2>/dev/null; then
         fi
     fi
 
-    if [ -f "$USB/server/control_server.sh" ]; then
-        if sh "$USB/server/control_server.sh" start > /dev/null 2>&1; then
+    if [ -f "$SRV/control_server.sh" ]; then
+        if sh "$SRV/control_server.sh" start > /dev/null 2>&1; then
             echo "CONTROL SERVER: 8080"
             echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
         else
@@ -143,8 +152,8 @@ if kill -0 "$PID" 2>/dev/null; then
         fi
     fi
 
-    if [ -f "$USB/server/watch_usb.sh" ]; then
-        sh "$USB/server/watch_usb.sh" > /dev/null 2>&1 &
+    if [ -f "$SRV/watch_usb.sh" ]; then
+        sh "$SRV/watch_usb.sh" > /dev/null 2>&1 &
         echo "USB WATCHER: actif (incoming/)"
         echo "$(date '+%Y-%m-%d %H:%M:%S') USB WATCHER STARTED" >> "$LOG"
     fi

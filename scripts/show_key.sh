@@ -52,7 +52,9 @@ main()
     echo ""
     echo "--- Paquets .dpk disponibles ---"
 
-    LATEST="$(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort | tail -n 1)"
+    # tri sur le BUILD_ID (3e champ _) : le lexical du nom complet
+    # placerait v9 apres v13
+    LATEST="$(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort -t_ -k3 | tail -n 1)"
 
     FOUND=0
     for P in $(ls -1 "$USB_DIR"/*.dpk 2>/dev/null | sort); do

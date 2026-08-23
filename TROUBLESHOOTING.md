@@ -505,6 +505,38 @@ Solution:  v5 : server/*.sh installes dans /data/scripts/server a l'INSTALL,
 Status:    Corrige en v5. zram reste impossible sur ce firmware (limite kernel).
 ```
 
+### 2026-08-23 - Recette toujours NO-GO (P1/P2/P4/P7) apres retour de logs
+
+```text
+Date:      2026-08-23
+Device:    Leelbox rk322x_box, Android 7.1.2 (SDK 25)
+Version:   v13 cote PC ; box re-installee depuis une cle perimee/incomplete
+Problem:   recette -> verdict NO-GO (P1 P2 P4 P7)
+Symptoms:  manifest d'install : 9 outils manquants + /data/scripts/server VIDE ;
+           P2 ssh_server rc=127 ; P4 mem_tune rc=1 (mkswap/swapon) ;
+           P7 ports 0/3 alors que l'api CONFIG repond au wget.
+Diagnosis: - Cle au layout zip officiel (deploy.sh + .dpk a la racine, sans
+             scripts/) : deploy INSTALL ne copie presque rien -> boite
+             demi-installee, server/ vide -> selftest et EXPOSE en echec.
+           - "Dernier .dpk" choisi par tri lexical du nom : v9 > v13
+             (find_pkg cote box, show_key, tools/dpk.sh latest).
+           - mem_tune : le kernel ACCEPTE disksize mais backend lz4 mort
+             (dmesg : "Cannot initialise lz4 compressing backend") ->
+             mkswap/swapon echouent -> RC=1 ; chemin non couvert par le
+             correctif v5 (qui ne declenchait que si disksize etait refuse).
+           - recette P7 : netstat absent/muet et parsing /proc incertain sur
+             ce firmware -> 0/3 meme quand les services repondent.
+Solution:  v13 : INSTALL bascule automatiquement sur le .dpk quand la cle n'a
+              pas scripts/ ; "dernier paquet" trie sur le BUILD_ID (3e champ,
+              largeur fixe) cote PC et box ; mem_tune : comp_algorithm AVANT
+              disksize, echec mkswap/swapon -> WARN + marqueur zram_unavailable
+              + reset propre (rc neutre, limite firmware) ; recette port_up :
+              netstat -> /proc/net/tcp -> sonde wget fonctionnelle par endpoint.
+Status:    Corrige en v13. Re-deployer : dezipper rk322x-cle_v13_*.zip a la
+           racine de la cle puis su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
+           et relancer la recette. zram reste impossible sur ce firmware.
+```
+
 ---
 
 ## Notes

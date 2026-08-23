@@ -38,7 +38,9 @@ adb_run()
 
 latest_pkg()
 {
-    ls -1 "$DIST"/*.dpk 2>/dev/null | sort | tail -n 1
+    # tri sur le BUILD_ID (3e champ _ ; YY.MM.ddHH.MMss a largeur fixe) :
+    # le tri lexical du nom complet place v9 apres v13
+    ls -1 "$DIST"/*.dpk 2>/dev/null | sort -t_ -k3 | tail -n 1
 }
 
 resolve_pkg()
