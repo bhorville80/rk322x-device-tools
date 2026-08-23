@@ -125,10 +125,13 @@ d'un repertoire log/ vide et regenerera des traces fraiches.
 
 ## Points OUVERTS (hors non-reg, en cours de traitement)
 
-| # | Sujet | Source |
+| # | Sujet | Etat |
 |---|---|---|
-| O1 | Recette P7 EXPOSE : trace incomplete (pas de bilan GO/NO-GO, pas de footer rc) - interrompue pendant P7 ; liee au bug serveurs API corrige (fetch failed) - A REVALIDER sur device | recette_19700101-013414 |
-| O2 | Trace boot sans footer rc (coupee apres front_digit CLOCK) alors que la suite du boot a bien tourne (http_server 01:30:08) | boot_19700101-012936 |
-| O3 | check_state : WARN Passerelle absente sur eth0 malgre config statique | check_state_19700101-013716 |
-| O4 | Horloge box encore en 1970 pendant toute la session (set_time AUTO sans resultat visible) | toutes traces |
-| O5 | run_state : fichiers residus 'box'/'test' sur le device (vestiges d'anciennes versions) + JAMAIS obsoletes (add_to_bin/boxhelp...) - purger via CLEAN puis re-INSTALL | run_state_19700101-013938 |
+| O1 | Recette P7 EXPOSE : trace incomplete (interrompue pendant P7, vieux build sans fix serveurs) | CORRIGE (serveurs pipes + sondes bornees) - A REVALIDER sur device |
+| O2 | Trace boot sans footer rc (vieux build) | SANS CODE (couvert : front_digit borne 90 s, sd_boot dernier) - A REVALIDER sur device |
+| O3 | check_state : WARN Passerelle absente sur eth0 | CORRIGE (BOOT_SET_NETWORK=1) - A REVALIDER sur device |
+| O4 | Horloge box en 1970 toute la session | CORRIGE (BOOT_TIME_SYNC=1 + passerelle O3) - A REVALIDER sur device |
+| O5 | Residus 'box'/'test' + JAMAIS obsoletes sur le device | CORRIGE (link_bin purge les liens morts au INSTALL) - A REVALIDER sur device |
+
+Tous les points sont traites cote depot ; la derniere passe device
+(dpk >= 26.08.2317.4931) valide leur fermeture avec traces fraiches.
