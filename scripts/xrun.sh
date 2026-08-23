@@ -76,6 +76,24 @@ main()
     esac
 
     CMD="$(printf '%s' "$X_CMD" | sed "s|%BASE%|$BASE|g")"
+
+    # repli de chemin mot a mot : un chemin sous BASE inexistant est
+    # reecrit vers le niveau superieur (layout depot cote PC), et
+    # inversement /data/scripts/... -> BASE (box)
+    NEW=""
+    for W_ in $CMD; do
+        case "$W_" in
+            "$BASE"/*)
+                [ -f "$W_" ] || { A_="$(dirname "$BASE")/${W_#"$BASE"/}"
+                                 [ -f "$A_" ] && W_="$A_" ; } ;;
+            /data/scripts/*)
+                [ -f "$W_" ] || { A_="$BASE/${W_#"/data/scripts/"}"
+                                 [ -f "$A_" ] && W_="$A_" ; } ;;
+        esac
+        NEW="$NEW${NEW:+ }$W_"
+    done
+    CMD="$NEW"
+
     echo "[xrun] [$1] $X_LABEL"
     echo "       \$ $CMD"
     sh -c "$CMD"

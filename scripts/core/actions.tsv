@@ -48,3 +48,13 @@ N5	Vitals instantane	sh %BASE%/vitals.sh STATUS
 N6	Check state complet	sh %BASE%/check_state.sh
 N7	Diagnostic reseau	sh %BASE%/net_diag.sh
 N8	Sante systeme rapide	sh %BASE%/sys_diag.sh
+P1	Copier dpk+sha+deploy.sh sur la cle	-
+P2	Activer options developpeur sur la TV	-
+P3	Activer debogage USB	-
+P4	Configurer IP statique via TV	-
+P5	adb devices : verifier la connexion	-
+P6	Ouvrir adb shell puis su	-
+P7	Verifier la visibilite de la cle	ls /mnt/media_rw/*/INSTALLER.sh
+C3	ping de la box depuis le PC	ping
+O4b	Swap cle deja couvert par O2 (mem_tune)	sh %BASE%/mem_tune.sh STATUS
+O8	Deploiement instrumente (ramstep 30 s)	sh %BASE%/ramstep.sh 30
