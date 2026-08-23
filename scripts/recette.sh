@@ -159,29 +159,44 @@ port_up()
     [ -n "$PH" ] && grep -qi ":$PH .* 0A " /proc/net/tcp 2>/dev/null && return 0
     grep -qi ":$PH .* 0A " /proc/net/tcp6 2>/dev/null && return 0
 
-    [ -n "$(busybox wget -qO- -T 3 "http://127.0.0.1:$P_$EP_" 2>/dev/null)" ] && return 0
+    [ -n "$(wget_bounded "http://127.0.0.1:$P_$EP_")" ] && return 0
     return 1
+}
+
+wget_bounded()
+{
+    # sonde HTTP bornee : un service muet ne doit pas figer la phase P7
+    if command -v timeout > /dev/null 2>&1; then
+        timeout 10 busybox wget -qO- "$1" 2>/dev/null
+    else
+        busybox wget -qO- -T 8 "$1" 2>/dev/null
+    fi
 }
 
 p_expose()
 {
     echo "--- [P7] EXPOSE ---"
     sh "$BASE/deploy.sh" STOP > /dev/null 2>&1
-    EXPOSE_OUT="$(sh "$BASE/deploy.sh" EXPOSE 2>&1)"
+    # capture par fichier (pas de $() nu) : un descripteur herite par un
+    # serveur en tache de fond ne doit pas bloquer la fin de la recette
+    EXP_TMP="/data/local/tmp/recette_expose.$$"
+    sh "$BASE/deploy.sh" EXPOSE > "$EXP_TMP" 2>&1
     RC_EXPOSE=$?
+    EXPOSE_OUT="$(cat "$EXP_TMP" 2>/dev/null)"
+    rm -f "$EXP_TMP" 2>/dev/null
     sleep 3
 
     PORTS=0
     port_up 8000 /index.html && PORTS=$((PORTS+1))
     port_up 8080 /api/HELP   && PORTS=$((PORTS+1))
     port_up 8081             && PORTS=$((PORTS+1))
-    IDX="$(busybox wget -qO- http://127.0.0.1:8000/index.html 2>/dev/null | grep -c RK322X)"
+    IDX="$(wget_bounded http://127.0.0.1:8000/index.html | grep -c RK322X)"
     API_NOTE="api CONFIG : non verifiee"
     API_OK=1
     if [ -n "$KEY" ] && [ -f "$KEY/server/token" ]; then
         API_NOTE="token actif (controle API saute)"
     else
-        API_N="$(busybox wget -qO- http://127.0.0.1:8080/api/CONFIG 2>/dev/null | grep -c DEPLOY_VERSION)"
+        API_N="$(wget_bounded http://127.0.0.1:8080/api/CONFIG | grep -c DEPLOY_VERSION)"
         if [ "${API_N:-0}" -gt 0 ]; then
             API_NOTE="api CONFIG repond"
             API_OK=1

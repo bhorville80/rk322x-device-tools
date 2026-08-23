@@ -387,7 +387,7 @@ daemon_loop()
                 sleep "$SEC"
             done
         done
-    ) &
+    ) >/dev/null 2>&1 &
     DPID=$!
     echo "$DPID" > "$PIDFILE"
     printf '%s' "$DPID"

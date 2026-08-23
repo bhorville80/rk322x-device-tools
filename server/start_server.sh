@@ -139,8 +139,13 @@ if kill -0 "$PID" 2>/dev/null; then
 
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER STARTED (PID $PID, PORT $PORT, ROOT $USB)" >> "$LOG"
 
+    # capture par fichier (pas de $() nu) : un descripteur herite par un
+    # serveur en tache de fond ne doit pas bloquer le demarrage de la pile
+    SRV_TMP="/data/local/tmp/start_server_out.$$"
+
     if [ -f "$SRV/gui_server.sh" ]; then
-        GUI_OUT="$(sh "$SRV/gui_server.sh" start 2>&1)"
+        sh "$SRV/gui_server.sh" start > "$SRV_TMP" 2>&1
+        GUI_OUT="$(cat "$SRV_TMP" 2>/dev/null)"
         case "$GUI_OUT" in
             *"ALREADY RUNNING"*)
                 echo "GUI SERVER: deja actif"
@@ -156,7 +161,8 @@ if kill -0 "$PID" 2>/dev/null; then
     fi
 
     if [ -f "$SRV/control_server.sh" ]; then
-        CTRL_OUT="$(sh "$SRV/control_server.sh" start 2>&1)"
+        sh "$SRV/control_server.sh" start > "$SRV_TMP" 2>&1
+        CTRL_OUT="$(cat "$SRV_TMP" 2>/dev/null)"
         case "$CTRL_OUT" in
             *"ALREADY RUNNING"*)
                 echo "CONTROL SERVER: deja actif"
@@ -170,6 +176,8 @@ if kill -0 "$PID" 2>/dev/null; then
                 ;;
         esac
     fi
+
+    rm -f "$SRV_TMP" 2>/dev/null
 
     if [ -f "$SRV/watch_usb.sh" ]; then
         sh "$SRV/watch_usb.sh" > /dev/null 2>&1 &

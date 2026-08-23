@@ -198,7 +198,7 @@ fi
 
         rm -f /data/local/tmp/control_request
     done
-) &
+) >> "$LOG" 2>&1 &
 
 PID="$!"
 echo "$PID" > "$PIDFILE"

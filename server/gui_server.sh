@@ -233,7 +233,7 @@ get_ip()
 
         rm -f /data/local/tmp/gui_request
     done
-) &
+) >> "$LOG" 2>&1 &
 
 PID="$!"
 echo "$PID" > "$PIDFILE"

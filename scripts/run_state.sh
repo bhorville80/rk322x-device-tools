@@ -55,7 +55,13 @@ for D_ in $LOG_DIRS; do
         TOOL="${NAME%_*}"
         TS="${NAME##*_}"
         RC="$(sed -n 's/^rc *: *//p' "$F" 2>/dev/null | tail -n 1)"
-        case "$RC" in ''|*[!0-9]*) RC="?" ;; esac
+        case "$RC" in ''|*[!0-9]*)
+            if [ -n "$RS_MARK" ] && [ "$F" -nt "$RS_MARK" ] 2>/dev/null; then
+                continue
+            fi
+            RC="?"
+            ;;
+        esac
         INVENT="$INVENT$TOOL|$TS|$RC
 "
     done
@@ -70,7 +76,7 @@ INVENT="$(printf '%s\n' "$INVENT" | sort -u)"
 echo ""
 echo "[2] Outils deja lances (sur les 5 dernieres traces retenues/outil)"
 printf '  %-22s %5s  %-17s %-8s %s\n' "OUTIL" "FOIS" "DERNIER" "RC" "VERDICT"
-LANCED=0 ; KO_TOT=0
+LANCED=0 ; KO_TOT=0 ; INC_TOT=0
 for T in $(printf '%s\n' "$INVENT" | sed 's/|.*//' | sort -u); do
     NB=0 ; LAST="" ; LAST_RC="?" ; KO=0
     for L in $(printf '%s\n' "$INVENT" | grep "^$T|" | cut -d'|' -f2 | sort); do
@@ -80,11 +86,18 @@ for T in $(printf '%s\n' "$INVENT" | sed 's/|.*//' | sort -u); do
     for L in $(printf '%s\n' "$INVENT" | grep "^$T|$LAST|" | cut -d'|' -f3); do
         LAST_RC="$L"
     done
-    KO_N_="$(printf '%s\n' "$INVENT" | grep "^$T|" | grep -cv '|0$')"
+    # echec : uniquement un code retour numerique non nul ; un rc absent
+    # (?) = trace incomplete (outil interrompu ou arret brutal), pas un
+    # echec de l'outil
+    KO_N_="$(printf '%s\n' "$INVENT" | grep "^$T|" | grep -cE '\|[1-9][0-9]*$')"
+    INC_N_="$(printf '%s\n' "$INVENT" | grep '^'"$T"'|' | grep -c '|?$')"
     VERDICT="ok"
     if [ "$KO_N_" -gt 0 ]; then
         VERDICT="$KO_N_ echec(s)"
         KO_TOT=$((KO_TOT+KO_N_))
+    elif [ "$INC_N_" -gt 0 ]; then
+        VERDICT="trace incomplete"
+        INC_TOT=$((INC_TOT+1))
     fi
     printf '  %-22s %5s  %-17s %-8s %s\n' "$T" "$NB" "$LAST" "$LAST_RC" "$VERDICT"
     LANCED=$((LANCED+1))
@@ -109,10 +122,17 @@ echo "[4] Synthese"
 echo "  outils lances      : $LANCED"
 echo "  installs silencieux: $MISS"
 echo "  executions en echec: $KO_TOT (toutes traces)"
+echo "  traces incompletes : $INC_TOT (outil actif ou arret brutal)"
 echo ""
 
 return 0
 }
+
+# marqueur pose AVANT la creation du trace de ce lancement : toute trace
+# modifiee apres est en cours d'ecriture (run_state lui-meme, outil lance
+# a l'instant) -> ignoree par le scan plutot que comptee en echec
+RS_MARK="/data/local/tmp/.runstate_mark"
+touch "$RS_MARK" 2>/dev/null || RS_MARK=""
 
 if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then
     main >> "$RUNLOG_FILE" 2>&1
