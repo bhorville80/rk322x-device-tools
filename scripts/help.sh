@@ -145,9 +145,15 @@ INSPECTION
                       option : nom d'utilisateur exemple
   device_info        Inventaire puces / materiel trie par fonctionnalite
                       (SOC/CPU, RAM, GPU, stockage, reseau, wireless,
-                      USB, audio, HDMI, entrees/IR, alim/RTC, thermique)
-                      + services init rattaches a chaque fonction
-  inspect_system     Rapport materiel : RAM, CPU freq/governor,
+                      USB, audio, HDMI, inputs/IR, regulators/RTC,
+                      thermal) + services groupes par fonction
+  hw_report          Rapport materiel COMPLET pour recherche web des
+                      puces (datasheets/possibilites) : device_info +
+                      getprop filtre + noyau (version/modules/dmesg)
+                      + bus i2c/spi/input/partitions ; SAVE ecrit
+                      log/hardware_latest.txt sur la cle, telechargeable
+                      via le panneau :8000 (bouton page Commandes)
+   inspect_system     Rapport materiel : RAM, CPU freq/governor,
                      GPU Mali, temperatures, stockage,
                      affichage/HDMI, charge, top RAM
   inspect_services   Services init (running/stopped), packages

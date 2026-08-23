@@ -123,6 +123,36 @@ handle_request()
             fi
             ;;
 
+        # reponse synchrone : rapport materiel complet (recherche puces/net)
+        # + ecriture sur la cle pour telechargement direct via httpd 8000
+        HW_REPORT)
+            SRC=""
+            if [ -f /data/scripts/hw_report.sh ]; then
+                SRC="/data/scripts/hw_report.sh"
+            elif [ -f "$USB/scripts/hw_report.sh" ]; then
+                SRC="$USB/scripts/hw_report.sh"
+            fi
+
+            if [ -z "$SRC" ]; then
+                log "COMMANDE REJECTED: HW_REPORT (hw_report.sh introuvable)"
+                reply 404 "Not Found" '{"status":"error","message":"hw_report introuvable"}'
+            else
+                OUT="$(sh "$SRC" SAVE 2>&1)"
+                RC=$?
+                log "COMMANDE ACCEPTED: HW_REPORT (rc=$RC)"
+                if [ -f "$USB/log/hardware_latest.txt" ]; then
+                    R_="$(cat "$USB/log/hardware_latest.txt" 2>/dev/null)"
+                    BODY="${R_}
+
+--- rapport sauvegarde sur la cle : /log/hardware_latest.txt
+--- telechargement direct       : http://<ip-box>:8000/log/hardware_latest.txt"
+                    reply 200 OK "$BODY" "text/plain; charset=utf-8"
+                else
+                    reply 200 OK "$OUT" "text/plain; charset=utf-8"
+                fi
+            fi
+            ;;
+
         HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE|VITALS|RECETTE|RECETTE_P1|RECETTE_P2|RECETTE_P3|RECETTE_P4|RECETTE_P5|RECETTE_P6|RECETTE_P7|RECETTE_RETOUR|RECETTE_MANIFEST)
             touch "$INCOMING/$COMMAND"
             log "COMMANDE ACCEPTED: $COMMAND"

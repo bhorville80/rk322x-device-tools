@@ -77,6 +77,12 @@ button.done   { background:#2a4a2a; border-color:#3a6a3a; color:#bfb; }
 <span class="dim"> profil CPU (24/7 : eco conseille)</span><br>
 <button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
 
+<h2>Materiel</h2>
+<button onclick="hwReport()">RAPPORT MATERIEL COMPLET</button>
+<span class="dim"> puces/bus/noyau pour recherche web (datasheets)</span><br>
+<a id="hwlink" href="/log/hardware_latest.txt" target="_blank"
+   style="font-size:12px;color:#9cf;text-decoration:none">telecharger le dernier rapport (si genere)</a>
+
 <h2>Recette</h2>
 <div style="margin:4px 0">
   <button id="rP1" onclick="lancePhase('P1')">P1 INSTALL</button>
@@ -170,6 +176,18 @@ function timeSync() {
     show("SYNC HORLOGE : envoi " + v + " (UTC)...");
     api("TIME_SYNC?t=" + v)
         .then(t => show("SYNC HORLOGE\n" + t))
+        .catch(e => show("Erreur : " + e));
+}
+
+function hwReport() {
+    show("RAPPORT MATERIEL : generation (~10 s)...");
+    document.getElementById("hwlink").style.color = "#7c7";
+    api("HW_REPORT")
+        .then(t => {
+            show(t);
+            var l = document.getElementById("hwlink");
+            l.textContent = "telecharger le dernier rapport (log/hardware_latest.txt)";
+        })
         .catch(e => show("Erreur : " + e));
 }
 
