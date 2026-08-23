@@ -45,7 +45,8 @@ mode_of()
 
 try_remount()
 {
-    # $1 = rw|ro : plusieurs formes selon toolbox/toybox/busybox
+    # $1 = rw|ro : multi-formes toolbox/toybox/busybox - l'ordre va du plus
+    # standard au plus exotique ; busybox mount passe la ou la toolbox rate
     M="$1"
     L="$(mount_line)"
     DEV="$(line_dev "$L")"
@@ -55,6 +56,14 @@ try_remount()
     mount -o "$M,remount" "$TARGET" > /dev/null 2>&1 && return 0
     [ -n "$DEV" ] && mount -o "remount,$M" -t "$FSTYPE" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
     [ -n "$DEV" ] && mount -o "remount,$M" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
+
+    if command -v busybox > /dev/null 2>&1; then
+        busybox mount -o "remount,$M" "$TARGET" > /dev/null 2>&1 && return 0
+        busybox mount -o "$M,remount" "$TARGET" > /dev/null 2>&1 && return 0
+        [ -n "$DEV" ] && busybox mount -o "remount,$M" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
+        [ -n "$FSTYPE" ] && [ -n "$DEV" ] && \
+            busybox mount -t "$FSTYPE" -o "remount,$M" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
+    fi
 
     return 1
 }
@@ -154,11 +163,12 @@ do_switch()
 usage()
 {
     echo ""
-    echo "Usage: system_rw <STATUS|RW|RO>"
+    echo "Usage: system_rw <STATUS|RW|RO|DEBUG>"
     echo ""
     echo "  STATUS  etat du montage $TARGET (device/type/options)"
     echo "  RW      repasse $TARGET en lecture-ecriture (probe d'ecriture incluse)"
     echo "  RO      revient en lecture-seule (defaut au reboot)"
+    echo "  DEBUG   teste chaque forme de remontage une par une (diagnostic)"
     echo ""
     echo "Cas d'usage : edition keylayout .kl (inspect_remote), bootanimation,"
     echo "fichiers systeme. Toujours revenir en RO apres modification."
@@ -166,10 +176,52 @@ usage()
     return 1
 }
 
+do_debug()
+{
+    # montre chaque tentative de remontage avec son code retour :
+    # utile a distance pour identifier la forme acceptee par le firmware
+    L="$(mount_line)"
+    [ -z "$L" ] && { echo "[ERREUR] $TARGET absent de /proc/mounts" ; return 1 ; }
+    DEV="$(line_dev "$L")"
+    FSTYPE="$(line_type "$L")"
+    echo "=== SYSTEM RW DEBUG ($TARGET) ==="
+    echo "ligne   : $L"
+    echo ""
+    i=0
+    try()
+    {
+        i=$((i+1))
+        printf '  [%02d] %s\n        -> ' "$i" "$*"
+        "$@" > /dev/null 2>&1
+        RC=$?
+        M2="$(mode_of "$(mount_line)")"
+        echo "rc=$RC etat=$M2"
+        [ "$M2" = "rw" ] && { echo "        RESULTAT : RW ATTEINT via forme [$i]" ; return 0 ; }
+        return 1
+    }
+
+    try mount -o "remount,rw" "$TARGET"
+    [ "$(mode_of "$(mount_line)")" = "rw" ] && { echo ""; grep " $TARGET " /proc/mounts | sed 's/^/  /'; return 0; }
+    try mount -o "rw,remount" "$TARGET"
+    [ "$(mode_of "$(mount_line)")" = "rw" ] && { echo ""; grep " $TARGET " /proc/mounts | sed 's/^/  /'; return 0; }
+    try mount -o "remount,rw" -t "$FSTYPE" "$DEV" "$TARGET"
+    try mount -o "remount,rw" "$DEV" "$TARGET"
+    if command -v busybox > /dev/null 2>&1; then
+        try busybox mount -o "remount,rw" "$TARGET"
+        try busybox mount -o "rw,remount" "$TARGET"
+        try busybox mount -o "remount,rw" "$DEV" "$TARGET"
+        try busybox mount -t "$FSTYPE" -o "remount,rw" "$DEV" "$TARGET"
+    fi
+    echo ""
+    grep " $TARGET " /proc/mounts | sed 's/^/  /'
+    return 0
+}
+
 case "$1" in
     ""|STATUS|status)  do_status ;;
     RW|rw)             do_switch RW ;;
     RO|ro)             do_switch RO ;;
+    DEBUG|debug)       do_debug ;;
     HELP|help|-h|--help) usage ;;
     *)                 usage ;;
 esac
