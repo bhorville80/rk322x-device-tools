@@ -231,6 +231,7 @@ inspect - analyses de la box
   gui               interface android (inspect_gui STATUS)
   user              apps utilisateur (inspect_user)
   remote            telecommande IR (inspect_remote)
+  proc              processus/RAM candidats au detournement (inspect_proc)
 EOF
 }
 
@@ -246,6 +247,7 @@ do_inspect()
         gui)        run_tool inspect_gui.sh STATUS ;;
         user)       run_tool inspect_user.sh ;;
         remote)     run_tool inspect_remote.sh ;;
+        proc)       run_tool inspect_proc.sh ;;
         *)          echo "action inconnue : $1 (voir menu inspect)" ; return 1 ;;
     esac
 }
