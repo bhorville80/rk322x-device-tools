@@ -100,6 +100,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | inspect_usb | cle USB x adb : montage/droits uid2000/adbd 5555 |
 | inspect_proc | processus par PSS : critiques/kit/deja coupees/candidats detournables + traitement suggere (reduction RAM) |
 | inspect_dev | capacites d'execution embarquee : runtimes/ABI/montages exec/primitives de service/cout mesure d'un mini-daemon |
+| launcher_toggle | lanceur TV : STATUS / ON (apps visibles, voie A/B inspect_dev) / OFF (retour headless via cut_services) |
 | hw_report | rapport materiel COMPLET recherche web (SAVE = fichier cle) |
 | investigate | collecte contextuelle ALL/scenario |
 | capture | captures ecran/logcat |

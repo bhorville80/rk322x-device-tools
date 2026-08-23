@@ -56,6 +56,7 @@ P5	adb devices : verifier la connexion	-
 P6	Ouvrir adb shell puis su	-
 P7	Verifier la visibilite de la cle	ls /mnt/media_rw/*/INSTALLER.sh
 C3	ping de la box depuis le PC	ping
+C4	Launcher TV : etat	sh %BASE%/launcher_toggle.sh STATUS
 O4b	Swap cle deja couvert par O2 (mem_tune)	sh %BASE%/mem_tune.sh STATUS
 O8	Deploiement instrumente (ramstep 30 s)	sh %BASE%/ramstep.sh 30
 O9	Sonde acceptation swapon (kernel)	sh %BASE%/mem_tune.sh PROBE

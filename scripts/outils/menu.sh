@@ -199,6 +199,9 @@ optim - optimisation memoire / allegement
   wireless-off      coupe wifi/bt (disable_wireless OFF)
   wireless-on       retablit wifi/bt (disable_wireless ON)
   wireless-status   etat radio
+  launcher-on       lanceur TV visible (launcher_toggle ON)
+  launcher-off      retour headless (launcher_toggle OFF)
+  launcher-status   etat du lanceur
 EOF
 }
 
@@ -214,6 +217,9 @@ do_optim()
         wireless-off)   run_tool disable_wireless.sh OFF ;;
         wireless-on)    run_tool disable_wireless.sh ON ;;
         wireless-status) run_tool disable_wireless.sh STATUS ;;
+        launcher-on)    run_tool launcher_toggle.sh ON ;;
+        launcher-off)   run_tool launcher_toggle.sh OFF ;;
+        launcher-status) run_tool launcher_toggle.sh STATUS ;;
         *)              echo "action inconnue : $1 (voir menu optim)" ; return 1 ;;
     esac
 }
