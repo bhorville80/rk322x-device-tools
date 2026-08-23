@@ -136,6 +136,38 @@ BENCH()
 }
 
 # ------------------------------------------------------------------ [6] verdicts
+# ------------------------------------------------- [4b] ksm + io scheduler
+
+KSM_SCHED()
+{
+    sec 4b "DEDUPLICATION KSM + SCHEDULER I/O"
+    if [ -d /sys/kernel/mm/ksm ]; then
+        KR="$(cat /sys/kernel/mm/ksm/run 2>/dev/null)"
+        KP="$(cat /sys/kernel/mm/ksm/pages_to_scan 2>/dev/null)"
+        KS="$(cat /sys/kernel/mm/ksm/pages_shared 2>/dev/null)"
+        case "$KR" in
+            1) row ksm "ACTIF (pages_to_scan=${KP:-?}, shared=${KS:-0})" ;;
+            *) row ksm "DISPONIBLE mais inactif -> 'echo 1 > .../ksm/run' au boot :" ;
+               echo "         gain potentiel sur pages identiques (daemons busybox)" ;;
+        esac
+    else
+        row ksm "non expose par ce kernel"
+    fi
+    for D_ in /sys/block/mmcblk0 /sys/block/mmcblk1; do
+        [ -d "$D_/queue" ] || continue
+        B_="${D_#/sys/block/}"
+        CUR_="$(cat "$D_/queue/scheduler" 2>/dev/null | tr ',' ' ')"
+        DEF_=""
+        for S_ in $CUR_; do
+            case "$S_" in \[*\]) DEF_="$S_" ;; esac
+        done
+        row "sched $B_" "${CUR_:-illisible} (actuel : ${DEF_:-?})"
+        case "$DEF_" in
+            *cfq*) echo "         cfq penalise les petits daemons ; tester : echo deadline > $D_/queue/scheduler" ;;
+        esac
+    done
+}
+
 VERDICTS()
 {
     sec 6 "VERDICTS PAR STRATEGIE"
@@ -179,6 +211,7 @@ main()
     esac
     echo ""
     echo "=== INSPECT DEV - capacites d'execution embarquee ==="
+    KSM_SCHED
     [ "${VERDICT_MAIN}" = "1" ] && BENCH
     VERDICTS
     echo ""
