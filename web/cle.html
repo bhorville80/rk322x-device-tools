@@ -20,6 +20,12 @@ code, .mono { font-family:monospace; color:#cf9; font-size:13px; }
 .dim { font-size:12px; color:#888; }
 a { color:#9cf; }
 ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
+.apistatus { margin:-10px 0 18px; font-size:12px; color:#888; }
+.apistatus b { display:inline-block; padding:2px 8px; margin-right:6px;
+               border-radius:4px; border:1px solid #444; font-weight:normal; color:#888; }
+.apistatus b.up   { color:#7c7; border-color:#3a5a3a; }
+.apistatus b.warn { color:#fc6; border-color:#a86; }
+.apistatus b.down { color:#e66; border-color:#a55; }
 </style>
 </head>
 
@@ -35,6 +41,12 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
 </nav>
+
+<div class="apistatus" id="apistatus">ports :
+  <b id="as8000">8000 test...</b>
+  <b id="as8080">8080 api...</b>
+  <b id="as8081">8081 gui...</b>
+</div>
 
 <div class="card">
   <h3>Premier demarrage</h3>
@@ -89,7 +101,48 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
     <li><span class="mono">5555</span> adb tcpip &nbsp;|&nbsp; <span class="mono">2222</span> dropbear (si lance)</li>
   </ul>
   <span class="dim">arret global : deploy STOP ou bouton correspondant page Commandes</span>
+  <p>
+  <b>Protection optionnelle par token.</b> Tant que <span class="mono">server/token</span>
+  n'existe pas sur la cle, l'API 8080 et la GUI 8081 sont ouvertes a tout le LAN.
+  Pour les proteger :
+  <br><span class="mono">deploy TOKEN ON</span> (token aleatoire) ou
+  <span class="mono">deploy TOKEN MonSecret123</span>, puis
+  <span class="mono">deploy STOP &amp;&amp; deploy EXPOSE</span>.
+  Le panneau demandera la valeur une seule fois par navigateur (gardee en localStorage).
+  Retrait : <span class="mono">deploy TOKEN OFF</span>.
+  </p>
+
 </div>
+
+<script>
+var AS_TOK = "";
+try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
+function asUrl(b) {
+    if (!AS_TOK) return b;
+    return b + (b.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(AS_TOK);
+}
+function asSet(id, cls, t) {
+    var e = document.getElementById(id);
+    if (e) { e.className = cls; e.textContent = t; }
+}
+asSet("as8000", "up", "8000 HTTP OK");
+fetch(asUrl("http://" + location.hostname + ":8080/api/HELP"), {cache:"no-store"})
+    .then(function (r) {
+        asSet("as8080", r.status === 403 ? "warn" : "up",
+              r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+    })
+    .catch(function () {
+        asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+    });
+fetch(asUrl("http://" + location.hostname + ":8081/"), {cache:"no-store"})
+    .then(function (r) {
+        asSet("as8081", r.status === 403 ? "warn" : "up",
+              r.status === 403 ? "8081 GUI UP - token requis" : "8081 GUI OK");
+    })
+    .catch(function () {
+        asSet("as8081", "down", "8081 GUI INJOIGNABLE (arrete ou bloque)");
+    });
+</script>
 
 </div>
 

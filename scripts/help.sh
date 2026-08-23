@@ -254,6 +254,7 @@ SERVEURS   (dossier server/ de la cle)
                       automatiquement : l'acces de reference reste adb
                       arret inclus dans deploy STOP (server/ssh.pid)
   Securite : si server/token existe, l'API exige ?token=<valeur>
+              deploy TOKEN ON|OFF|<valeur>|STATUS (ON = aleatoire)
 
 LOGS
   Chaque outil ecrit : log/exec/<script>_<YYYYmmdd-HHMMSS>.log

@@ -110,6 +110,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
+| `deploy TOKEN ON/OFF/<valeur>/STATUS` | protection optionnelle API 8080 + GUI 8081 par secret partage (`server/token`) ; panneau : saisie unique par navigateur |
 
 | `sync_usb` `disable_wireless` `media` `check_state` `inspect_*` `hdmi` `field_mode` `show_key` `boxhelp` `rotate_logs` `set_network` `set_time` | outils d'origine (v1-v2) - documentes dans les sections ADB/Reseau/Wireless ci-dessus |
 

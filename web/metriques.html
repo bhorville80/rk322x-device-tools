@@ -20,6 +20,12 @@ button:hover { background:#444; }
        max-height:460px; overflow:auto; border-radius:8px;
        font-family:monospace; font-size:13px; }
 .dim { font-size:12px; color:#888; }
+.apistatus { margin:-10px 0 18px; font-size:12px; color:#888; }
+.apistatus b { display:inline-block; padding:2px 8px; margin-right:6px;
+               border-radius:4px; border:1px solid #444; font-weight:normal; color:#888; }
+.apistatus b.up   { color:#7c7; border-color:#3a5a3a; }
+.apistatus b.warn { color:#fc6; border-color:#a86; }
+.apistatus b.down { color:#e66; border-color:#a55; }
 </style>
 </head>
 
@@ -36,6 +42,12 @@ button:hover { background:#444; }
   <a href="metriques.html" class="here">Metriques</a>
 </nav>
 
+<div class="apistatus" id="apistatus">ports :
+  <b id="as8000">8000 test...</b>
+  <b id="as8080">8080 api...</b>
+  <b id="as8081">8081 gui...</b>
+</div>
+
 <button onclick="loadVitals()">VITALS (refresh)</button>
 <button onclick="askState()">CHECK STATE</button>
 <button onclick="confCheck()">CONF CHECK</button>
@@ -49,6 +61,28 @@ button:hover { background:#444; }
 <script>
 
 var API = "http://" + location.hostname + ":8080/api/";
+
+function tokUrl(base) {
+    var t = "";
+    try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
+    if (!t) return base;
+    return base + (base.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(t);
+}
+
+function api(path) {
+    return fetch(tokUrl(API + path)).then(function(r) {
+        if (r.status === 403) {
+            var t = prompt("API protegee par un token (server/token sur la cle).\nEntrer la valeur du token :");
+            if (t && t.trim()) {
+                try { localStorage.setItem("rk_token", t.trim()); } catch (e) {}
+                location.reload();
+                throw new Error("token memorise, rechargement...");
+            }
+            throw new Error("403 forbidden (token requis)");
+        }
+        return r.text();
+    });
+}
 
 function show(t) {
     var d = new Date();
@@ -66,7 +100,7 @@ function loadVitals() {
 
 function askState() {
     show("CHECK STATE lance...");
-    fetch(API + "STATE").catch(e => show("Erreur : " + e));
+    api("STATE").catch(e => show("Erreur : " + e));
     var tries = 0;
     (function poll() {
         fetch("/log/state_last.txt", {cache:"no-store"})
@@ -85,13 +119,40 @@ function askState() {
 
 function confCheck() {
     show("CONF CHECK...");
-    fetch(API + "CONF_CHECK")
-        .then(r => r.text())
+    api("CONF_CHECK")
         .then(t => show("CONF CHECK\n" + t))
         .catch(e => show("Erreur : " + e));
 }
 
 loadVitals();
+
+var AS_TOK = "";
+try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
+function asUrl(b) {
+    if (!AS_TOK) return b;
+    return b + (b.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(AS_TOK);
+}
+function asSet(id, cls, t) {
+    var e = document.getElementById(id);
+    if (e) { e.className = cls; e.textContent = t; }
+}
+asSet("as8000", "up", "8000 HTTP OK");
+fetch(asUrl("http://" + location.hostname + ":8080/api/HELP"), {cache:"no-store"})
+    .then(function (r) {
+        asSet("as8080", r.status === 403 ? "warn" : "up",
+              r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+    })
+    .catch(function () {
+        asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+    });
+fetch(asUrl("http://" + location.hostname + ":8081/"), {cache:"no-store"})
+    .then(function (r) {
+        asSet("as8081", r.status === 403 ? "warn" : "up",
+              r.status === 403 ? "8081 GUI UP - token requis" : "8081 GUI OK");
+    })
+    .catch(function () {
+        asSet("as8081", "down", "8081 GUI INJOIGNABLE (arrete ou bloque)");
+    });
 
 </script>
 

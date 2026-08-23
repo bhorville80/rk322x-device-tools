@@ -758,6 +758,65 @@ case "$1" in
         do_clean "$2"
         ;;
 
+    TOKEN)
+        # protection optionnelle de l'API 8080 / GUI 8081 par secret partage :
+        # tant que server/token n'existe pas, ces ports sont ouverts au LAN.
+        echo ""
+        echo "=== RK322X TOKEN API ==="
+        require_usb || exit 1
+        TOKFILE="$USB_DIR/server/token"
+        mkdir -p "$USB_DIR/server" 2>/dev/null
+        case "$2" in
+            ""|STATUS|status)
+                if [ -f "$TOKFILE" ]; then
+                    echo "protection : ACTIVEE (server/token present)"
+                    echo "valeur     : masquee ($(wc -c < "$TOKFILE" | tr -dc '0-9') octets)"
+                else
+                    echo "protection : DESACTIVEE (API 8080 / GUI 8081 ouvertes au LAN)"
+                fi
+                echo ""
+                echo "usage : deploy TOKEN ON | OFF | <valeur>"
+                echo "  ON        token aleatoire genere et affiche"
+                echo "  OFF       supprime la protection"
+                echo "  <valeur>  pose ce token (alphanumeriques seuls)"
+                ;;
+            OFF)
+                if [ -f "$TOKFILE" ]; then
+                    rm -f "$TOKFILE" && echo "[ OK ] protection supprimee"
+                else
+                    echo "[ -- ] deja desactivee"
+                fi
+                echo "suivant : deploy STOP && deploy EXPOSE"
+                ;;
+            ON)
+                VAL=""
+                [ -c /dev/urandom ] && \
+                    VAL="$(head -c 64 /dev/urandom 2>/dev/null | tr -cd 'a-zA-Z0-9' | cut -c1-16)"
+                [ -z "$VAL" ] && VAL="RK$(date '+%d%H%M%S')"
+                printf '%s' "$VAL" > "$TOKFILE" && \
+                    echo "[ OK ] token genere : $VAL"
+                echo "note    : le panneau web demandera cette valeur une fois par navigateur"
+                echo "suivant : deploy STOP && deploy EXPOSE"
+                ;;
+            *)
+                case "$2" in
+                    *[!a-zA-Z0-9]*)
+                        echo "[ERREUR] valeur invalide : alphanumeriques seuls (a-z A-Z 0-9)"
+                        exit 1
+                        ;;
+                esac
+                if printf '%s' "$2" > "$TOKFILE"; then
+                    echo "[ OK ] token pose (${#2} caracteres)"
+                    echo "note    : le panneau web demandera cette valeur une fois par navigateur"
+                    echo "suivant : deploy STOP && deploy EXPOSE"
+                else
+                    echo "[ERREUR] ecriture impossible dans $TOKFILE"
+                    exit 1
+                fi
+                ;;
+        esac
+        ;;
+
     SEND_LOGS)
         TS="$(date '+%Y%m%d_%H%M%S')"
 
@@ -842,6 +901,7 @@ case "$1" in
         echo "  VERSION      Versions installee / cle (diagnostic mise a jour)"
         echo "  STATUS       Etat du deploiement : outils, liens, backups, cle"
         echo "  CLEAN [DRY]  Assainissement : backups/manifests/shots/staging"
+        echo "  TOKEN        Protection API 8080/GUI 8081 (ON/OFF/<valeur>/STATUS)"
         echo ""
         if [ -f "/data/scripts/help.sh" ]; then
             echo "Aide complete des outils : help"

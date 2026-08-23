@@ -486,6 +486,44 @@ A `server/token` file exists on the key: every API call requires
 `?token=<value>`. The panel prompts for it once on the first 403 and keeps
 it in localStorage. To remove the protection, delete `server/token`.
 
+To create the protection (it does not exist by default):
+
+```bash
+deploy TOKEN ON              # random value, printed once
+# or: deploy TOKEN MonSecret123
+deploy STOP && deploy EXPOSE
+```
+
+`deploy TOKEN STATUS` shows the current state, `deploy TOKEN OFF`
+removes it. The value is read from the key by `control_server.sh`
+(8080) and `gui_server.sh` (8081) at each request; alphanumerics only.
+
+### Port badges under the page title
+
+Every panel page shows three badges (`8000 HTTP / 8080 API / 8081 GUI`):
+
+- green `OK`: port answers;
+- orange `UP - token requis`: server reachable, 403 answered (token
+  missing or wrong in this browser);
+- red `INJOIGNABLE (arrete ou bloque)`: TCP connection failed.
+
+### Panel loads but every fetch fails / nothing loads at all
+
+The Android box installs no firewall rules itself. If a port is closed
+from your PC, the block is on the path between the two:
+
+1. `http://IP:8000` does not even load -> Wi-Fi AP isolation or router
+   firewall; connect the PC to the same network segment.
+2. Panel loads but badges show `8080 INJOIGNABLE` while `net_diag PORTS`
+   on the box lists `:8080` -> inbound filter on 8080/8081 (PC firewall,
+   corporate LAN). Test from the PC:
+   `curl http://IP:8080/api/HELP` (or `Test-NetConnection IP -Port 8080`).
+3. Badges flip OK/INJOIGNABLE intermittently -> single-slot `nc` servers
+   busy (a synchronous CONF_CHECK blocks 8080 for a few seconds); retry.
+4. Requests never appear in `log/control_server.log` (not even as
+   `REQUEST REJECTED`) -> they are dropped before reaching the box:
+   confirmed network/firewall issue, not a tools problem.
+
 ### Command accepted but nothing happens
 
 The watcher runs the action with the uid of whoever launched `EXPOSE`.
