@@ -131,6 +131,8 @@ Note : [O2][O5] sont reappliques automatiquement a chaque boot
 ## Phase 6 - Tests IHM (navigateur PC)
 
 **Prerequis : [S2]**
+Identifiants panneau par defaut : `user` / `user`
+(PANEL_USER/PANEL_PASS device.conf).
 
 - [W1] Accueil      : badges verts, heure box reelle, versions a jour
 - [W2] Commandes    : CHECK STATE / SYNC HORLOGE instantanes

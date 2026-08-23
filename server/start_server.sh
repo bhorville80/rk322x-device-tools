@@ -22,6 +22,32 @@ LOG="$USB/log/http_server.log"
 
 mkdir -p "$USB/server" "$USB/log"
 
+# --- authentification du panneau (HTTP Basic busybox) ---
+# PANEL_USER/PANEL_PASS dans device.conf ; vides = acces libre.
+conf_val()
+{
+    for C in /data/scripts/config/device.conf "$USB/scripts/config/device.conf"; do
+        [ -f "$C" ] || continue
+        V="$(sed -n "s/^$1=//p" "$C" 2>/dev/null | head -n 1 | tr -d '\r')"
+        [ -n "$V" ] && { printf '%s' "$V" ; return 0 ; }
+    done
+    printf '%s' "$2"
+}
+
+PANEL_USER="$(conf_val PANEL_USER "")"
+PANEL_PASS="$(conf_val PANEL_PASS "")"
+AUTH_CONF="$USB/server/httpd.conf"
+
+if [ -n "$PANEL_USER" ] && [ -n "$PANEL_PASS" ]; then
+    mkdir -p "$USB/server" 2>/dev/null
+    printf '/:%s:%s\n' "$PANEL_USER" "$PANEL_PASS" > "$AUTH_CONF" 2>/dev/null
+    AUTH_OPTS="-c $AUTH_CONF -r RK322X_PANEL"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') PANEL AUTH active (user: $PANEL_USER)" >> "$LOG"
+else
+    rm -f "$AUTH_CONF" 2>/dev/null
+    AUTH_OPTS=""
+fi
+
 # serveurs annexes : installation locale d'abord (/data/scripts/server),
 # puis repertoire du script (cle layout depot), puis cle/scripts/server
 # (cle construite par sync_usb), cle/server en dernier recours
@@ -113,9 +139,9 @@ ensure_index
 
     # nohup si dispo : la fermeture de la session adb ne doit pas tuer le serveur
     if command -v nohup > /dev/null 2>&1; then
-        nohup busybox httpd -f -p 0.0.0.0:$PORT -h "$USB" >> "$LOG" 2>&1 &
+        nohup busybox httpd -f -p 0.0.0.0:$PORT $AUTH_OPTS -h "$USB" >> "$LOG" 2>&1 &
     else
-        busybox httpd -f -p 0.0.0.0:$PORT -h "$USB" >> "$LOG" 2>&1 &
+        busybox httpd -f -p 0.0.0.0:$PORT $AUTH_OPTS -h "$USB" >> "$LOG" 2>&1 &
     fi
 
 PID="$!"
