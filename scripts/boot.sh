@@ -52,6 +52,35 @@ RC_NAME="rk322x_tools"
 IR_SH="/system/etc/install-recovery.sh"
 MK_BEGIN="# >>> RK322X TOOLS >>>"
 MK_END="# <<< RK322X TOOLS <<<"
+INITD_DIR="/system/etc/init.d"
+INITD_FILE="$INITD_DIR/95rk322x_tools"
+
+# support init.d ? (service sysinit/run-parts dans les rc, ou dossier deja la)
+detect_initd()
+{
+    [ -d "$INITD_DIR" ] && return 0
+    grep -qlsE 'run-parts|sysinit|init\.d' \
+        /system/etc/init.rc "$RC_DIR"/*.rc /system/etc/*.rc 2>/dev/null
+}
+
+write_initd()
+{
+    mkdir -p "$INITD_DIR" 2>/dev/null || return 1
+    {
+        echo "#!/system/bin/sh"
+        echo "# genere par rk322x-device-tools (boot INSTALL) - $(date '+%Y-%m-%d %H:%M:%S')"
+        echo "# retire via : sh /data/scripts/boot.sh REMOVE"
+        echo "/system/bin/sh /data/scripts/boot.sh > /dev/null 2>&1 &"
+    } > "$INITD_FILE" 2>/dev/null || return 1
+    chmod 755 "$INITD_FILE" 2>/dev/null
+    [ -s "$INITD_FILE" ]
+}
+
+remove_initd()
+{
+    [ -f "$INITD_FILE" ] || return 0
+    rm -f "$INITD_FILE" 2>/dev/null
+}
 
 flag()
 {
@@ -291,6 +320,22 @@ do_install()
             echo "       retrait : boot REMOVE"
             return 0
         fi
+
+        # mecanisme 2 : script init.d si le firmware les execute
+        if detect_initd; then
+            echo "[..] support init.d detecte, essai..."
+            if write_initd; then
+                echo "[ OK ] hook init.d : $INITD_FILE"
+                ro_system
+                echo ""
+                echo "[ OK ] actif au PROCHAIN reboot (run-parts init.d)"
+                return 0
+            fi
+            echo "[WARN] ecriture init.d impossible"
+        else
+            echo "[ -- ] init.d non supporte par ce firmware (pas de run-parts/sysinit)"
+        fi
+
         echo "[WARN] $RC_DIR non accessible -> repli install-recovery.sh"
         ro_system
     else
@@ -327,6 +372,15 @@ do_remove()
         ro_system
     else
         echo "[ -- ] pas de hook init ($RC_FILE absent)"
+    fi
+
+    if [ -f "$INITD_FILE" ]; then
+        rw_system || true
+        remove_initd && echo "[ OK ] $INITD_FILE supprime" \
+                     || { echo "[ ERREUR ] suppression $INITD_FILE impossible"; RC=1; }
+        ro_system
+    else
+        echo "[ -- ] pas de hook init.d"
     fi
 
     if ir_has_block; then
@@ -369,6 +423,13 @@ do_status()
         oui) echo "  Fallback        : bloc present dans $IR_SH" ;;
         *)   echo "  Fallback        : rien dans $IR_SH" ;;
     esac
+    if [ -f "$INITD_FILE" ]; then
+        echo "  Hook init.d     : $INITD_FILE"
+    elif detect_initd; then
+        echo "  init.d          : supporte par le firmware, non utilise"
+    else
+        echo "  init.d          : non supporte par ce firmware"
+    fi
 
     echo ""
     echo "  Actions (device.conf) :"
