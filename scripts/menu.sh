@@ -342,6 +342,29 @@ do_cle()
     esac
 }
 
+help_pilotage()
+{
+    cat << 'EOF'
+pilotage - vues d'ensemble et configuration
+  manage            etat services/web/ports + actions (manage HELP)
+  nreg              non-regression : 10 themes, un seul possible
+                    (nreg 4 | nreg mem ; liste : nreg HELP)
+  config            config interactive : page complete puis
+                    modification par numero (config SET pour scripts)
+EOF
+}
+
+do_pilotage()
+{
+    case "$1" in
+        manage)     shift ; run_tool manage.sh "$@" ;;
+        nreg)       shift ; run_tool nreg.sh "$@" ;;
+        config)     shift ; run_tool config.sh "$@" ;;
+        ""|help|-h) help_pilotage ;;
+        *)          echo "action inconnue : $1 (voir menu pilotage)" ; return 1 ;;
+    esac
+}
+
 # ------------------------------------------------------------- dispatch
 
 main()
@@ -356,12 +379,14 @@ main()
         logs|log)            shift ; do_logs "$@" ;;
         serveur|server|web)  shift ; do_serveur "$@" ;;
         cle|usb|key)         shift ; do_cle "$@" ;;
+        manage|nreg|config|pilotage)
+                             shift ; do_pilotage "$@" ;;
         help|-h|--help)
             sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
             ;;
         *)
             echo "Sujet inconnu : $1"
-            echo "sujets : install recette optim inspect diag logs serveur cle"
+            echo "sujets : install recette optim inspect diag logs serveur cle pilotage"
             return 1
             ;;
     esac

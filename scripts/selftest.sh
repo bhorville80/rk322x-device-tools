@@ -74,6 +74,10 @@ main()
 
     check_rc "help"                "0" sh "$BASE/help.sh"
     check_rc "menu"                "0" sh "$BASE/menu.sh"
+    check_rc "nreg HELP"           "0" sh "$BASE/nreg.sh" HELP
+    check_rc "recette HELP"        "0" sh "$BASE/recette.sh" HELP
+    check_rc "config HELP"         "0" sh "$BASE/config.sh" HELP
+    check_rc "manage HELP"         "0" sh "$BASE/manage.sh" HELP
     check_rc "check_state"         "0 1" sh "$BASE/check_state.sh"
     check_rc "inspect_system"      "0" sh "$BASE/inspect_system.sh"
     check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"

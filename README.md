@@ -72,6 +72,8 @@ Quatre pages sur `http://<ip-box>:8000` :
 ```bash
 recette                 # sequence complete + "CLE PRETE POUR ANALYSE RETOUR"
 recette P5              # ou phase par phase ; etat : log/recette_phases.txt
+recette CONFIG          # sections thematiques : CONFIG (P3+P4), DIAG (P5+P6)
+recette HELP            # liste des phases/sections launchables
 ```
 
 A la fin : manifest certifie (phases + conf_check + sha256 des scripts
@@ -105,7 +107,10 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `conf_check` | validation config (+profils+secrets) et etat d'application des optimisations |
 | `mem_tune STATUS/OPTIMIZE/RESTORE` | memoire : zram (degrade propre si backend kernel casse), swap disque optionnel (`MEM_SWAP_DEV` partition SD brute / `MEM_SWAP_FILE` fichier cle, prio 1), swappiness, lmk, buffers logd |
 | `run_state` | outils lances / jamais lances / echecs (analyse log/exec) |
-| `recette [P1..P7/RETOUR/MANIFEST]` | recette bout-en-bout, phases ou globale, manifest certifie |
+| `recette [P1..P7/RETOUR/MANIFEST/CONFIG/DIAG]` | recette bout-en-bout, phases ou sections thematiques, manifest certifie ; liste : `recette HELP` |
+| `nreg [theme]` | non-regression executable (10 themes, miroir docs/NON-REG.md) : deploiement, outils, configuration, memoire, boot, reseau, wifi, diagnostic, sd, traces ; un seul theme possible (`nreg 4`, `nreg mem`) ; bilan PASS/FAIL |
+| `config [SHOW/GET/SET/CHECK]` | configuration interactive : page complete numerotee puis modification par numero avec validation par type (IP/port/booleen/enum) ; `config SET CLE val` pour scripts |
+| `manage [service/web/ports]` | etat & gestion centralises : services (wifi/bt/ssh/front_digit), sante pile web (ports 8000/8080/8081, panneau, api, token), actions (`manage web restart`, `manage service wifi-off`) ; delegue aux outils dedies sans les dupliquer |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
 | `motd ON/SET/DEFAULT` | banniere adb (cadre ASCII) : URL panneau web, etat ports 8000/8080/8081, ip/ram/boot/recette ; activation manuelle uniquement (`ON`, jamais automatique) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |

@@ -2,15 +2,20 @@
 # recette - validation de bout en bout de la box, par phases ou globale.
 #
 #   recette                sequence complete P1..P7 + bilan + retour
-#   recette P1..P7         une seule phase (enregistree dans
+#   recette <phase>        une seule phase (enregistree dans
 #                          log/recette_phases.txt pour l'IHM)
-#   recette RETOUR         SEND_LOGS + message cle prete pour retour
+#   recette <section>      groupe thematique : CONFIG (P3+P4), DIAG (P5+P6)
+#   recette HELP           liste des phases/sections launchables
 #
 # Phases :
 #   P1 install      VERSION + deploy STATUS      P5 inspect_all (analyses)
 #   P2 selftest     tous les outils              P6 run_state (lancements)
 #   P3 conf_check   config + application         P7 expose ports/panneau/api
 #   P4 mem_tune     profil optimise
+#
+# Sections (groupes) :
+#   CONFIG          configuration : P3 + P4
+#   DIAG            diagnostics   : P5 + P6
 #
 # Traces : log/exec/recette_<TS>.log (detail)
 #          log/recette_last.txt    (derniere action, lu par l'IHM)
@@ -85,6 +90,36 @@ require_root_or_fail()
         return 1
     fi
     return 0
+}
+
+help_recette()
+{
+    echo ""
+    echo "=== RECETTE - validation de bout en bout ==="
+    echo ""
+    echo "Usage:"
+    echo "  recette              tout : P1..P7 + bilan + retour cle"
+    echo "  recette <phase>      une phase seule"
+    echo "  recette <section>    un groupe thematique (bilan inclus)"
+    echo "  recette HELP         cette aide"
+    echo ""
+    echo "Phases :"
+    echo "  P1        install       VERSION + deploy STATUS"
+    echo "  P2        selftest      tous les outils"
+    echo "  P3        conf_check    config + application"
+    echo "  P4        mem_tune      profil optimise"
+    echo "  P5        inspect_all   analyses completes"
+    echo "  P6        run_state     lancements outils"
+    echo "  P7        expose        ports 8000/8080/8081 + panneau + api"
+    echo "  RETOUR    collecte logs + cle prete pour analyse PC"
+    echo "  MANIFEST  certification (+ snapshot) apres P1..P7 a 7/7 OK"
+    echo ""
+    echo "Sections (groupes) :"
+    echo "  CONFIG    configuration : P3 + P4"
+    echo "  DIAG      diagnostics   : P5 + P6"
+    echo ""
+    echo "Traces : log/exec/recette_<TS>.log, log/recette_last.txt,"
+    echo "         log/recette_phases.txt (etat par phase, lu par l'IHM)"
 }
 
 # horloge sortie de l'etat 1970 ? sinon correction best-effort (set_time
@@ -427,6 +462,11 @@ p_snapshot()
 main()
 {
 
+if [ "$1" = "HELP" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    help_recette
+    return 0
+fi
+
 echo ""
 echo "=== RECETTE BOX - $(date '+%Y-%m-%d %H:%M:%S') ==="
 echo "cle : ${KEY:-absente}"
@@ -435,6 +475,10 @@ require_root_or_fail "$@" || return 2
 clock_guard
 
 case "$1" in
+    HELP|-h|--help)
+        help_recette
+        return 0
+        ;;
     P1) p_install ;;
     P2) p_selftest ;;
     P3) p_conf ;;
@@ -450,6 +494,18 @@ case "$1" in
     MANIFEST)
         p_manifest
         return $?
+        ;;
+    CONFIG)
+        echo "section : configuration (P3 conf_check + P4 mem_tune)"
+        p_conf
+        p_memtune
+        bilan
+        ;;
+    DIAG)
+        echo "section : diagnostics (P5 inspect_all + P6 run_state)"
+        p_analyses
+        p_runstate
+        bilan
         ;;
     *)
         p_install

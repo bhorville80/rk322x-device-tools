@@ -100,6 +100,26 @@ VERIFICATION
                       Phases separees possibles : recette P1..P7
                       ou RETOUR (etat par phase dans
                       log/recette_phases.txt, boutons IHM)
+                      Sections thematiques : recette CONFIG
+                      (P3+P4) / recette DIAG (P5+P6)
+                      Liste complete : recette HELP
+  nreg               Non-regression executable (cf.
+                      docs/NON-REG.md) : 10 themes verifies
+                      (deploiement, outils, configuration,
+                      memoire, boot, reseau, wifi, diagnostic,
+                      sd, traces) avec bilan PASS/FAIL
+                      Un seul theme : nreg 4 | nreg mem |
+                      nreg wifi ; liste : nreg HELP
+  config             Configuration interactive : toute la
+                      config en une page numerotee puis
+                      modification par numero (validation
+                      par type) ; scripts : config GET/SET ;
+                      validation : config CHECK
+  manage             Etat & gestion centralises :
+                      manage = apercu services+web+ports,
+                      manage service [wifi-off|ssh-...],
+                      manage web [expose|stop|restart|
+                      token-status], manage ports
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle
