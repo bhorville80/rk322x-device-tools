@@ -1,157 +1,136 @@
-# STARTUP - Procedure d'installation et de mise en service from scratch
+# STARTUP - From-scratch installation and bring-up procedure
 
-> Deploiement complet d'une box RK322X remise a zero jusqu'a l'autonomie totale.
-> Dernier dpk de reference : voir dist/ (build le plus recent).
-> Chaque phase indique les commandes EXACTES et le RESULTAT ATTENDU.
-> En cas d'echec : ne pas enchanter la phase suivante avant resolution.
+> Full deployment of a stock RK322X box up to full autonomy.
+> Reference dpk: latest build in dist/. Each phase lists exact commands
+> and EXPECTED results. Do not chain phases past a failure.
 
 ---
 
 ## Phase 0 - Preparation
 
-### Sur PC
-Copier a la racine de la cle USB (FAT32) :
+### On the PC
+Copy to USB key root (FAT32):
 ```
 rk322x-tools_v17_<BUILD>.dpk          (+ .sha256)
 deploy.sh
 ```
-(`INSTALLER.sh`, panneau web et tous les outils sont dans le dpk.)
 
-### Sur la TV (telecommande)
-1. Parametres → A propos → taper 7x sur "numero de build" → options developpeur
-2. Activer **Debogage USB**
-3. Parametres → Reseau → Ethernet → **Statique** :
-   - IP `192.168.50.20` / masque `/24`
-   - passerelle `192.168.50.1` / DNS `8.8.8.8`
-   (persistant natif Android ; nos outils s'alignent dessus)
+### On the TV (remote control)
+1. Settings -> About -> tap "Build number" 7x -> developer options
+2. Enable **USB debugging**
+3. Settings -> Network -> Ethernet -> **Static**:
+   IP `192.168.50.20` / `/24` / gateway `192.168.50.1` / DNS `8.8.8.8`
 
-### Connexion PC <-> box
+### PC <-> box connection
 ```bash
-adb kill-server && adb devices        # la box doit apparaitre
+adb kill-server && adb devices        # box must be listed
 adb shell ; su
-ls /mnt/media_rw/*/INSTALLER.sh       # la cle est vue
+ls /mnt/media_rw/*/INSTALLER.sh       # key is visible
 ```
 
 ---
 
-## Phase A - Empreinte memoire AVANT installation (box vierge)
+## Phase A - RAM baseline BEFORE installing (virgin box)
 
 ```bash
-# depuis le PC
 adb push scripts\rampre.sh /data/local/tmp/
 adb shell ; su
-sh /data/local/tmp/rampre.sh 120        # 120 s d'echantillonnage
+sh /data/local/tmp/rampre.sh 120      # 120 s sampling
 ```
 
-Attendu : rapport `rampre_<TS>.txt` sur la cle/sdcard avec MemAvailable
-moy/min/max, top PSS debut/fin, pressions lmk detectees.
-**C'est la ligne de base qui permettra de chiffrer les benefices.**
+Expected: `rampre_<TS>.txt` on key/sdcard with MemAvailable avg/min/max,
+top PSS start/end, lmk pressure count. This is the baseline used to
+quantify every optimization benefit later.
 
 ---
 
-## Phase 1 - Installation + hook + application
+## Phase 1 - Install + hook + apply
 
 ```bash
 sh /mnt/media_rw/*/INSTALLER.sh
 ```
 
-Interactive, avec validation a chaque etape :
-- [0] presentation du paquet detecte (BUILD-INFO)
-- 1/3 deploy PKG      -> scripts + panneau web + liens /data/bin
-- revue des cles importantes -> option ajustement interactif (`config`)
-- 2/3 boot INSTALL    -> point de lancement persistant
-                        (mecanismes essayes dans l'ordre : init .rc,
-                         init.d si supporte, bloc install-recovery.sh)
-- 3/3 boot TEST       -> application immediate (memoire/reseau/horloge/web)
-- bonus aliases       -> raccourcis adb shell (help, manage, nreg...)
+Interactive with validation gates:
+- [0] detected package presentation (BUILD-INFO)
+- 1/3 deploy PKG   -> tools + web panel + /data/bin links
+- config highlights review -> optional interactive editor (`config`)
+- 2/3 boot INSTALL -> persistent launcher (tried in order: init .rc,
+  init.d if firmware supports it, install-recovery.sh block)
+- 3/3 boot TEST    -> immediate application (memory/network/clock/web)
+- bonus aliases    -> uid-2000 shortcuts (help, manage, nreg...)
 
-**Attendu** : `[5] Demarrage automatique... [ OK ]`, pile web demarree,
-message final TERMINE.
+Expected: `[5] Startup... [ OK ]`, web stack running, TERMINE banner.
 
 ---
 
 ## Phase 2 - Configuration & verification
 
 ```bash
-config            # revue visuelle complete numerotee
-config CHECK      # = conf_check -> "[ OK ] configuration conforme"
+config            # numbered interactive review
+config CHECK      # = conf_check -> "[ OK ] configuration compliant"
 exit ; exit
-ping 192.168.50.20                    # reseau operationnel
+ping 192.168.50.20
 ```
 
-Points a verifier sur la page `config` :
-- `IP=192.168.50.20` / `GATEWAY=192.168.50.1`
-- `BOOT_SET_NETWORK=1`, `BOOT_TIME_SYNC=1`, `BOOT_EXPOSE=1`
-- `WEB_RUN=0` (console IHM desactivee par defaut)
+Keys to eyeball: `IP/GATEWAY`, `BOOT_SET_NETWORK=1`, `BOOT_TIME_SYNC=1`,
+`BOOT_EXPOSE=1`, `WEB_RUN=0` (panel console off by default).
 
 ---
 
-## Phase 2bis - Optimisation & Performance
+## Phase 2bis - Optimization & performance
 
-### A) Profil CPU thermique (24/7 -> ECO)
+A) CPU thermal profile (24/7 -> ECO)
 ```bash
-thermal STATUS        # gouverneur + temperatures actuelles
-thermal ECO           # profil eco conseille pour un fonctionnement 24/7
+thermal STATUS
+thermal ECO
 ```
-Attendu : gouverneur eco actif, temperature < 60 C au repos.
 
-### B) Memoire : optimisation puis test de tenue
+B) Memory: optimize then hold test
 ```bash
-mem_tune STATUS       # avant
+mem_tune STATUS
 mem_tune OPTIMIZE     # swappiness + LMK early + logd
-stress_ram            # pression RAM controlee ~30 s, kills surveilles
-vitals                # relevé apres coupure
+stress_ram            # controlled ~30 s RAM pressure, kills monitored
+vitals                # post-pressure reading
 ```
-Attendu : kills LMK propres pendant stress_ram, recuperation sans reboot.
-C'est LA validation que la configuration memoire tient sous charge.
+Expected: clean LMK kills during stress, recovery without reboot.
 
-### C) Allegement services / paquets
+C) Services/packages slimming
 ```bash
-cut_services STATUS   # ce qui tourne encore d'inutile
-cut_services CUT      # coupe liste SAFE + PACKAGES_DISABLE
+cut_services STATUS
+cut_services CUT      # frees ~120-150 MB PSS on this box
 ```
-Attendu : ~120-150 Mo de PSS liberés (gms, mediacenter, launcher, vending...).
 
-### D) Headless (si TV utilisee uniquement pour le panneau)
+D) Headless (if TV only used for panel): `field_mode OFF` then `hdmi OFF`.
+
+E) Immediate counter-check
 ```bash
-field_mode OFF        # arret des services d'affichage superflus
-hdmi OFF              # sortie HDMI coupee (economie/chaleur)
+check_state ; conf_check | tail -5 ; nreg memoire ; manage service
 ```
 
-### E) Contre-verification immediate
-```bash
-check_state           # synthese OK/KO/WARN
-conf_check | tail -5  # optimisations 3/3 APPLIQUE
-nreg memoire          # theme memoire seul -> PASS
-manage service        # vue rapide services restants
-```
-
-Note : BOOT_MEM_TUNE=1 et BOOT_CUT_SERVICES=1 reappliquent tout ceci
-automatiquement a chaque demarrage.
+Note: BOOT_MEM_TUNE/BOOT_CUT_SERVICES reapply B/C at every boot.
 
 ---
 
-## Phase 2ter - Deploiement INSTRUMENTE (ramstep)
+## Phase 2ter - Instrumented deployment (ramstep)
 
-Applique les optimisations UNE PAR UNE avec mesure RAM avant/apres
-et 30 s d'observation par etape :
+Isolates each optimization benefit with before/after RAM measures and a
+30 s observation window:
 
 ```bash
 ramstep 30
 ```
 
-Etapes isolees : mem_tune OPTIMIZE -> thermal ECO -> cut_services CUT ->
-reseau+horloge -> STOP+EXPOSE (effet du demarrage serveurs).
-Chronologie des gains : `log/ram_steps_<TS>.txt` (delta_prev par etape).
-
-Variante unitaire : `ramstep ONE "<label>" <commande...>`.
+Steps: mem_tune OPTIMIZE -> thermal ECO -> cut_services CUT ->
+network+clock -> STOP+EXPOSE (server startup cost isolated).
+Timeline with per-step gains: `log/ram_steps_<TS>.txt`.
+Single-command wrap: `ramstep ONE "<label>" <cmd...>`.
 
 ---
 
 ## Phase 3 - Re-check (non-regression)
 
 ```bash
-nreg                  # 10 themes -> PASS sans FAIL
+nreg                  # 10 themes, PASS without FAIL
 selftest | tail -3    # ~50 PASS / 0 FAIL
 ```
 
@@ -160,69 +139,64 @@ selftest | tail -3    # ~50 PASS / 0 FAIL
 ## Phase 4 - Inspection
 
 ```bash
-inspect_all LIST      # classification coeur/exploration avec raison+attentes
-inspect_all           # analyses coeur (~1 min)
-device_info           # inventaire puces par fonctionnalite
-hw_report SAVE        # rapport COMPLET -> log/hardware_latest.txt
-                      # (recherche web des puces : datasheets/possibilites)
+inspect_all LIST      # heart/exploration classes with reason+expectations
+inspect_all           # heart analyses (~1 min)
+device_info           # chip inventory by function
+hw_report SAVE        # FULL report -> log/hardware_latest.txt (chip research)
 ```
 
 ---
 
-## Phase 5 - Serveur
+## Phase 5 - Server
 
 ```bash
-manage                # vue globale : services + web + ports
-manage web            # 3 ports ECOUTE, panneau servi, api repond
-deploy STATUS         # manquants : 0
-show_key              # paquet cle vs installe
+manage                # services + web + ports overview
+manage web            # 3 ports LISTENING, panel served, api answering
+deploy STATUS         # missing: 0
+show_key              # key package vs installed
 ```
 
 ---
 
-## Phase 6 - Tests IHM (navigateur PC)
+## Phase 6 - IHM tests (PC browser) - see docs/IHM.md
 
-| Page | A tester | Attendu |
+| Page | Test | Expected |
 |---|---|---|
-| Accueil | badges ports, heure box, versions | 3 verts, horloge reelle |
-| Commandes | CHECK STATE, SYNC HORLOGE | reponse instantanee |
-| Cle | RAPPORT MATERIEL + telechargement + televerser dpk | generation ~10 s, download direct |
-| Metriques | VITALS | valeurs fraiches |
-| Telecommande | image TV + touches + clic=TAP | mirroring ~2 s |
-| Infos | identite/materiel/config/manifest | tout rempli |
+| Accueil | badges, box clock, versions | 3 green, real clock |
+| Commandes | CHECK STATE, SYNC HORLOGE | instant answer |
+| Cle | hardware report + download + dpk upload | ~10 s gen, direct download |
+| Metriques | VITALS | fresh values |
+| Telecommande | TV mirror + keys + click=TAP | ~2 s refresh |
+| Infos | identity/material/config/manifest | everything filled |
 
-Console distante (page Telecommande) : necessite `WEB_RUN=1`
-(config SET WEB_RUN 1) ET token actif (deploy TOKEN ON).
+Remote console needs `WEB_RUN=1` AND active token.
 
 ---
 
-## Phase 7 - LE critere final : reboot autonome
+## Phase 7 - THE final gate: autonomous reboot
 
 ```bash
 reboot
 ```
 
-Attendre **4 a 6 minutes** sans rien toucher (30 s du bloc install-recovery +
-fin de boot Android + attente de la cle jusqu'a 150 s + sequence complete).
+Wait **4 to 6 minutes** without touching anything. Then, no manual action:
+1. `http://192.168.50.20:8000/` -> panel up, green badges
+2. `date` -> real clock
+3. latest `log/exec/boot_*.log` -> complete sequence ending with
+   `[boot] panel OK (8000)` and `fin/rc` footer
 
-Verification sans aucune action manuelle :
-1. `http://192.168.50.20:8000/` -> IHM presente, badges verts
-2. `date` -> horloge reelle
-3. dernier `log/exec/boot_*.log` -> sequence complete avec
-   `[boot] panneau OK (8000)` et footer `fin/rc`
-
-Si la phase 7 passe : objectif "zero action manuelle" ATTEINT.
+Phase 7 passing = "zero manual action" goal ACHIEVED.
 
 ---
 
-## Recuperation (en cas de probleme)
+## Recovery
 
-| Symptome | Remediation |
+| Symptom | Remedy |
 |---|---|
-| Box injoignable en reseau | adb USB (cable PC->box) puis `set_network` |
-| IP perdue apres une ancienne version | reboot simple ; ou parametrage statique via TV |
-| Hook non pose (rc/init.d refuses) | mecanisme install-recovery.sh pris en repli auto |
-| Serveurs morts apres manip | `su -c 'deploy STOP ; deploy EXPOSE'` |
-| Tout est casse | reset usine MXQ puis cette procedure depuis Phase 0 |
+| Box unreachable over network | USB adb (PC->box cable) then `set_network` |
+| IP lost after an old version | simple reboot; or static via TV settings |
+| Hook not installed (rc/init.d refused) | install-recovery.sh fallback is automatic |
+| Servers dead after a manipulation | `su -c 'deploy STOP ; deploy EXPOSE'` |
+| Everything broken | MXQ factory reset then this procedure from Phase 0 |
 
-La cle USB est la SOURCE DE VERITE : elle suffit a redeployer integralement.
+The USB key is the SOURCE OF TRUTH: it alone can redeploy everything.

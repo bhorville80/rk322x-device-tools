@@ -1,94 +1,95 @@
-# IHM - Guide d'utilisation du panneau web
+# IHM - Web panel user guide
 
-> Tout se pilote depuis un navigateur : `http://<ip-box>:8000/`
-> 6 pages, une barre de navigation commune, des badges d'etat de ports
-> en tete de chaque page.
+> Everything is driven from a browser: `http://<ip-box>:8000/`
+> 6 pages, a common navigation bar, and port status badges on top
+> of every page.
 
-## Badges de ports (toutes les pages)
+## Port badges (all pages)
 
-| Badge | Signification |
+| Badge | Meaning |
 |---|---|
-| vert `OK` | le port repond |
-| orange `UP - token requis` | serveur actif mais protege par token |
-| rouge `INJOIGNABLE` | service arrete ou reseau bloque |
+| green `OK` | port answers |
+| orange `UP - token required` | server active, protected by token |
+| red `UNREACHABLE` | service stopped or network blocked |
 
 ---
 
-## Page ACCUEIL
+## ACCUEIL (Home)
 
-- **Bilan versions** : installee (/data/scripts) vs cle ; verdict "a jour"
-  ou "divergent -> deploy INSTALL".
-- **Verdict conf_check** : 3 dernieres lignes de la validation de config.
-- **Dernier CHECK STATE** : entete du dernier etat boitier/reseau.
-- **Heure box** : horloge de la machine comparee au PC -
-  rouge = 1970 (HORLOGE FAUSSE), orange = ecart > 180 s (SYNC HORLOGE a faire).
+- **Version summary**: installed (/data/scripts) vs key; verdict "up to date"
+  or "divergent -> deploy INSTALL".
+- **conf_check verdict**: last 3 lines of the configuration validation.
+- **Latest CHECK STATE**: header of the last box/network state.
+- **Box clock**: box time compared with PC - red = 1970 (CLOCK BROKEN),
+  orange = drift > 180 s (run SYNC HORLOGE).
 
-## Page CLE
+## CLE (USB key)
 
-- **Premier demarrage** : rappel de la commande d'installation initiale.
-- **Catalogue des outils** par fonction.
-- **Televerser sur la cle** : choisir un fichier (.dpk/.sha256/.txt/.log,
-  max 20 Mo) -> TELEVERSER. Le sha256 est calcule par le navigateur puis
-  verifie par la box. Un .dpk propose automatiquement l'application.
-- **Appliquer un dpk depose** : extrait l'archive tar.gz SUR LA CLE
-  (mise a jour sans la debrancher). Ensuite : page Commandes > REBOX,
-  ou `deploy INSTALL`.
-- **Telechargements directs** : rapport materiel, bilans recette/state/
-  vitals, manifest certifie, config, navigation du repertoire log/.
+- **First boot**: reminder of the initial install command.
+- **Tool catalogue** grouped by function.
+- **Upload to the key**: pick a file (.dpk/.sha256/.txt/.log, max 20 MB)
+  -> TELEVERSER. sha256 is computed by the browser then verified by the
+  box. A .dpk automatically offers APPLY.
+- **Apply a deposited dpk**: extracts the tar.gz ONTO THE KEY (update
+  without unplugging). Then: Commandes page > REBOX, or `deploy INSTALL`.
+- **Direct downloads**: hardware report, recette/state/vitals summaries,
+  certified manifest, config, log/ directory browsing.
 
-## Page COMMANDES
+## COMMANDES (actions)
 
-| Section | Boutons | Effet |
+| Section | Buttons | Effect |
 |---|---|---|
-| Base | SYNC HORLOGE | met l'horloge box a l'heure UTC du PC |
-| | CHECK STATE | etat complet boitier/reseau, resultat dans log/state_last.txt |
-| | SYNC CLE | synchronise /data/scripts vers la cle |
-| Logs | SEND LOGS / ROTATE / PURGE | collecte, rotation, purge des traces |
-| Affichage TV | PANEL | ouvre le panneau web SUR LA TV |
-| | HDMI OFF/ON, FIELD OFF/ON | coupe/restaure sortie et services affichage |
-| Systeme | MODE ECO / MODE PERF | profil CPU thermique (24/7 : ECO) |
-| | REBOOT | redemarrage (confirmation) |
-| Materiel | RAPPORT MATERIEL | genere hw_report complet + lien telechargement |
-| Recette | P1..P7, RETOUR | phases unitaires ; COMPLETE = P1->RETOUR |
-| | GENERER MANIFEST | certification apres 7/7 OK |
+| Base | SYNC HORLOGE | sets the box clock to PC UTC |
+| | CHECK STATE | full state; result in log/state_last.txt |
+| | SYNC CLE | syncs /data/scripts back to the key |
+| Logs | SEND LOGS / ROTATE / PURGE | collect, rotate, purge traces |
+| TV display | PANEL | opens the web panel ON THE TV |
+| | HDMI OFF/ON, FIELD OFF/ON | cut/restore display output & services |
+| System | MODE ECO / MODE PERF | CPU thermal profile (24/7: ECO) |
+| | REBOOT | restart (confirmation dialog) |
+| Material | HARDWARE REPORT | generates full hw_report + download link |
+| Recette | P1..P7, RETOUR | single phases; COMPLETE = P1->RETOUR |
+| | GENERATE MANIFEST | certification after 7/7 OK |
 
-Resultats affiches dans le bloc noir sous les boutons.
+Results are displayed in the black output block under the buttons.
 
-## Page METRIQUES
+## METRIQUES
 
-- **VITALS** : releve memoire/CPU/charge instantane (+ WATCH pour suivi).
-- **CHECK STATE**, **CONF CHECK** : relances manuelles avec sortie brute.
+- **VITALS**: instant memory/CPU/load reading (+ WATCH for tracking).
+- **CHECK STATE**, **CONF CHECK**: manual reruns with raw output.
 
-## Page TELECOMMANDE
+## TELECOMMANDE
 
-- **Ecran TV (miroir)** : capture d'ecran rafraichie (pause / 2 s / 4 s /
-  8 s). **Un clic sur l'image = un TAP aux memes coordonnees sur la TV.**
-- **Touches** : dpad + OK, RETOUR/HOME/MENU, VOL +/- , POWER.
-- **Envoyer** : TEXT = message plein ecran sur la TV ;
-  OUVRIR URL = page dans le navigateur de la TV.
-- **Console distante** (equivalent adb shell) : une ligne -> sortie brute.
-  Conditions : `WEB_RUN=1` dans device.conf ET token actif
-  (`deploy TOKEN ON`) - sinon refuse volontairement. Bornee a 15 s / 8 Ko,
-  chaque ligne est loggee.
+- **TV screen (mirror)**: screenshot refreshed on an interval
+  (pause / 2 s / 4 s / 8 s). **Clicking the image = TAP at the same
+  coordinates on the TV.**
+- **Keys**: dpad + OK, BACK/HOME/MENU, VOL +/- , POWER.
+- **Send**: TEXT = full-screen message on the TV;
+  OPEN URL = page in the TV browser.
+- **Remote console** (adb-shell equivalent): one line -> raw output.
+  Requirements: `WEB_RUN=1` in device.conf AND active token
+  (`deploy TOKEN ON`) - refused otherwise by design. Bounded to
+  15 s / 8 KB, every line is logged.
 
-## Page INFOS (donnees statiques)
+## INFOS (static data)
 
-- **Identite & versions** : Android, build, kernel, uptime, RAM, CPU, /data.
-- **Materiel** : dernier rapport puces consultable + regeneration.
-- **Configuration active** : device.conf servi en lecture.
-- **Manifest recette certifie** : phases OK + empreintes sha256.
+- **Identity & versions**: Android, build, kernel, uptime, RAM, CPU, /data.
+- **Material**: latest chip report viewable + regeneration button.
+- **Active configuration**: device.conf served read-only.
+- **Certified recette manifest**: OK phases + sha256 fingerprints.
 
 ---
 
-## Securite
+## Security
 
-- Sans token : API 8080 et GUI 8081 ouvertes au LAN (panneau 8000 statique).
-- `deploy TOKEN ON` protege l'API/GUI ; le panneau demande la valeur une
-  seule fois (localStorage).
-- La console distante exige EN PLUS `WEB_RUN=1`.
+- Without token: API 8080 and GUI 8081 are open to the LAN
+  (panel :8000 is static content).
+- `deploy TOKEN ON` protects API/GUI; the panel asks for the value once
+  per browser (localStorage).
+- The remote console additionally requires `WEB_RUN=1`.
 
-## En cas de souci
+## Troubleshooting
 
-- Badge 8080 rouge -> `deploy EXPOSE` sur la box (ou adb).
-- "Failed to fetch" persistant -> voir TROUBLESHOOTING section WEB PANEL.
-- Apres toute mise a jour des scripts : `deploy STOP && deploy EXPOSE`.
+- Badge 8080 red -> run `deploy EXPOSE` on the box (or adb).
+- Persistent "Failed to fetch" -> see TROUBLESHOOTING, WEB PANEL section.
+- After any script update: `deploy STOP && deploy EXPOSE`.

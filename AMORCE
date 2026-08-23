@@ -1,39 +1,17 @@
-=== RK322X DEVICE TOOLS - AMORCE ==============================
+AMORCE - 3 steps to a self-running box
+=======================================
 
-Cle montee noexec : toujours "sh <chemin>", jamais ./ .
+1) INSTALL (from adb shell, as root):
+     sh /mnt/media_rw/*/INSTALLER.sh
+   -> installs tools, boot hook, applies configs, starts the web panel
 
-[1] PREMIERE FOIS (depuis le PC)
+2) CHECK:
+     browser: http://<ip-box>:8000/          (6 pages, green port badges)
+     nreg                                     (10-theme non-regression)
 
-  adb shell
-  su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
-  exit
+3) REBOOT:
+     wait 4-6 min -> panel comes back ALONE.
+     Everything (memory profile, network, clock, web stack) restarts by itself.
 
-[2] ENSUITE (sur la box)
-
-  menu               dispatcher par sujet : install recette optim
-                     inspect diag logs serveur cle
-  menu recette tout  bilan complet + cle prete pour retour
-  amorce             rappel des commandes
-
-[3] INTERFACE WEB (panneau depuis un navigateur du LAN)
-
-  amorce EXPOSE      demarre la pile web (obligatoire une fois par boot)
-  puis ouvrir        http://<ip-box>:8000   accueil / cle / commandes / metriques
-  arreter            amorce STOP
-
-[4] PERSISTANCE AU REBOOT
-
-  boot INSTALL       pose le hook init : au prochain reboot, mem_tune +
-                     pile web lances tout seuls (cf. BOOT_* device.conf)
-  boot STATUS        etat du hook + dernier passage
-  reboot             redemarrage immediat (reboot 30 = differe,
-                     reboot CANCEL = annule ; RECOVERY/BOOTLOADER aussi)
-
-[5] DISPLAY FRONTAL ET TELECOMMANDE
-
-  front_digit PROBE  une fois : identifie le format d'ecriture du display
-  front_digit CLOCK  horloge custom (ou ROTATE 5 TIME IP pour rotation 5 s)
-  remote_map LEARN   capte les touches IR puis MAP scancode=KEYCODE
-
-Aide : help        Rapport global : inspect_all
-===============================================================
+Full procedure : docs/STARTUP.md
+Panel guide    : docs/IHM.md

@@ -1,110 +1,95 @@
-# FICHE DE RECETTE - RK322X DEVICE TOOLS v12
+# RECETTE SHEET - RK322X DEVICE TOOLS
 
-Recette fonctionnelle + energetique de la box Leelbox MXQ (rk322x,
-Android 7.1.2, 2 Go RAM, headless 24/7).
-Fiche a remplir a la main pendant la recette - pas d'automatisation.
-Trois cotes testes : BOX (local), PC LINUX, PC WINDOWS.
+Functional + energy acceptance run for the Leelbox MXQ box (rk322x,
+Android 7.1.2, 2 GB RAM, headless 24/7). Hand-filled during the run -
+not automated. Three tested sides: BOX (local), PC LINUX, PC WINDOWS,
+plus the WEB PANEL.
 
-## 1. Environnement
+## 1. Environment
 
-| Item            | Valeur                        |
+| Item            | Value                         |
 |-----------------|-------------------------------|
-| Paquet          | rk322x-tools_v12_<BUILD_ID>   |
-| Date/recetteur  | _____________________________ |
-| IP box / cle    | 192.168.50.20 / _____________ |
-| Etat initial    | ( ) usine   ( ) provisionnee  |
+| Package         | rk322x-tools_v17_<BUILD_ID>   |
+| Date/tester     | _____________________________ |
+| Box/key IP      | 192.168.50.20 / _____________ |
+| Initial state   | ( ) factory   ( ) provisioned |
 
-Installation du livrable :
+Deliverable installation:
 
-    tools/dpk.sh install -t 192.168.50.20:5555        (cote PC)
-    ou : su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL' (depuis la cle)
+    tools/dpk.sh install -t 192.168.50.20:5555        (PC side)
+    or: su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL' (from the key)
 
-## 2. Cas de test - COTE BOX (local, adb ou console)
+## 2. Test cases - BOX SIDE (local, adb or console)
 
-| #  | Action                    | Attendu                                        | OK/KO |
-|----|---------------------------|------------------------------------------------|-------|
-| B01| deploy STATUS             | outils presents = total, liens bin ok          |       |
-| B02| selftest                  | tous les modules repondent, 0 KO               |       |
-| B03| conf_check                | configuration conforme + sections [1..6]       |       |
-| B04| mem_tune OPTIMIZE         | zram/swappiness/logd appliques (ou kernel note)|       |
-| B05| mem_tune puis conf_check  | section [6] = APPLIQUE sur les lignes visees   |       |
-| B06| mem_tune RESTORE          | retour aux valeurs d'origine                   |       |
-| B07| run_state                 | lances/nb/rc + installes jamais lances         |       |
-| B08| device_info               | puces par fonctionnalite + services groupes    |       |
-| B09| inspect_all               | toutes sections, synthese rc en fin            |       |
-| B10| STOP puis EXPOSE          | serveurs relances : 8000/8080/8081 + watcher   |       |
-| B11| boot INSTALL puis boot STATUS| hook init actif, dernier passage trace      |       |
-| B12| front_digit PROBE         | format trame memorise, SHOW "12.34" visible    |       |
-| B13| remote_map STATUS         | device cible + layout, 0 modification          |       |
-| B14| net_watch STATUS          | etats de connexions + top IP distantes        |       |
-| B15| motd DEFAULT              | banniere cadre ASCII : URL panneau + etat 8000/8080/8081 |       |
+| #  | Action                      | Expected                                        | OK/KO |
+|----|-----------------------------|-------------------------------------------------|-------|
+| B01| deploy STATUS               | tools present = total, bin links ok             |       |
+| B02| selftest                    | all modules answer, 0 KO                        |       |
+| B03| conf_check                  | config compliant + sections [1..6]              |       |
+| B04| mem_tune OPTIMIZE           | zram/swappiness/logd applied (or kernel noted)  |       |
+| B05| mem_tune then conf_check    | section [6] = APPLIED on targeted lines         |       |
+| B06| mem_tune RESTORE            | back to original values                         |       |
+| B07| run_state                   | runs/count/rc + installed-never-run             |       |
+| B08| device_info                 | chips by function + grouped services            |       |
+| B09| inspect_all                 | all sections, rc synthesis at end               |       |
+| B10| STOP then EXPOSE            | servers restarted: 8000/8080/8081 + watcher     |       |
+| B11| boot INSTALL then STATUS    | init hook active, last pass traced              |       |
+| B12| front_digit PROBE           | frame format memorized, SHOW "12.34" visible    |       |
+| B13| remote_map STATUS           | target device + layout, 0 modification         |       |
+| B14| net_watch STATUS            | connection states + top remote IPs              |       |
+| B15| motd DEFAULT                | ASCII frame banner: panel URL + ports state     |       |
 
-## 3. Cas de test - PANNEAU WEB (http://192.168.50.20:8000)
+## 3. Test cases - WEB PANEL (http://192.168.50.20:8000)
 
-| #  | Page       | Action              | Attendu                                   | OK/KO |
-|----|------------|---------------------|-------------------------------------------|-------|
-| W01| accueil    | ouverture           | resume config + versions + verdict a jour |       |
-| W02| accueil    | verdict config      | ligne conf_check visible et coherente     |       |
-| W03| cle        | lecture             | contenu cle + catalogue outils affiches   |       |
-| W04| commandes  | SYNC HORLOGE        | horloge box remise (UTC PC)               |       |
-| W05| commandes  | CHECK STATE         | state_last.txt rapatrie dans le resultat  |       |
-| W06| commandes  | HDMI OFF/ON         | ecran coupe/rendu                         |       |
-| W07| metriques  | VITALS              | releve vitals_last.txt affiche            |       |
-| W08| metriques  | CONF CHECK          | rapport conf_check complet                |       |
-| W09| navigation | barre des 4 pages   | navigation fluide, page courante surlignee|       |
+Full page-by-page matrix: docs/IHM.md. Minimum grid:
 
-## 4. Cas de test - COTE PC LINUX
+| #  | Page       | Action              | Expected                                   | OK/KO |
+|----|------------|---------------------|--------------------------------------------|-------|
+| W01| accueil    | open                | config summary + versions + verdict        |       |
+| W02| commandes  | SYNC HORLOGE        | box clock reset (PC UTC)                   |       |
+| W03| commandes  | CHECK STATE         | instant answer, state_last displayed       |       |
+| W04| cle        | HARDWARE REPORT     | report generated + downloadable link       |       |
+| W05| cle        | upload .dpk         | sha verified, APPLY offered                |       |
+| W06| metriques  | VITALS              | vitals_last.txt displayed                  |       |
+| W07| telecommande| mirror + click TAP | screen refreshes ~2 s, tap lands on TV     |       |
+| W08| infos      | static data         | identity/hardware/config/manifest filled   |       |
+| W09| navigation | 6-page bar          | smooth navigation, current page highlighted|       |
 
-| #  | Outil                    | Attendu                                         | OK/KO |
+## 4. Test cases - PC LINUX side
+
+| #  | Tool                     | Expected                                        | OK/KO |
 |----|--------------------------|-------------------------------------------------|-------|
-| L01| admin/linux/provision.sh | check : etapes [0..8], resume OK/KO             |       |
-| L02| provision.sh fix         | avec -Fix : corrections appliquees puis valides |       |
-| L03| admin/linux/set_box_time | horloge box alignee sur le PC                   |       |
-| L04| admin/linux/vitals_history | collecte CSV vitals vers history/             |       |
-| L05| admin/linux/logpull.sh   | SEND_LOGS box -> history/logs/ (tgz extrait)    |       |
+| L01| admin/linux/provision.sh | check: steps [0..8], OK/KO summary              |       |
+| L02| set_box_time.sh          | box clock aligned with PC                       |       |
+| L03| logpull.sh               | collects key logs to the PC                     |       |
+| L04| vitals_history.sh        | CSV history readable/plotted                    |       |
 
-## 5. Cas de test - COTE PC WINDOWS
+## 5. Test cases - PC WINDOWS side
 
-| #  | Outil                       | Attendu                                      | OK/KO |
-|----|-----------------------------|----------------------------------------------|-------|
-| C01| admin/windows/provision.ps1 | check : etapes [0..8] equivalents a L01      |       |
-| C02| provision.ps1 -Fix -Net     | corrections + ajout sous-reseau si demande   |       |
-| C03| set_box_time.ps1 / .bat     | horloge box alignee                          |       |
-| C04| vitals_history.ps1          | collecte CSV vitals                          |       |
-| C05| logpull.ps1                 | logs remontes vers history/logs/             |       |
-| C06| write_set_heure.ps1/.bat    | fichier SET_HEURE pose a la racine de la cle |       |
+Same grid as section 4 with provision.ps1 / set_box_time.ps1 /
+logpull.ps1 / vitals_history.ps1.
 
-## 6. Recette energetique (NRG)
+## 6. Energy measurements
 
-Objectif : mesurer l'impact consommation des profils avant/apres optimisation.
-Materiel : wattmetre prise (ou prise connectée), lecture W/V/A.
+Protocol and sheet: docs/PJ-releve-energie.csv.
+Reference scenarios:
 
-Protocole par phase (10 min minimum par palier, releves toutes les minutes
-dans la PJ) :
+| Ref | Scenario                          | Expected metric |
+|-----|-----------------------------------|-----------------|
+| N01| boot -> idle after EXPOSE         | peak W then stabilization |
+| N02| idle 10 min headless (hdmi off)   | avg W |
+| N03| idle ECO (thermal ECO)            | avg W vs N01 |
+| N04| idle PERF (thermal PERF)          | avg W delta |
+| N05| stress_ram 256 MB during measure  | max W |
 
-| Phase | Configuration                                    | A relever      |
-|-------|--------------------------------------------------|----------------|
-| N01   | boot -> idle usine                               | W moyen, pic   |
-| N02   | idle apres cut_services APPS                     | W moyen        |
-| N03   | idle ECO (thermal ECO) + field_mode OFF          | W moyen        |
-| N04   | idle PERF (thermal PERF)                         | W moyen        |
-| N05   | HDMI ON vs OFF (a profil constant)               | delta W        |
-| N06   | serveurs actifs + lecture USB (EXPOSE)           | W moyen        |
-| N07   | 24h continus en configuration finale             | kWh, stabilite |
+## 7. Verdict
 
-Gabarit de saisie : PJ-releve-energie.csv (a dupliquer par session).
-Croiser avec : vitals CSV (temp/freq/ram) via vitals_history.
+| Phase                     | GO/KO |
+|---------------------------|-------|
+| BOX (section 2)           |       |
+| WEB PANEL (section 3)     |       |
+| PC LINUX (section 4)      |       |
+| PC WINDOWS (section 5)    |       |
+| ENERGY (section 6)        |       |
 
-## 7. Criteres de sortie
-
-| Critere                                              | Seuil            | Verdict |
-|------------------------------------------------------|------------------|---------|
-| Cas B/W/L/C KO bloquants                              | 0                |         |
-| selftest KO                                           | 0                |         |
-| conf_check                                            | conforme         |         |
-| mem_tune : optimisations APPLIQUEES (section [6])     | conformes au cfg |         |
-| Gain N02 vs N01                                       | a definir        |         |
-| Delta N05 (HDMI off)                                  | a definir        |         |
-| Stabilite N07                                         | 0 reboot/watchdog|         |
-
-Verdict global : ( ) GO   ( ) GO avec reserves   ( ) NO-GO
+Global: ______ GO ______ NO-GO - Comments: ______________________
