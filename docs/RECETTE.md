@@ -37,7 +37,7 @@ Installation du livrable :
 | B12| front_digit PROBE         | format trame memorise, SHOW "12.34" visible    |       |
 | B13| remote_map STATUS         | device cible + layout, 0 modification          |       |
 | B14| net_watch STATUS          | etats de connexions + top IP distantes        |       |
-| B15| motd DEFAULT              | banniere riche generee (16 lignes)             |       |
+| B15| motd DEFAULT              | banniere cadre ASCII : URL panneau + etat 8000/8080/8081 |       |
 
 ## 3. Cas de test - PANNEAU WEB (http://192.168.50.20:8000)
 

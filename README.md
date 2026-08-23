@@ -107,7 +107,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `run_state` | outils lances / jamais lances / echecs (analyse log/exec) |
 | `recette [P1..P7/RETOUR/MANIFEST]` | recette bout-en-bout, phases ou globale, manifest certifie |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
-| `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
+| `motd ON/SET/DEFAULT` | banniere adb (cadre ASCII) : URL panneau web, etat ports 8000/8080/8081, ip/ram/boot/recette ; activation manuelle uniquement (`ON`, jamais automatique) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
 | `deploy TOKEN ON/OFF/<valeur>/STATUS` | protection optionnelle API 8080 + GUI 8081 par secret partage (`server/token`) ; panneau : saisie unique par navigateur |

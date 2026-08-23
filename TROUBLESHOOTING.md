@@ -651,6 +651,46 @@ Status:    Corrige en v13. Re-deployer : dezipper rk322x-cle_v13_*.zip a la
            et relancer la recette. zram reste impossible sur ce firmware.
 ```
 
+### 2026-08-23 - Recette bloquee en P7 + boot bloque sur front_digit
+
+```text
+Date:      2026-08-23
+Device:    Leelbox rk322x_box, Android 7.1.2 (SDK 25)
+Version:   v17
+Problem:   recette -> log tronque juste apres "--- [P7] EXPOSE ---"
+           (deux runs identiques) : pas de bilan, pas de RETOUR,
+           P7 absente de recette_phases.txt.
+           boot -> log tronque apres "[boot] front_digit CLOCK..." :
+           sd_boot CHECK et motd jamais executes au demarrage.
+Symptoms:  box vivante pendant le blocage (autres outils lancables) ;
+           run_state annonce des "echecs" RC ? pour selftest/recette/
+           run_state eux-memes, simplement parce que leur trace est
+           encore en cours d'ecriture au moment du scan.
+Diagnosis: sous-shell de service lance en arriere-plan SANS redirection :
+           il herite du tube d'une capture $( ) et la ferme jamais ->
+           le $( ) n'en finit jamais.
+           - gui_server/control_server : ( boucle nc ) & capture par
+             start_server (GUI_OUT=/CTRL_OUT=$( ... )) puis recette P7
+             (EXPOSE_OUT="$( deploy EXPOSE )") -> fige exactement apres
+             l'entete [P7].
+           - front_digit daemon_loop : ( while true ) & capture par
+             PID="$( daemon_loop ... )" -> do_clock ne rend jamais la
+             main -> boot.sh bloque avant la fin de sequence.
+           - le boot passe quand il redirige vers /dev/null (run_tool),
+             d'ou l'impression que seul P7 est touche.
+Solution:  redirection systematique des sous-shells detaches
+           ( ) >/dev/null ou >> "$LOG" ; captures par fichier temporaire
+           au lieu d'un $( ) nu (recette P7, start_server) ; sondes wget
+           bornees timeout dans P7 ; boot : front_digit CLOCK sous
+           timeout 90 pour garantir la suite du boot ; run_state : seuls
+           les rc numeriques non nuls comptent en echec, trace en cours
+           ignoree (comparaison -nt marqueur), verdict "trace incomplete"
+           sinon.
+Status:    Corrige. Regle generale : ne JAMAIS capturer dans $( ) un
+           script qui detache une boucle infinie - rediriger le
+           sous-shell OU passer par un fichier temporaire.
+```
+
 ---
 
 ## Notes
