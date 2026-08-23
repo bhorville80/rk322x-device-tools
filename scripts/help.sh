@@ -283,6 +283,10 @@ RESEAU / DIAGNOSTIC
                      config/device.conf
 
 MAINTENANCE
+  rotate_logs        rotation tailles (512 Ko) des *.log actifs + garde
+                     KEEP derniers par outil ; purge par age des rapports
+                     (AGE_DAYS=14 : rampre/hardware/stress_ram/gui_shots)
+                     execute aussi automatiquement au boot
   sync_usb           Synchronise /data/scripts -> cle USB
                      + validation post-copie (cmp octet a octet)
    sync_usb STATUS    Compare sans copier : identiques/divergents

@@ -34,12 +34,46 @@ One-page summary of what V1 delivers on a stock RK322X TV box
 
 ## NEXT - V1-beta roadmap
 
-**Phase 1 (next) - From-scratch integration of a rich version**
-Rebuild the distribution as a single rich V-beta image: full STARTUP
-procedure executed end-to-end on a factory-reset box (baseline rampre ->
-INSTALLER -> ramstep instrumented -> nreg -> IHM matrix -> autonomous
-reboot), with every gap found during the run fixed before beta tagging.
+### Phase 1 - Integration from scratch (CHECKLIST - aucune avancee)
 
-Later candidates (unordered): multi-box fleet provisioning from the PC
-admin kit, panel-side log viewer page, optional SSH hardening wizard,
-OTA delta updates via UPLOAD/APPLY_DPK scheduling.
+> Etat au 2026-08-23 : code pret, MXQ reset usine en attente de run.
+> Les IDs [Xnn] referencent docs/STARTUP.md. Rien n'est coche tant que
+> la preuve (log/trace/sortie) n'est pas archivée.
+
+#### Pre-requis
+- [ ] Cle FAT32 preparee avec dernier dpk + sha256 + deploy.sh ([P1])
+- [ ] TV : options developpeur + debogage USB actives ([P2][P3])
+- [ ] IP statique configuree via TV ([P4])
+- [ ] adb root operationnel en USB ([P5][P6])
+
+#### Baseline
+- [ ] [A2] rampre 120 s archive sur la cle (rapport renomme baseline)
+
+#### Installation
+- [ ] [I1] INSTALLER interactif : 0 ERREUR, hook confirme par boot STATUS
+
+#### Configuration & optimisations
+- [ ] [C1] conforme / [C3] ping OK
+- [ ] [O1] ECO actif ; [O2] mem_tune applique ; swap.bin 512 Mo swapon
+- [ ] [O5] cut_services CUT : gains PSS chiffres vs baseline
+- [ ] [O8] ramstep 30 s : chronologie ram_steps archivee
+
+#### Verification & inspection
+- [ ] [R1] nreg 10/10 themes PASS
+- [ ] [R2] selftest 0 FAIL
+- [ ] [N4] hw_report SAVE genere (analyse puces a fournir)
+
+#### Serveur & IHM
+- [ ] [S2] manage web : tcpsvd actif ? listeners = API_MAX_CONN ?
+- [ ] [W0..W7] matrice IHM complete (dont auth user/user, upload+APPLY dpk reel)
+
+#### Gate beta
+- [ ] [B1..B4] reboot autonome x2 CONSECUTIFS sans intervention
+- [ ] docs/NON-REG.md mis a jour (points O1-O5 fermes)
+- [ ] tag v1.0-beta
+
+### Hors phase 1 (backlog, non planifie)
+- [ ] GUI 8081 multi-listeners (tcpsvd) comme l'API 8080
+- [ ] OTA delta via UPLOAD/APPLY_DPK programme
+- [ ] provisioning multi-box depuis admin/
+- [ ] page IHM viewer de logs

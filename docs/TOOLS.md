@@ -58,6 +58,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 |---|---|
 | net_diag | PING/PORTS/THROUGHPUT + verdicts |
 | net_watch | daemon suivi connexions + BAN/UNBAN iptables |
+| disable_wireless | coupe Wi-Fi/BT (OFF) / restaure (ON) / STATUS |
 
 ## Affichage & peripheriques
 
@@ -77,6 +78,12 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | check_state | verdict boitier/reseau/wireless/hdmi |
 | inspect_all | coeur + classes exploration (FORCE = tout avec confirmation) |
 | inspect_system/services/user/display/gui/remote | inspections unitaires |
+| inspect_system | RAM/CPU/processus/kernel instantane |
+| inspect_services | services init running vs allegement |
+| inspect_display | afficheur frontal 4 digits (exploration) |
+| inspect_gui | capacites UI/HDMI + SHOT/URL (exploration) |
+| inspect_remote | recepteur IR/input/.kl (exploration) |
+| inspect_user | methodes utilisateurs Android (exploration) |
 | device_info | inventaire materiel par fonctionnalite |
 | sys_diag | sante rapide charge/memoire/stockage |
 | sd_inspect | carte SD montage/erreurs/espace |
