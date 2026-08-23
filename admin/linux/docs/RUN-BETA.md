@@ -25,7 +25,7 @@ Kit autonome (toolkit non installe) :
 
 ```bash
 # PC
-adb push scripts\mem_tune.sh /data/local/tmp/
+adb push scripts\optim\mem_tune.sh /data/local/tmp/
 adb push scripts\core\config.sh /data/local/tmp/core_config.sh
 adb shell ; su
 mkdir -p /data/local/tmp/core

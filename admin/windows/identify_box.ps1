@@ -174,12 +174,12 @@ if ($Full) {
     if ((Rget "test -f /data/scripts/device_info.sh && echo ok") -eq "ok") {
         Write-Host (Rget "su -c 'sh /data/scripts/device_info.sh'")
     } else {
-        $Src = Join-Path (Join-Path $Repo "scripts") "device_info.sh"
+        $Src = Join-Path (Join-Path (Join-Path $Repo "scripts") "inspect") "device_info.sh"
         if (Test-Path $Src) {
             & $AdbExe @Sel push $Src /data/local/tmp/device_info.sh *> $null
             Write-Host (Rget "sh /data/local/tmp/device_info.sh")
         } else {
-            Write-Host "[ -- ] scripts/device_info.sh absent du depot : inventaire indisponible"
+            Write-Host "[ -- ] scripts/inspect/device_info.sh absent du depot : inventaire indisponible"
         }
     }
 }

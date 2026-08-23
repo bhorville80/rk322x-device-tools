@@ -4,6 +4,15 @@
 > Chaque outil est installe dans /data/scripts + lien /data/bin
 > (sauf mention contraire). `help` donne le detail complet sur la box.
 
+## Organisation du depot (themes)
+
+Depot thematise : `scripts/boot` (demarrage), `scripts/optim`
+(memoire/thermie/allegement), `scripts/inspect` (diagnostics),
+`scripts/frontal` (afficheur 4 digits/LED/IR), `scripts/outils`
+(administration transversale), `scripts/core` (librairies + registre).
+Le PAQUET reste a plat : la box ne voit aucun dossier (contract
+/data/scripts). Point d'entree PC : `./rk322x.sh <outil|ID|LIST>`.
+
 ## Themes d'actions (xrun)
 
 | Lettre | Theme |

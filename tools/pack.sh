@@ -30,7 +30,14 @@ usage()
 OK=0
 OUT=""
 BUILD_INFO="$REPO/BUILD-INFO.txt"
-trap 'rm -f "$BUILD_INFO"; [ "$OK" = "1" ] || [ -z "$OUT" ] || rm -f "$OUT"' EXIT INT TERM
+STAGE=""
+cleanup()
+{
+    rm -f "$BUILD_INFO"
+    [ -n "$STAGE" ] && rm -rf "$STAGE"
+    [ "$OK" = "1" ] || [ -z "$OUT" ] || rm -f "$OUT"
+}
+trap cleanup EXIT INT TERM
 
 case "${1:-}" in
     ""|build) ;;
@@ -90,11 +97,28 @@ GIT_STATE="clean"
 mkdir -p "$DIST" || die "dist/ inaccessible"
 
 # --- construction -----------------------------------------------------------
+# Layout depot thematise (scripts/<theme>/*.sh) mais layout PAQUET a plat
+# (contract box : /data/scripts/*.sh sans dossier) : staging d'un arbre
+# scripts/ aplati, integre au tar via un second -C. Le contenu du dpk est
+# identique a l'ancien layout a plat (meme noms, meme chemins d'entree).
 say "construction : $OUT"
+STAGE="$(mktemp -d 2>/dev/null)" || STAGE=""
+[ -n "$STAGE" ] || die "staging temporaire impossible"
+mkdir -p "$STAGE/scripts/core" || die "staging scripts impossible"
+cp -r scripts/core/. "$STAGE/scripts/core/" || die "copie core echouee"
+for T in boot optim inspect frontal outils; do
+    for S in scripts/$T/*.sh; do
+        cp "$S" "$STAGE/scripts/" || die "copie $(basename "$S") echouee"
+    done
+done
+
 if ! tar --exclude='*.bak' --exclude='*.swp' --exclude='*~' \
          --exclude='*.pid' --exclude='*.log' \
          --exclude='config/secrets.conf' \
-         -czf "$OUT" BUILD-INFO.txt $INPUTS; then
+         -C "$REPO" -czf "$OUT" BUILD-INFO.txt \
+             AMORCE INSTALLER.sh deploy.sh \
+             server config web docs README.md TROUBLESHOOTING.md ROADMAP.md \
+         -C "$STAGE" scripts; then
     die "echec tar (voir messages ci-dessus)"
 fi
 rm -f "$BUILD_INFO"
@@ -102,6 +126,10 @@ rm -f "$BUILD_INFO"
 # --- verification post-build -------------------------------------------------
 tar -tzf "$OUT" > /dev/null 2>&1 || die "archive produite illisible"
 tar -tzf "$OUT" | grep -q '^deploy.sh$' || die "deploy.sh absent de l'archive"
+tar -tzf "$OUT" | grep -q '^scripts/boot/boot.sh$' \
+    && die "staging thematise fuite dans l'archive (boot/)" || true
+N_THEMES="$(tar -tzf "$OUT" | grep -cE '^scripts/(boot|optim|inspect|frontal|outils)/')"
+[ "$N_THEMES" -eq 0 ] || die "dossiers de theme presentes dans l'archive ($N_THEMES entrees)"
 
 if command -v sha256sum >/dev/null 2>&1; then
     ( cd "$DIST" && sha256sum "$NAME" > "$NAME.sha256" ) \

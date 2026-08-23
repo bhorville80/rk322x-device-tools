@@ -36,7 +36,7 @@
 
 **Prerequis : [P6]**
 
-- [A1] (PC) `adb push scripts\rampre.sh /data/local/tmp/`
+- [A1] (PC) `adb push scripts\optim\rampre.sh /data/local/tmp/`
 - [A2] (box) `sh /data/local/tmp/rampre.sh 120`
 
 Attendu : `rampre_<TS>.txt` sur cle/sdcard (MemAvailable moy/min/max,

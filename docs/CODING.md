@@ -26,20 +26,23 @@ grep -rnE '\[\[|<<<|function [a-z_]+\(|\$\{[a-zA-Z_]+\[' scripts server
 `.gitattributes` impose LF ; le paquet REJETE tout CRLF
 (`pack` gate). Ecrire les fichiers avec newline='\n'.
 
-## 3. Squelette standard d'un outil (scripts/X.sh)
+## 3. Squelette standard d'un outil (scripts/<theme>/X.sh)
+
+Layout depot thematise : boot optim inspect frontal outils (+ core).
+Resolution core avec candidat parent (depot) avant le chemin box :
 
 ```sh
 #!/system/bin/sh
 SCRIPT_ID="$(basename "$0" .sh)"
 
 RUNLOG_LOADED=0
-for B in "$(dirname "$0")" /data/scripts; do
+for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
     [ -f "$B/core/runlog.sh" ] && { . "$B/core/runlog.sh"; RUNLOG_LOADED=1; break; }
 done
 
 # librairie config : UNIQUEMENT core/config.sh
 # (NE JAMAIS sourcer "$(dirname)/config.sh" : c'est l'outil interactif !)
-for B in "$(dirname "$0")/core" /data/scripts/core; do
+for B in "$(dirname "$0")/core" "$(dirname "$0")/../core" /data/scripts/core; do
     [ -f "$B/config.sh" ] && { . "$B/config.sh"; break; }
 done
 
@@ -55,6 +58,11 @@ else
 fi
 exit "$RC"
 ```
+
+Le PAQUET reste a plat (pack.sh stage les themes vers scripts/*.sh) :
+sur la box le premier candidat gagne -> comportement box inchange.
+Appels croises entre themes : ajouter un candidat du type
+`"$(dirname "$0")/../<theme>/Y.sh"` (jamais un chemin unique).
 
 ## 4. Repli explicite (pattern "fallback chaine")
 
