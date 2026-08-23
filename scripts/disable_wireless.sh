@@ -21,7 +21,7 @@ done
 
 for B in "$(dirname "$0")" "$(dirname "$0")/core" "$(dirname "$0")/../scripts/core" /data/scripts /data/scripts/core; do
     if [ -f "$B/config.sh" ]; then
-        . "$B/config.sh"
+        . "$B/core/config.sh"
         break
     fi
 done

@@ -341,6 +341,48 @@ handle_request()
             reply 200 OK "{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
             ;;
 
+        # reponse synchrone : donnees statiques systeme (page Infos)
+        SYS_INFO)
+            OUT_="=== SYSTEME ==="
+            for P_ in ro.product.device ro.product.model ro.product.brand \
+                      ro.build.version.release ro.build.version.sdk \
+                      ro.build.version.security_patch ro.build.version.incremental \
+                      ro.hardware ro.board.platform; do
+                V_="$(getprop "$P_" 2>/dev/null)"
+                [ -n "$V_" ] && OUT_="$OUT_
+$P_ = $V_"
+            done
+            OUT_="$OUT_
+
+kernel : $(cat /proc/version 2>/dev/null)"
+            UP_="$(cut -d. -f1 /proc/uptime 2>/dev/null | tr -dc '0-9')"
+            if [ -n "${UP_:-}" ]; then
+                OUT_="$OUT_
+uptime : $((UP_ / 86400))j $((UP_ % 86400 / 3600))h $((UP_ % 3600 / 60))m"
+            fi
+            MEM_="$(sed -n 's/^MemTotal: *\([0-9]*\) kB/\1/p' /proc/meminfo 2>/dev/null | head -n 1)"
+            [ -n "$MEM_" ] && OUT_="$OUT_
+ram    : $((MEM_ / 1024)) Mo"
+            GV_="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null)"
+            GF_="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null)"
+            [ -n "$GV_" ] && OUT_="$OUT_
+cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
+            DF_="$(df -h /data 2>/dev/null | tail -n 1 | awk '{print $3 "/" $2 " (" $5 ")"}')"
+            [ -n "$DF_" ] && OUT_="$OUT_
+/data  : $DF_"
+
+            log "COMMANDE ACCEPTED: SYS_INFO"
+            reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            ;;
+
+        # reponse synchrone : horloge de la box (epoch + lisible)
+        BOX_TIME)
+            E_="$(date +%s 2>/dev/null | tr -dc '0-9')"
+            H_="$(date '+%Y-%m-%d %H:%M:%S')"
+            log "COMMANDE ACCEPTED: BOX_TIME ($H_)"
+            reply 200 OK "{\"status\":\"ok\",\"epoch\":${E_:-0},\"box_time\":\"$H_\"}"
+            ;;
+
         # console distante (equivalent adb shell) : une ligne, sortie bornee.
         # Double garde : WEB_RUN=1 dans device.conf ET token obligatoire.
         RUN)
@@ -405,21 +447,26 @@ fi
     trap '' HUP
 
     # attente de l'arrivee de la requete : sleep fractionnaire si supporte,
-    # sinon pas de 1 s (bornes ajustees pour ~6 s d'attente max)
-    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=50; else STEP="1"; MAX=6; fi
+    # sinon pas de 1 s (borne courte : une connexion oisive ne doit pas
+    # monopoliser le slot unique - les navigateurs ouvrent des preconnect)
+    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=25; else STEP="1"; MAX=3; fi
 
-    # timeout dispo ? ceinture de securite si un client reste connecte
-    # sans lire pendant un traitement long (CONF_CHECK)
+    # ceinture de securite globale par connexion (transferts inclus)
     RUNNC="busybox nc"
-    command -v timeout > /dev/null 2>&1 && RUNNC="timeout 90 busybox nc"
+    command -v timeout > /dev/null 2>&1 && RUNNC="timeout 180 busybox nc"
+
+    FIFO="/data/local/tmp/control_resp"
 
     while true
     do
         rm -f "$TMP_REQ"
+        rm -f "$FIFO"
+        mkfifo "$FIFO" 2>/dev/null || { sleep 1; continue; }
 
-        # La reponse est PIPEE DANS nc : elle part reellement sur la socket
-        # tant que la connexion est ouverte. nc ecrit la requete recue dans
-        # TMP_REQ ; on ne genere la reponse qu'APRES son arrivee complete.
+        # Le handler tourne en DETACHE et ecrit dans le FIFO : il traque
+        # l'arrivee de la requete puis produit la reponse. nc sert de pont
+        # FIFO -> socket. Une connexion oisive coute ~2 s (le handler ferme
+        # le FIFO, nc sort), pas 90 s.
         {
             i=0
             while [ ! -s "$TMP_REQ" ] && [ "$i" -lt "$MAX" ]; do
@@ -435,7 +482,7 @@ fi
                 # preflight eventuel du navigateur : reponse seche avec CORS
                 case "$REQUEST" in
                     OPTIONS*)
-                        printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+                        printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
                         ;;
                     POST*)
                         # depot de fichiers sur la cle (dpk/sha256/txt...)
@@ -487,9 +534,22 @@ fi
                 esac
 
             fi
-        } | $RUNNC -l -p "$PORT" > "$TMP_REQ" 2>/dev/null
+        } > "$FIFO" &
+        HP="$!"
 
-        rm -f "$TMP_REQ"
+        $RUNNC -l -p "$PORT" < "$FIFO" > "$TMP_REQ" 2>/dev/null
+
+        # si nc est sorti avant le handler (timeout, client parti), lui
+        # laisser <= 3 s de grace puis terminer (pas de zombie qui s'accumule)
+        k=0
+        while kill -0 "$HP" 2>/dev/null && [ "$k" -lt 30 ]; do
+            sleep 0.1
+            k=$((k + 1))
+        done
+        kill "$HP" 2>/dev/null
+        wait "$HP" 2>/dev/null
+
+        rm -f "$FIFO"
     done
 ) >> "$LOG" 2>&1 &
 

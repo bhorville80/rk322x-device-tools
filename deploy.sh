@@ -118,8 +118,7 @@ link_bin()
     [ "$STALE" -gt 0 ] || echo "    [ OK ] aucun lien residuel"
 }
 
-backup_existing()
-{
+backup_existing(){
     if [ -d "$SCRIPTS_DIR" ] && [ -n "$(ls -A "$SCRIPTS_DIR" 2>/dev/null)" ]; then
         TS="$(date '+%Y%m%d-%H%M%S')"
         DEST="$BACKUP_DIR/scripts_$TS"
@@ -171,6 +170,28 @@ write_manifest()
         return 0
     fi
     echo "[ WARN ] manifest non ecrit"
+    return 0
+}
+
+# post-install : pose le hook de demarrage automatiquement.
+# Non bloquant : si /system refuse l'ecriture, simple avertissement
+# (boot INSTALL restera possible manuellement).
+post_install_boot()
+{
+    BOOT_SH="$SCRIPTS_DIR/boot.sh"
+    [ -f "$BOOT_SH" ] || return 0
+
+    echo ""
+    echo "[5] Demarrage automatique (boot INSTALL)..."
+    TMPB="/data/local/tmp/deploy_boot_$$"
+    if sh "$BOOT_SH" INSTALL > "$TMPB" 2>&1; then
+        grep -E '\[ OK \]' "$TMPB" | sed 's/^/    /'
+        echo "    [ OK ] pile web + optimisations lanceront seules au prochain reboot"
+    else
+        echo "    [WARN] hook non pose (non bloquant) -> boot INSTALL manuel plus tard"
+        grep -E 'ERREUR|WARN' "$TMPB" | tail -n 3 | sed 's/^/      /'
+    fi
+    rm -f "$TMPB" 2>/dev/null
     return 0
 }
 
@@ -276,12 +297,15 @@ install_from()
     echo "    [ OK ] $SCRIPTS_DIR/VERSION"
     write_manifest
 
-    echo ""
-    echo "=== TERMINE ==="
     if [ "$VALID_RC" != "0" ]; then
         echo "[ ERREUR ] installation incomplete : verifier ci-dessus (deploy STATUS)"
         return 1
     fi
+
+    post_install_boot
+
+    echo ""
+    echo "=== TERMINE ==="
     echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | VERSION | STATUS | CLEAN | HELP"
 }
 

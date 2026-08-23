@@ -44,6 +44,7 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
+  <a href="infos.html">Infos</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -56,7 +57,8 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
   <b>BOX</b><br>
   IP : <span id="ip">192.168.50.20</span> &nbsp;|&nbsp;
   HTTP : 8000 &nbsp;|&nbsp; CONTROL : 8080 &nbsp;|&nbsp; GUI : 8081<br>
-  <span id="cfgsum" class="dim">config : chargement...</span>
+  <span id="cfgsum" class="dim">config : chargement...</span><br>
+  <span id="boxtime" class="dim">heure box : chargement...</span>
 </div>
 
 <div class="card">
@@ -185,6 +187,36 @@ function asSet(id, cls, t) {
     if (e) { e.className = cls; e.textContent = t; }
 }
 asSet("as8000", "up", "8000 HTTP OK");
+
+/* ---- heure de la box (MXQ) vs PC ---- */
+function boxTime() {
+    fetch(tokUrl(API + "BOX_TIME"), {cache:"no-store"})
+        .then(r => { if (!r.ok) throw 0; return r.json(); })
+        .then(j => {
+            var el = document.getElementById("boxtime");
+            var d = Math.abs((j.epoch || 0) - Math.floor(Date.now() / 1000));
+            if ((j.epoch || 0) < 1577836800) {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — HORLOGE FAUSSE (1970 ?)";
+                el.style.color = "#e66";
+            } else if (d > 180) {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — ecart PC : " + d + " s (TIME_SYNC a faire)";
+                el.style.color = "#fc6";
+            } else {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — ok (ecart PC " + d + " s)";
+                el.style.color = "";
+            }
+        })
+        .catch(() => {
+            var el = document.getElementById("boxtime");
+            el.textContent = "heure box : indisponible";
+            el.style.color = "";
+        });
+}
+boxTime();
+setInterval(boxTime, 15000);
 fetch(asUrl("http://" + location.hostname + ":8080/api/HELP"), {cache:"no-store"})
     .then(function (r) {
         asSet("as8080", r.status === 403 ? "warn" : "up",

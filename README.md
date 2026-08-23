@@ -58,7 +58,7 @@ Aide memoire complete : `cat /mnt/media_rw/*/AMORCE`
 `deploy EXPOSE` (ou `amorce EXPOSE`) lance toute la pile : HTTP 8000,
 control API 8080, GUI TV 8081 et le watcher USB.
 
-Cinq pages sur `http://<ip-box>:8000` :
+Six pages sur `http://<ip-box>:8000` :
 
 * **index.html** - accueil/bilan : versions installee vs cle, verdict
   conf_check, dernier etat reseau
@@ -76,6 +76,9 @@ Cinq pages sur `http://<ip-box>:8000` :
   screencap, clic = TAP), touches (dpad/back/home/vol/power), TEXT/URL
   plein ecran, console distante (API RUN : une ligne shell, bornee
   15 s/8 Ko, requiert WEB_RUN=1 dans device.conf ET token actif)
+* **infos.html** - donnees statiques : identite systeme + versions,
+  rapport materiel complet (generation + consultation), device.conf
+  actif, manifest recette certifie
 
 ### Recette
 

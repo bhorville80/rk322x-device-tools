@@ -74,6 +74,14 @@ run_tool()
     fi
 }
 
+# le port 8000 ecoute-t-il ? (netstat, sinon /proc/net/tcp hexa)
+panel_up()
+{
+    netstat -tln 2>/dev/null | grep -q ":8000 " && return 0
+    grep -qi ":1F40 .* 0A " /proc/net/tcp 2>/dev/null && return 0
+    return 1
+}
+
 do_run()
 {
     echo ""
@@ -92,6 +100,26 @@ do_run()
         [ "$(getprop sys.boot_completed 2>/dev/null)" = "1" ] \
             && echo "[boot] boot termine (${I}s)" \
             || echo "[boot] timeout ${W}s, poursuite quand meme"
+    fi
+
+    # la cle USB peut s'enumerer LONGTEMPS apres boot_completed sur ce
+    # socle : sans elle aucun script n'est disponible -> attente bornee
+    KW="$(config_get BOOT_WAIT_KEY 150)"
+    case "$KW" in ''|*[!0-9]*) KW=150 ;; esac
+    if ! ls /mnt/media_rw/*/deploy.sh > /dev/null 2>&1; then
+        echo "[boot] attente de la cle USB (max ${KW}s)..."
+        I=0
+        while [ "$I" -lt "$KW" ]; do
+            ls /mnt/media_rw/*/deploy.sh > /dev/null 2>&1 && break
+            sleep 3
+            I=$((I+3))
+        done
+        if ls /mnt/media_rw/*/deploy.sh > /dev/null 2>&1; then
+            echo "[boot] cle presente (${I}s)"
+        else
+            echo "[boot] ABANDON : cle absente apres ${KW}s (retirer/reinsérer ou vérifier alimentation USB)"
+            return 1
+        fi
     fi
 
     if flag BOOT_MEM_TUNE; then
@@ -113,6 +141,16 @@ do_run()
     if flag BOOT_EXPOSE; then
         run_tool "deploy STOP"      "$BASE/deploy.sh" STOP
         run_tool "deploy EXPOSE"    "$BASE/deploy.sh" EXPOSE
+        # verification effective : le panneau doit ecouter ; une seule
+        # relance si le port n'est pas la (course d'arret/demarrage)
+        sleep 3
+        if ! panel_up; then
+            echo "[boot] port 8000 absent -> relance EXPOSE..."
+            sh "$BASE/deploy.sh" EXPOSE > /dev/null 2>&1
+            sleep 3
+        fi
+        panel_up && echo "[boot] panneau OK (8000)" \
+                || echo "[boot] ECHEC panneau (tester deploy EXPOSE manuel)"
     fi
     if flag BOOT_FRONT_CLOCK; then
         # horloge custom frontale : remplace le daemon usine

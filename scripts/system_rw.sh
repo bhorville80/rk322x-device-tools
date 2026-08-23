@@ -18,7 +18,7 @@ done
 
 for B in "$(dirname "$0")" "$(dirname "$0")/core" /data/scripts /data/scripts/core; do
     if [ -f "$B/config.sh" ]; then
-        . "$B/config.sh"
+        . "$B/core/config.sh"
         break
     fi
 done
@@ -54,6 +54,7 @@ try_remount()
     mount -o "remount,$M" "$TARGET" > /dev/null 2>&1 && return 0
     mount -o "$M,remount" "$TARGET" > /dev/null 2>&1 && return 0
     [ -n "$DEV" ] && mount -o "remount,$M" -t "$FSTYPE" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
+    [ -n "$DEV" ] && mount -o "remount,$M" "$DEV" "$TARGET" > /dev/null 2>&1 && return 0
 
     return 1
 }

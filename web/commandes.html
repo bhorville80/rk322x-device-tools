@@ -46,6 +46,7 @@ button.done   { background:#2a4a2a; border-color:#3a6a3a; color:#bfb; }
   <a href="commandes.html" class="here">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
+  <a href="infos.html">Infos</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -58,7 +59,8 @@ button.done   { background:#2a4a2a; border-color:#3a6a3a; color:#bfb; }
 <button onclick="timeSync()">SYNC HORLOGE</button>
 <button onclick="cmd('STATE')">CHECK STATE</button>
 <button class="warn" onclick="cmd('SYNC')">SYNC CLE</button>
-<span class="dim"> horloge UTC du PC -> box ; sync = box vers cle</span>
+<span class="dim"> horloge UTC du PC -> box ; sync = box vers cle</span><br>
+<span id="boxtime" class="dim">heure box : chargement...</span>
 
 <h2>Logs</h2>
 <button class="warn" onclick="cmd('SEND_LOGS')">SEND LOGS</button>
@@ -176,9 +178,37 @@ function timeSync() {
             "." + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
     show("SYNC HORLOGE : envoi " + v + " (UTC)...");
     api("TIME_SYNC?t=" + v)
-        .then(t => show("SYNC HORLOGE\n" + t))
+        .then(t => { show("SYNC HORLOGE\n" + t); boxTime(); })
         .catch(e => show("Erreur : " + e));
 }
+
+/* ---- heure de la box ---- */
+function boxTime() {
+    fetch(tokUrl(API + "BOX_TIME"), {cache:"no-store"})
+        .then(r => { if (!r.ok) throw 0; return r.json(); })
+        .then(j => {
+            var el = document.getElementById("boxtime");
+            var d = Math.abs((j.epoch || 0) - Math.floor(Date.now() / 1000));
+            if ((j.epoch || 0) < 1577836800) {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — HORLOGE FAUSSE (1970 ?)";
+                el.style.color = "#e66";
+            } else if (d > 180) {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — ecart PC : " + d + " s";
+                el.style.color = "#fc6";
+            } else {
+                el.textContent = "heure box : " + j.box_time +
+                    " (UTC) — ok (ecart PC " + d + " s)";
+                el.style.color = "";
+            }
+        })
+        .catch(() => {
+            document.getElementById("boxtime").textContent = "heure box : indisponible";
+        });
+}
+boxTime();
+setInterval(boxTime, 15000);
 
 function hwReport() {
     show("RAPPORT MATERIEL : generation (~10 s)...");

@@ -192,6 +192,9 @@ else
     ko "BOOT_WAIT_BOOT invalide ('$BW', attendu : secondes)"
 fi
 
+KW="$(gv BOOT_WAIT_KEY)"
+case "$KW" in "") ok "BOOT_WAIT_KEY = <vide, defaut 150>" ;; *) is_num "$KW" && ok "BOOT_WAIT_KEY = $KW" || ko "BOOT_WAIT_KEY '$KW' (attendu : secondes)" ;; esac
+
 RK="$(gv REMOTE_KL_DEVICE)"
 if [ -z "$RK" ]; then
     warn "REMOTE_KL_DEVICE vide (device IR autodetecte)"
@@ -306,6 +309,7 @@ BOOT_WAIT_BOOT
 BOOT_FRONT_CLOCK
 BOOT_SD_LAST
 SD_MOUNT_RO
+BOOT_WAIT_KEY
 SD_WAIT_SEC
 WEB_RUN
 FD_FORMAT

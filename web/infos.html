@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RK322X - Infos</title>
+
+<style>
+body { font-family:Arial,sans-serif; background:#111; color:#eee; margin:0; padding:25px; }
+.panel { max-width:960px; margin:auto; }
+h1 { margin-top:0; } h2 { font-size:18px; color:#9cf; margin-bottom:6px; }
+nav a { color:#eee; background:#333; border:1px solid #555; border-radius:6px;
+        padding:8px 14px; margin-right:6px; text-decoration:none; font-size:14px; }
+nav a.here { background:#9cf; color:#000; border-color:#9cf; }
+nav { margin:12px 0 20px; }
+.card { background:#1b1b1b; border:1px solid #333; border-radius:8px;
+        padding:12px 14px; margin:14px 0; }
+.card h3 { margin:0 0 8px; font-size:15px; color:#9cf; }
+pre { white-space:pre-wrap; font-family:monospace; font-size:12.5px;
+      background:#000; padding:10px; border-radius:6px; max-height:420px;
+      overflow:auto; margin:0 0 6px; color:#cf9; }
+.dim { font-size:12px; color:#888; }
+button { padding:10px 16px; margin:3px 3px 3px 0; font-size:14px; cursor:pointer;
+         border-radius:6px; border:1px solid #555; background:#333; color:#eee; }
+button:hover { background:#444; } button:disabled { background:#222;color:#666; }
+a { color:#9cf; }
+</style>
+</head>
+
+<body>
+
+<div class="panel">
+
+<h1>Infos systeme</h1>
+
+<nav>
+  <a href="index.html">Accueil</a>
+  <a href="cle.html">Cle</a>
+  <a href="commandes.html">Commandes</a>
+  <a href="metriques.html">Metriques</a>
+  <a href="telecommande.html">Telecommande</a>
+  <a href="infos.html" class="here">Infos</a>
+</nav>
+
+<div class="card">
+  <h3>Identite &amp; versions</h3>
+  <pre id="sysinfo">chargement...</pre>
+  <span class="dim">installee : voir ligne version ci-dessous et page Accueil ;
+  build du paquet de la cle : <span id="buildinfo">-</span></span>
+</div>
+
+<div class="card">
+  <h3>Materiel (puces, bus, noyau)</h3>
+  <pre id="hw">chargement de log/hardware_latest.txt...</pre>
+  <button id="hwbtn" onclick="genHw()">GENERER / RAFRAICHIR LE RAPPORT MATERIEL</button>
+  <span class="dim">~10 s ; aussi telechargeable :
+  <a href="/log/hardware_latest.txt" target="_blank">log/hardware_latest.txt</a></span>
+</div>
+
+<div class="card">
+  <h3>Configuration active (device.conf)</h3>
+  <pre id="conf">chargement...</pre>
+  <span class="dim">copie servie ; modification : adb shell config ou page Cle</span>
+</div>
+
+<div class="card">
+  <h3>Manifest recette certifie</h3>
+  <pre id="manifest">chargement...</pre>
+  <span class="dim"><a href="/manifests/recette/latest.manifest" target="_blank">ouvrir le fichier</a>
+  - genere par RECETTE &gt; MANIFEST (7/7 phases OK)</span>
+</div>
+
+</div>
+
+<script>
+
+var API = "http://" + location.hostname + ":8080/api/";
+function tokQ() {
+    var t = "";
+    try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
+    return t ? "&token=" + encodeURIComponent(t) : "";
+}
+function put(id, t) { document.getElementById(id).textContent = t; }
+
+function loadText(url, id, absent) {
+    fetch(url, {cache:"no-store"})
+        .then(r => { if (!r.ok) throw 0; return r.text(); })
+        .then(t => put(id, t))
+        .catch(() => put(id, absent));
+}
+
+/* identite + noyau + uptime + memoire + cpu + stockage */
+fetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""), {cache:"no-store"})
+    .then(r => { if (!r.ok) throw 0; return r.text(); })
+    .then(t => put("sysinfo", t))
+    .catch(() => {
+        /* repli sans API : minimum statique servi par la cle */
+        loadText("/BUILD-INFO.txt", "sysinfo", "API 8080 injoignable (deploy EXPOSE)");
+    });
+
+/* version installee via l'API CONFIG existante (1re ligne) */
+fetch(API + "CONFIG" + (tokQ() ? "?" + tokQ().slice(1) : ""), {cache:"no-store"})
+    .then(r => r.text())
+    .then(t => {
+        var m = (t.split("\n")[0] || "").match(/version installee\s*:\s*(.*)/);
+        if (m) {
+            var el = document.getElementById("sysinfo");
+            el.textContent = "version installee : " + m[1] + "\n" + el.textContent;
+        }
+        var b = t.match(/build *: *([^\n]*)/);
+        if (b) put("buildinfo", b[1]);
+    })
+    .catch(() => {});
+
+/* build info du paquet de la cle */
+loadText("/BUILD-INFO.txt", "buildinfo",
+         "inconnu (pas de BUILD-INFO.txt a la racine cle)");
+
+/* materiel : dernier rapport genere */
+loadText("/log/hardware_latest.txt", "hw",
+         "pas encore genere -> bouton ci-dessous");
+
+/* configuration active */
+loadText("/config/device.conf", "conf", "config/device.conf introuvable sur la cle");
+
+/* manifest */
+loadText("/manifests/recette/latest.manifest", "manifest",
+         "aucun manifest (lancer recette complete puis MANIFEST)");
+
+async function genHw() {
+    var b = document.getElementById("hwbtn");
+    b.disabled = true;
+    put("hw", "generation du rapport (~10 s)...");
+    try {
+        var qs = tokQ();
+        var r = await fetch(API + "HW_REPORT" + (qs ? "?" + qs.slice(1) : ""),
+                            {cache:"no-store"});
+        var t = await r.text();
+        put("hw", t.replace(/--- rapport sauvegarde[\s\S]*$/, "").trim());
+    } catch (e) {
+        put("hw", "[KO] " + e + "\nverifier le badge 8080");
+    }
+    b.disabled = false;
+}
+
+</script>
+
+</body>
+</html>
