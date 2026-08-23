@@ -62,9 +62,15 @@ Quatre pages sur `http://<ip-box>:8000` :
 
 * **index.html** - accueil/bilan : versions installee vs cle, verdict
   conf_check, dernier etat reseau
-* **cle.html** - presentation de la cle et catalogue des outils
+* **cle.html** - presentation de la cle, catalogue des outils,
+  **televersement** de fichiers (.dpk/.sha256/.txt/.log, max 20 Mo,
+  sha256 verifie par la box) + **APPLIQUER LE DPK** (extraction tar.gz
+  sur la cle = mise a jour sans la debrancher ; puis deploy INSTALL +
+  REBOX) + liens de telechargement directs (rapport materiel, bilans,
+  manifest, config, navigation log/)
 * **commandes.html** - commandes minimales + boutons de recette par phase
-  (P1..P7, global, RETOUR LOGS, GENERER MANIFEST a 7/7)
+  (P1..P7, global, RETOUR LOGS, GENERER MANIFEST a 7/7) + rapport
+  materiel complet telechargeable (hw_report)
 * **metriques.html** - vitals / check state / conf check
 
 ### Recette

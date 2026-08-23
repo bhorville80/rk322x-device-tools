@@ -114,7 +114,105 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
 
 </div>
 
+<div class="card">
+  <h3>Televerser sur la cle (sans la debrancher)</h3>
+  <input type="file" id="upfile" accept=".dpk,.sha256,.sha,.txt,.log"
+         style="font-size:14px;color:#eee">
+  <br><br>
+  <button id="upbtn" onclick="doUpload()">TELEVERSER</button>
+  <span class="dim"> .dpk / .sha256 / .txt / .log - max 20 Mo - sha256 verifie par la box</span>
+  <div id="upout" class="mono" style="margin-top:10px;white-space:pre-wrap"></div>
+</div>
+
+<div class="card">
+  <h3>Appliquer un dpk depose (mise a jour de la cle)</h3>
+  <span class="dim">extrait l'archive tar.gz sur la cle (layout depot) apres controle
+  deploy.sh present. Ensuite : page Commandes &gt; deploy INSTALL puis REBOX.</span><br><br>
+  <button onclick="applyDpk()">APPLIQUER LE DPK SUR LA CLE</button>
+  <span class="dim">nom du fichier demande (ex : rk322x-tools_v17_....dpk)</span>
+</div>
+
+<div class="card">
+  <h3>Telechargements directs (servis par la cle :8000)</h3>
+  <ul>
+    <li><a href="/log/hardware_latest.txt" target="_blank">rapport materiel complet</a>
+        (bouton generation page Commandes)</li>
+    <li><a href="/log/recette_last.txt" target="_blank">dernier bilan recette</a></li>
+    <li><a href="/log/state_last.txt" target="_blank">dernier CHECK STATE</a></li>
+    <li><a href="/log/vitals_last.txt" target="_blank">dernier releve vitals</a></li>
+    <li><a href="/manifests/recette/latest.manifest" target="_blank">manifest certifie recette</a></li>
+    <li><a href="/config/device.conf" target="_blank">configuration active</a></li>
+    <li><a href="/log/" target="_blank">naviguer tout le repertoire log/</a></li>
+  </ul>
+</div>
+
 <script>
+var API8080 = "http://" + location.hostname + ":8080/api/";
+function tokQ() {
+    var t = "";
+    try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
+    return t ? "token=" + encodeURIComponent(t) : "";
+}
+function out(t) {
+    document.getElementById("upout").textContent = t;
+}
+
+async function sha256Hex(buf) {
+    if (!(window.crypto && crypto.subtle && crypto.subtle.digest)) return "";
+    var h = await crypto.subtle.digest("SHA-256", buf);
+    var a = new Uint8Array(h), s = "";
+    for (var i = 0; i < a.length; i++) {
+        s += (a[i] < 16 ? "0" : "") + a[i].toString(16);
+    }
+    return s;
+}
+
+async function doUpload() {
+    var f = document.getElementById("upfile").files[0];
+    if (!f) { out("[KO] choisir un fichier d'abord"); return; }
+    if (f.size > 20 * 1024 * 1024) { out("[KO] fichier > 20 Mo"); return; }
+    document.getElementById("upbtn").disabled = true;
+    try {
+        out("lecture du fichier (" + f.size + " o)...");
+        var buf = await f.arrayBuffer();
+        var sha = await sha256Hex(buf);
+        var qs = "name=" + encodeURIComponent(f.name) +
+                 "&dir=" + (/\.(dpk|sha256|sha)$/.test(f.name) ? "root" : "upload");
+        if (sha) qs += "&sha=" + sha;
+        var tk = tokQ();
+        if (tk) qs += "&" + tk;
+        var r = await fetch(API8080 + "UPLOAD?" + qs, { method: "POST", body: f });
+        var t = await r.text();
+        out("[HTTP " + r.status + "] " + t);
+        if (/\.dpk$/i.test(f.name) && r.ok &&
+            confirm("dpk depose sur la cle.\nL'appliquer maintenant (extraction sur la cle) ?")) {
+            await applyNamed(f.name);
+        }
+    } catch (e) {
+        out("[KO] " + e + "\nverifier le badge 8080 (API injoignable ?)");
+    }
+    document.getElementById("upbtn").disabled = false;
+}
+
+async function applyNamed(name) {
+    var qs = "name=" + encodeURIComponent(name);
+    var tk = tokQ();
+    if (tk) qs += "&" + tk;
+    var r = await fetch(API8080 + "APPLY_DPK?" + qs, { cache: "no-store" });
+    out(await r.text());
+}
+
+async function applyDpk() {
+    var n = prompt("Nom du fichier .dpk sur la cle (racine ou upload/) :");
+    if (!n) return;
+    n = n.trim().replace(/^.*[\/\\]/, "");
+    if (!/\.dpk$/.test(n)) { out("[KO] extension .dpk attendue"); return; }
+    document.getElementById("upbtn").disabled = true;
+    try { await applyNamed(n); }
+    catch (e) { out("[KO] " + e); }
+    document.getElementById("upbtn").disabled = false;
+}
+
 var AS_TOK = "";
 try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
 function asUrl(b) {
