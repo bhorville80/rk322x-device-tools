@@ -311,21 +311,20 @@ install_from()
         return 1
     fi
 
-    post_install_boot
-
     IP_HINT="$(sed -n 's/^IP=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+    EXPOSE_FLAG="$(sed -n 's/^BOOT_EXPOSE=//p' "$SCRIPTS_DIR/config/device.conf" | head -n 1)"
     echo ""
     echo "=== PROCHAINES ETAPES ==="
-    echo "  1) config CHECK          valider la configuration"
-    echo "  2) nreg                  non-regression (10 themes)"
-    echo "  3) manage                etat global services / web / ports"
-    if [ "$(sed -n 's/^BOOT_EXPOSE=//p' "$SCRIPTS_DIR/config/device.conf" | head -n 1)" = "1" ]; then
-        echo "  4) IHM deja lancee : http://${IP_HINT:-<ip-box>}:8000/"
+    echo "  [C1] config CHECK          valider la configuration"
+    echo "  [R1] nreg                  non-regression (10 themes)"
+    echo "  [S1] manage                etat global services / web / ports"
+    if [ "$EXPOSE_FLAG" = "1" ]; then
+        echo "  [W0] IHM deja lancee : http://${IP_HINT:-<ip-box>}:8000/"
     else
-        echo "  4) demarrer l'IHM : deploy STOP ; deploy EXPOSE"
-        echo "     puis : http://${IP_HINT:-<ip-box>}:8000/"
+        echo "  [S2] demarrer la pile : deploy STOP ; deploy EXPOSE"
+        echo "  [W0] puis : http://${IP_HINT:-<ip-box>}:8000/"
     fi
-    echo "  5) reboot de controle    -> tout doit revenir SEUL (boot STATUS)"
+    echo "  [B1] reboot de controle    -> tout doit revenir SEUL (boot STATUS)"
     echo "  Procedure complete sur la cle : docs/STARTUP.md"
     echo ""
     echo "=== TERMINE ==="

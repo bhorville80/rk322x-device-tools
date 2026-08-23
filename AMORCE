@@ -1,21 +1,24 @@
 AMORCE - 3 steps to a self-running box
 =======================================
 
-Prereq on the key root: <latest>.dpk (+ .sha256) and deploy.sh
+Convention des etapes : [Theme+numero]
+  P Prepa | I Install | C Config | O Optim | R Re-check
+  N iNspection | S Serveur | W Web IHM | B Boot
+Detail complet : docs/STARTUP.md
 
-1) INSTALL (from adb shell, as root):
-     sh /mnt/media_rw/*/deploy.sh INSTALL
-   -> auto-installs from the dpk, copies the web panel + INSTALLER.sh,
-      poses the boot hook, then prints the NEXT STEPS checklist.
-   (richer alternative once present on the key: sh /mnt/media_rw/*/INSTALLER.sh)
+Prereq on the key root : <latest>.dpk (+ .sha256) and deploy.sh
 
-2) CHECK - follow the printed PROCHAINES ETAPES checklist:
-     config CHECK     nreg     manage
-     browser: http://<ip-box>:8000/          (6 pages, green badges)
+[I1] INSTALL - from adb shell, as root:
+       sh /mnt/media_rw/*/deploy.sh INSTALL
+     -> installs from the dpk, copies panel + INSTALLER.sh + docs,
+        poses the boot hook, prints the PROCHAINES ETAPES checklist.
 
-3) REBOOT:
+Then follow the printed checklist :
+  [C1] config CHECK      validate configuration
+  [R1] nreg              non-regression (10 themes)
+  [S1] manage            global services / web / ports state
+  [W0] browser: http://<ip-box>:8000/   (6 pages, green badges)
+
+[B1] REBOOT:
      wait 4-6 min -> panel comes back ALONE.
      Memory profile, network, clock, web stack restart by themselves.
-
-Full procedure on the key : docs/STARTUP.md
-Panel guide               : docs/IHM.md
