@@ -171,6 +171,8 @@ INSPECTION
                      et reseau 5555, synthese KEY_VISIBLE/ADB_*
   inspect_proc       Processus par PSS : critiques / kit / deja coupees /
                      candidats detournables + traitement suggere (RAM)
+  inspect_dev        Capacites d execution embarquee : runtimes/ABI/exec,
+                     primitives de service, cout mesure d un mini-daemon
   inspect_user       Methodes de creation utilisateur dispo
                       (pm create-user, cmd user, busybox...)
                       option : nom d'utilisateur exemple

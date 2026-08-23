@@ -60,3 +60,4 @@ O4b	Swap cle deja couvert par O2 (mem_tune)	sh %BASE%/mem_tune.sh STATUS
 O8	Deploiement instrumente (ramstep 30 s)	sh %BASE%/ramstep.sh 30
 N9	Inspection cle USB x adb	sh %BASE%/inspect_usb.sh
 N10	Inspection processus / RAM	sh %BASE%/inspect_proc.sh
+N11	Capacites execution embarquee	sh %BASE%/inspect_dev.sh

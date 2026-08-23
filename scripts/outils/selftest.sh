@@ -84,6 +84,7 @@ main()
     check_rc "inspect_system"      "0" sh "$BASE/inspect_system.sh"
     check_rc "inspect_usb"         "0" sh "$BASE/inspect_usb.sh"
     check_rc "inspect_proc HELP"   "0" sh "$BASE/inspect_proc.sh" HELP
+    check_rc "inspect_dev HELP"    "0" sh "$BASE/inspect_dev.sh" HELP
     check_rc "inspect_services"    "0" sh "$BASE/inspect_services.sh"
     check_rc "device_info"         "0" sh "$BASE/device_info.sh"
     check_rc "hw_report HELP"      "0" sh "$BASE/hw_report.sh" HELP

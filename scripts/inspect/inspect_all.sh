@@ -54,6 +54,7 @@ X|inspect_gui|inspect_gui.sh STATUS|capacites UI/HDMI + SHOT/URL plein ecran|uti
 X|inspect_display|inspect_display.sh|afficheur frontal 4 digits : noeuds/drivers/daemons|utile UNE fois pour choisir FD_FORMAT (front_digit PROBE) ; ensuite sans objet
 X|inspect_remote|inspect_remote.sh|recepteur IR/devices input/layouts .kl|utile UNE fois pour identifier le device (rk29-keypad fait) ; apres : remote_map STATUS suffit
 X|inspect_user|inspect_user.sh|methodes de creation d'utilisateurs Android|SANS OBJET sur cette box headless mono-utilisateur
+X|inspect_dev|inspect_dev.sh|capacites d'execution embarquee (runtimes/ABI/exec/bench daemon)|utile UNE fois avant d'ecrire un petit process ; ensuite sans objet
 CATALOG
 }
 

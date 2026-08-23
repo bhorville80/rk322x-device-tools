@@ -232,6 +232,7 @@ inspect - analyses de la box
   user              apps utilisateur (inspect_user)
   remote            telecommande IR (inspect_remote)
   proc              processus/RAM candidats au detournement (inspect_proc)
+  dev               capacites d'execution embarquee (inspect_dev)
 EOF
 }
 
@@ -248,6 +249,7 @@ do_inspect()
         user)       run_tool inspect_user.sh ;;
         remote)     run_tool inspect_remote.sh ;;
         proc)       run_tool inspect_proc.sh ;;
+        dev)        run_tool inspect_dev.sh ;;
         *)          echo "action inconnue : $1 (voir menu inspect)" ; return 1 ;;
     esac
 }
