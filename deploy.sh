@@ -100,6 +100,22 @@ link_bin()
         ln -sf "$TARGET" "$BIN_DIR/$NAME"
         echo "    [ OK ] $NAME"
     done
+
+    # purge des liens residuels : une commande dont la cible n'existe plus
+    # (script retiré du depot, ancienne version) ne doit pas polluer /data/bin
+    STALE=0
+    for E in "$BIN_DIR"/*; do
+        [ -e "$E" ] || [ -L "$E" ] || continue
+        T_="$(readlink "$E" 2>/dev/null)"
+        case "$T_" in
+            ""|"$SCRIPTS_DIR"/*|"$SCRIPTS_DIR/core"/*) ;;
+            *) continue ;;
+        esac
+        if [ ! -e "$T_" ]; then
+            rm -f "$E" && { echo "    [ PURGE ] $(basename "$E") (cible absente : $T_)"; STALE=$((STALE+1)); }
+        fi
+    done
+    [ "$STALE" -gt 0 ] || echo "    [ OK ] aucun lien residuel"
 }
 
 backup_existing()

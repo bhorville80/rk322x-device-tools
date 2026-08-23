@@ -17,6 +17,8 @@
 # Pilotage (config/device.conf) :
 #   BOOT_MEM_TUNE=1       mem_tune OPTIMIZE a chaque boot
 #   BOOT_CUT_SERVICES=1   cut_services CUT a chaque boot
+#   BOOT_SET_NETWORK=1    set_network a chaque boot (route+DNS non persistants)
+#   BOOT_TIME_SYNC=1      set_time AUTO a chaque boot (sortie de l'etat 1970)
 #   BOOT_EXPOSE=1         pile web demarree a chaque boot (ports 8000/8080/8081)
 #   BOOT_SD_LAST=1        carte SD examinee en TOUT DERNIER (sd_boot CHECK)
 #   BOOT_FRONT_CLOCK=1    horloge frontale custom (front_digit CLOCK)
@@ -98,6 +100,16 @@ do_run()
     if flag BOOT_CUT_SERVICES; then
         run_tool "cut_services CUT" "$BASE/cut_services.sh" CUT
     fi
+    if flag BOOT_SET_NETWORK; then
+        # route/DNS non persistants sur ce firmware : reapplication au boot
+        # (sinon passerelle absente -> WARN check_state, pas de NTP possible)
+        run_tool "set_network (route+DNS)" "$BASE/set_network.sh"
+    fi
+    if flag BOOT_TIME_SYNC; then
+        # horloge : INIT sort de l'etat 1970, FILE utilise SET_HEURE de la cle,
+        # le reseau affine ensuite (TIME_SYNC panneau / provision --fix)
+        run_tool "set_time AUTO" "$BASE/set_time.sh" AUTO
+    fi
     if flag BOOT_EXPOSE; then
         run_tool "deploy STOP"      "$BASE/deploy.sh" STOP
         run_tool "deploy EXPOSE"    "$BASE/deploy.sh" EXPOSE
@@ -129,7 +141,7 @@ do_run()
     [ -f "$BASE/motd.sh" ] && sh "$BASE/motd.sh" DEFAULT > /dev/null 2>&1
 
     NONE=1
-    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST; do
+    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST; do
         flag "$K" && NONE=0 && break
     done
     [ "$NONE" -eq 1 ] && echo "[boot] aucune action active (device.conf BOOT_*)"
@@ -324,9 +336,11 @@ do_status()
     echo "  Actions (device.conf) :"
     printf '    %-18s : %s\n' BOOT_MEM_TUNE     "$(config_get BOOT_MEM_TUNE 0)"
     printf '    %-18s : %s\n' BOOT_CUT_SERVICES "$(config_get BOOT_CUT_SERVICES 0)"
-    printf '    %-18s : %s\n' BOOT_EXPOSE       "$(config_get BOOT_EXPOSE 0)"
-    printf '    %-18s : %s\n' BOOT_FRONT_CLOCK  "$(config_get BOOT_FRONT_CLOCK 0)"
-    printf '    %-18s : %s\n' BOOT_SD_LAST      "$(config_get BOOT_SD_LAST 0)"
+    printf '    %-18s : %s\n' BOOT_SET_NETWORK "$(config_get BOOT_SET_NETWORK 0)"
+    printf '    %-18s : %s\n' BOOT_TIME_SYNC   "$(config_get BOOT_TIME_SYNC 0)"
+    printf '    %-18s : %s\n' BOOT_EXPOSE      "$(config_get BOOT_EXPOSE 0)"
+    printf '    %-18s : %s\n' BOOT_FRONT_CLOCK "$(config_get BOOT_FRONT_CLOCK 0)"
+    printf '    %-18s : %s\n' BOOT_SD_LAST     "$(config_get BOOT_SD_LAST 0)"
 
     LAST="$(last_run_log)"
     echo ""
@@ -352,6 +366,7 @@ usage()
     echo "  TEST      execute les actions maintenant (identique au lancement boot)"
     echo ""
     echo "Actions pilotees par device.conf : BOOT_MEM_TUNE, BOOT_CUT_SERVICES,"
+    echo "BOOT_SET_NETWORK (route+DNS au boot), BOOT_TIME_SYNC (horloge AUTO),"
     echo "BOOT_EXPOSE, BOOT_FRONT_CLOCK, BOOT_SD_LAST (0|1),"
     echo "BOOT_WAIT_BOOT (secondes, defaut 120)."
     echo ""
