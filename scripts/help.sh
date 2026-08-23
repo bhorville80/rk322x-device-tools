@@ -120,6 +120,13 @@ VERIFICATION
                       manage service [wifi-off|ssh-...],
                       manage web [expose|stop|restart|
                       token-status], manage ports
+  aliases            Raccourcis utilisateur 2000 (adb shell) :
+                      aliases INSTALL depose un wrapper
+                      /system/bin/<outil> par outil du depot ->
+                      taper help, manage, nreg, recette... depuis
+                      adb shell equivaut a su -c sh <script> ;
+                      binaire systeme existant jamais ecrase ;
+                      STATUS/LIST/REMOVE ; persistant aux reboots
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle
