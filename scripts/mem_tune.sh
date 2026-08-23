@@ -277,6 +277,17 @@ do_optimize()
 
     SWD="$(config_get MEM_SWAP_DEV)"
     SWF="$(config_get MEM_SWAP_FILE)"
+    # resolution automatique : 'auto' = premier peripherique monte dans
+    # /mnt/media_rw (la cle), fichier swap.bin a sa racine
+    if [ "$SWF" = "auto" ]; then
+        SWF=""
+        for d in /mnt/media_rw/*; do
+            [ -d "$d" ] || continue
+            SWF="$d/swap.bin"
+            break
+        done
+        [ -n "$SWF" ] && echo "    [i] MEM_SWAP_FILE=auto -> $SWF"
+    fi
     SWMB="$(config_get MEM_SWAP_MB 512)"
     if [ -n "$SWD" ] || [ -n "$SWF" ]; then
         echo "[2] swap disque..."

@@ -75,8 +75,13 @@ label.act { display:inline-flex; align-items:center; gap:6px;
 <select id="maxth">
   <option>1</option><option>2</option><option>3</option><option>4</option>
 </select>
-| depart decale + retries auto ; puce par action :
-⏳ en cours / ✓ ok / ✗ echec</span><br><br>
+| listeners box :
+<select id="maxconn">
+  <option>1</option><option selected>3</option><option>4</option>
+  <option>5</option><option>6</option><option>7</option><option>2</option>
+</select>
+<button onclick="saveMaxConn()" style="padding:6px 10px;font-size:12px">APPLIQUER</button>
+| depart decale + retries auto ; puce par action : ⏳ / ✓ / ✗</span><br><br>
 <button onclick="loadVitals()">[N5] seul</button>
 <button onclick="askState()">[N6] seul</button>
 <button onclick="confCheck()">[C1] seul</button>
@@ -167,6 +172,13 @@ function confCheck() {
     api("CONF_CHECK")
         .then(t => show("CONF CHECK\n" + t))
         .catch(e => show("Erreur : " + e));
+}
+
+function saveMaxConn() {
+    var v = document.getElementById("maxconn").value;
+    api("MAXCONN?v=" + v)
+        .then(t => show("[MAXCONN] " + t))
+        .catch(e => show("[MAXCONN] Erreur : " + e));
 }
 
 /* ---- mode parallele : selection + pool avec max de threads ---- */

@@ -75,6 +75,8 @@ Attendu : bloc `[5] Demarrage automatique... [ OK ]` puis `TERMINE`.
 - [O2] `mem_tune STATUS` puis `mem_tune OPTIMIZE`  (swappiness/LMK/logd)
 - [O3] `stress_ram`                                (tenue sous pression)
 - [O4] `vitals`                                    (releve post-coupure)
+- [O4b] swap sur la cle : actif par defaut (MEM_SWAP_FILE=auto,
+  512 Mo, swappiness 40) - mem_tune OPTIMIZE le cree/reactive
 - [O5] `cut_services STATUS` puis `cut_services CUT` (allegement ~120-150 Mo)
 - [O6] headless : `field_mode OFF` puis `hdmi OFF` (optionnel)
 - [O7] contre-verif : `check_state` ; `conf_check | tail -5` ; `nreg memoire`

@@ -104,20 +104,19 @@ handle_post()
             || { reply 500 "Internal Server Error" '{"status":"error","message":"destination inaccessible"}'; return 0; }
     fi
 
-    # --- en-tetes : offset du corps + Content-Length ---
-    OFF=0 ; CL=0 ; FOUND=0
-    # lecture ligne a ligne du fichier : read conserve \r, ajoute le \n
-    while IFS= read -r LINE; do
-        OFF=$((OFF + ${#LINE} + 1))
-        case "$LINE" in
-            [Cc]ontent-[Ll]ength:*) CL="$(printf '%s' "$LINE" | sed 's#^[^:]*: *##' | tr -dc '0-9')" ;;
-            "") FOUND=1 ; break ;;
-        esac
-    done < "$TMP_REQ"
-
-    if [ "$FOUND" -ne 1 ]; then
-        sleep 2
-        OFF=0 ; FOUND=0 ; CL=0
+    # --- corps : soit deja separe (mode serve-one/tcpsvd), soit extrait
+    #     par offsets depuis TMP_REQ (mode FIFO heritage) ---
+    if [ -n "${BODY_FILE:-}" ] && [ -f "$BODY_FILE" ]; then
+        PART="$BODY_FILE"
+        CL="$BODY_LEN"
+        SIZE_PART="$(wc -c < "$PART" 2>/dev/null | tr -dc '0-9')"
+        if [ "${SIZE_PART:-0}" -ne "$CL" ]; then
+            reply 500 "Internal Server Error" "{\"status\":\"error\",\"message\":\"taille recue $SIZE_PART != annonce $CL\"}"
+            return 0
+        fi
+    else
+        # --- en-tetes : offset du corps + Content-Length ---
+        OFF=0 ; CL=0 ; FOUND=0
         while IFS= read -r LINE; do
             OFF=$((OFF + ${#LINE} + 1))
             case "$LINE" in
@@ -125,41 +124,51 @@ handle_post()
                 "") FOUND=1 ; break ;;
             esac
         done < "$TMP_REQ"
-    fi
 
-    if [ "$FOUND" -ne 1 ] || [ "${CL:-0}" -le 0 ]; then
-        reply 400 "Bad Request" '{"status":"error","message":"requete POST incomprehensible"}'
-        return 0
-    fi
-    if [ "$CL" -gt "$MAX_UPLOAD" ]; then
-        reply 413 "Payload Too Large" "{\"status\":\"error\",\"message\":\"fichier > 20 Mo\"}"
-        return 0
-    fi
+        if [ "$FOUND" -ne 1 ]; then
+            sleep 2
+            OFF=0 ; FOUND=0 ; CL=0
+            while IFS= read -r LINE; do
+                OFF=$((OFF + ${#LINE} + 1))
+                case "$LINE" in
+                    [Cc]ontent-[Ll]ength:*) CL="$(printf '%s' "$LINE" | sed 's#^[^:]*: *##' | tr -dc '0-9')" ;;
+                    "") FOUND=1 ; break ;;
+                esac
+            done < "$TMP_REQ"
+        fi
 
-    TOTAL=$((OFF + CL))
+        if [ "$FOUND" -ne 1 ] || [ "${CL:-0}" -le 0 ]; then
+            reply 400 "Bad Request" '{"status":"error","message":"requete POST incomprehensible"}'
+            return 0
+        fi
+        if [ "$CL" -gt "$MAX_UPLOAD" ]; then
+            reply 413 "Payload Too Large" "{\"status\":\"error\",\"message\":\"fichier > 20 Mo\"}"
+            return 0
+        fi
 
-    # --- attendre la fin du transfert (borne ~60 s) ---
-    j=0
-    while [ "$j" -lt 200 ]; do
+        TOTAL=$((OFF + CL))
+
+        j=0
+        while [ "$j" -lt 200 ]; do
+            SIZE_NOW="$(wc -c < "$TMP_REQ" 2>/dev/null | tr -dc '0-9')"
+            [ "${SIZE_NOW:-0}" -ge "$TOTAL" ] && break
+            sleep 0.3 2>/dev/null || sleep 1
+            j=$((j+1))
+        done
         SIZE_NOW="$(wc -c < "$TMP_REQ" 2>/dev/null | tr -dc '0-9')"
-        [ "${SIZE_NOW:-0}" -ge "$TOTAL" ] && break
-        sleep 0.3 2>/dev/null || sleep 1
-        j=$((j+1))
-    done
-    SIZE_NOW="$(wc -c < "$TMP_REQ" 2>/dev/null | tr -dc '0-9')"
-    if [ "${SIZE_NOW:-0}" -lt "$TOTAL" ]; then
-        reply 408 "Request Timeout" '{"status":"error","message":"transfert incomplet"}'
-        return 0
-    fi
+        if [ "${SIZE_NOW:-0}" -lt "$TOTAL" ]; then
+            reply 408 "Request Timeout" '{"status":"error","message":"transfert incomplet"}'
+            return 0
+        fi
 
-    # --- extraction par octets + controle ---
-    PART="$DEST_DIR/.$NAME.part"
-    tail -c +"$((OFF + 1))" "$TMP_REQ" > "$PART" 2>/dev/null
-    SIZE_PART="$(wc -c < "$PART" 2>/dev/null | tr -dc '0-9')"
-    if [ "${SIZE_PART:-0}" -ne "$CL" ]; then
-        rm -f "$PART"
-        reply 500 "Internal Server Error" "{\"status\":\"error\",\"message\":\"taille recue $SIZE_PART != annonce $CL\"}"
-        return 0
+        PART="$DEST_DIR/.$NAME.part"
+        tail -c +"$((OFF + 1))" "$TMP_REQ" > "$PART" 2>/dev/null
+        SIZE_PART="$(wc -c < "$PART" 2>/dev/null | tr -dc '0-9')"
+        if [ "${SIZE_PART:-0}" -ne "$CL" ]; then
+            rm -f "$PART"
+            reply 500 "Internal Server Error" "{\"status\":\"error\",\"message\":\"taille recue $SIZE_PART != annonce $CL\"}"
+            return 0
+        fi
     fi
 
     SHA_OK="non"
@@ -383,6 +392,31 @@ cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
             reply 200 OK "{\"status\":\"ok\",\"epoch\":${E_:-0},\"box_time\":\"$H_\"}"
             ;;
 
+        # reglage du nombre de listeners (factory tcpsvd) : 1..7
+        MAXCONN)
+            CFG_F=""
+            if [ -f /data/scripts/config/device.conf ]; then
+                CFG_F=/data/scripts/config/device.conf
+            elif [ -f "$USB/scripts/config/device.conf" ]; then
+                CFG_F="$USB/scripts/config/device.conf"
+            fi
+            V_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]v=\([0-9]\).*#\1#p')"
+            if [ -z "$CFG_F" ] || [ -z "$V_" ] || [ "$V_" -lt 1 ] || [ "$V_" -gt 7 ]; then
+                reply 400 "Bad Request" '{"status":"error","message":"v=1..7 requis"}'
+                return 0
+            fi
+            TMP_C="${CFG_F}.tmp.$$"
+            awk -v k="API_MAX_CONN" -v val="$V_" '
+                BEGIN{done=0}
+                !done && $0 ~ "^"k"=" { print k "=" val ; done=1 ; next }
+                { print }
+                END { if (!done) print k "=" val }
+            ' "$CFG_F" > "$TMP_C" 2>/dev/null && mv -f "$TMP_C" "$CFG_F" \
+                || { rm -f "$TMP_C"; reply 500 "Internal Server Error" '{"status":"error","message":"ecriture impossible"}'; return 0; }
+            log "MAXCONN -> $V_ (effectif au prochain STOP/EXPOSE)"
+            reply 200 OK "{\"status\":\"ok\",\"api_max_conn\":$V_,\"note\":\"effectif apres deploy STOP ; EXPOSE\"}"
+            ;;
+
         # console distante (equivalent adb shell) : une ligne, sortie bornee.
         # Double garde : WEB_RUN=1 dans device.conf ET token obligatoire.
         RUN)
@@ -422,11 +456,87 @@ $OUT" "text/plain; charset=utf-8"
     esac
 }
 
+# ------------------------------------------------------- dispatch requete
+# Unifie le traitement pour les deux modes (FIFO mono-slot et tcpsvd
+# multi-listeners). Variables attendues : REQUEST (+ BODY_FILE/BODY_LEN
+# en mode serve-one pour un POST dont le corps est deja separe).
+
+req_dispatch()
+{
+    # garde-fou global : tout plantage du handler repond 500 proprement
+    req_dispatch_inner || {
+        log "DISPATCH ERROR rc=$?"
+        reply 500 "Internal Server Error" '{"status":"error","message":"erreur interne"}'
+        return 1
+    }
+}
+
+req_dispatch_inner()
+{
+    # preflight eventuel du navigateur : reponse seche avec CORS
+    case "$REQUEST" in
+        OPTIONS*)
+            printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+            ;;
+        POST*)
+            if [ -f "$TOKEN_FILE" ]; then
+                TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
+                GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
+                if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
+                    log "UPLOAD REJETE: token invalide"
+                    reply 403 Forbidden '{"status":"error","message":"forbidden"}'
+                else
+                    handle_post
+                fi
+            else
+                handle_post
+            fi
+            ;;
+        *)
+            COMMAND="$(printf '%s' "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
+
+            if [ "$COMMAND" = "APPLY_DPK" ]; then
+                if [ -f "$TOKEN_FILE" ]; then
+                    TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
+                    GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
+                    if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
+                        log "APPLY_DPK REJETE: token invalide"
+                        reply 403 Forbidden '{"status":"error","message":"forbidden"}'
+                        COMMAND=""
+                    fi
+                fi
+                [ -n "$COMMAND" ] && { apply_dpk "$REQUEST" ; COMMAND="" ; }
+            fi
+
+            if [ -n "$COMMAND" ]; then
+                if [ -f "$TOKEN_FILE" ]; then
+                    TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
+                    GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
+                    if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
+                        log "REQUEST REJECTED: token invalide (${COMMAND:-<inconnu>})"
+                        reply 403 Forbidden '{"status":"error","message":"forbidden"}'
+                    else
+                        handle_request
+                    fi
+                else
+                    handle_request
+                fi
+            fi
+            ;;
+    esac
+}
+
 case "$1" in
     start)
         ;;
+    serve-one)
+        # une connexion (invoque par tcpsvd) : socket sur stdin/stdout
+        TMP_BODY="/data/local/tmp/control_body.$$"
+        serve_one
+        exit 0
+        ;;
     *)
-        echo "Usage: sh $0 start"
+        echo "Usage: sh $0 start|serve-one"
         exit 1
         ;;
 esac
@@ -441,32 +551,93 @@ if [ -f "$PIDFILE" ]; then
     rm -f "$PIDFILE"
 fi
 
-(
-    # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
-    # tuer le service lance en arriere-plan
-    trap '' HUP
+# --- factory multi-listeners : tcpsvd cree un processus par connexion ---
+# borne par -c N (API_MAX_CONN dans device.conf, 1..7, defaut 3).
+# Repli automatique sur la boucle FIFO mono-slot si tcpsvd manque/echoue.
 
-    # attente de l'arrivee de la requete : sleep fractionnaire si supporte,
-    # sinon pas de 1 s (borne courte : une connexion oisive ne doit pas
-    # monopoliser le slot unique - les navigateurs ouvrent des preconnect)
+max_conn()
+{
+    N="$(sed -n 's/^API_MAX_CONN=//p' /data/scripts/config/device.conf 2>/dev/null | head -n 1 | tr -dc '0-9')"
+    [ -z "$N" ] && N="$(sed -n 's/^API_MAX_CONN=//p' "$USB/scripts/config/device.conf" 2>/dev/null | head -n 1 | tr -dc '0-9')"
+    case "$N" in ''|*[!0-9]*) N=3 ;; esac
+    [ "$N" -lt 1 ] && N=1
+    [ "$N" -gt 7 ] && N=7
+    echo "$N"
+}
+
+tcpsvd_detect()
+{
+    command -v tcpsvd > /dev/null 2>&1 && return 0
+    busybox tcpsvd 2>&1 | grep -q "tcpsvd" && return 0
+    return 1
+}
+
+serve_one()
+{
+    TMP_BODY="/data/local/tmp/control_body.$$"
+    BODY_FILE=""
+    BODY_LEN=0
+    TMP_REQ="/data/local/tmp/control_req.$$"
+    CR=$(printf '\r')
+
+    : > "$TMP_REQ" 2>/dev/null
+    while IFS= read -r LINE; do
+        LINE="${LINE%"$CR"}"
+        case "$LINE" in
+            "") break ;;
+        esac
+        printf '%s\n' "$LINE" >> "$TMP_REQ"
+    done
+
+    REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
+
+    case "$REQUEST" in
+        POST*)
+            CL="$(grep -ia '^content-length:' "$TMP_REQ" 2>/dev/null | tail -n 1 | tr -dc '0-9')"
+            case "${CL:-0}" in ''|0) CL=0 ;; esac
+            if [ "$CL" -gt 0 ] && [ "$CL" -le "$MAX_UPLOAD" ]; then
+                BIG=$((CL / 4096))
+                REST=$((CL % 4096))
+                dd bs=4096 count="$BIG" of="$TMP_BODY" 2>/dev/null
+                [ "$REST" -gt 0 ] && dd bs=1 count="$REST" >> "$TMP_BODY" 2>/dev/null
+                BODY_FILE="$TMP_BODY"
+                BODY_LEN="$CL"
+            else
+                dd bs=65536 count=$(( MAX_UPLOAD / 65536 + 1 )) of=/dev/null 2>/dev/null
+            fi
+            ;;
+    esac
+
+    req_dispatch
+    rm -f "$TMP_REQ" "$TMP_BODY" 2>/dev/null
+}
+
+run_tcpsvd_forever()
+{
+    N_="$(max_conn)"
+    log "MODE MULTI-LISTENERS : $TCPSVD_BIN -c $N_ port $PORT"
+    while true; do
+        $TCPSVD_BIN -c "$N_" 0.0.0.0 "$PORT" sh "$SELF_PATH" serve-one > /dev/null 2>&1 \
+            || { log "SUPERVISEUR: tcpsvd en echec -> REPLI FIFO mono-slot" ; break ; }
+        log "SUPERVISEUR: relance tcpsvd dans 2 s"
+        sleep 2
+    done
+}
+
+fifo_loop()
+{
     if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=25; else STEP="1"; MAX=3; fi
-
-    # ceinture de securite globale par connexion (transferts inclus)
     RUNNC="busybox nc"
     command -v timeout > /dev/null 2>&1 && RUNNC="timeout 180 busybox nc"
-
     FIFO="/data/local/tmp/control_resp"
 
     while true
     do
-        rm -f "$TMP_REQ"
-        rm -f "$FIFO"
+        rm -f "$TMP_REQ" "$FIFO"
         mkfifo "$FIFO" 2>/dev/null || { sleep 1; continue; }
 
-        # Le handler tourne en DETACHE et ecrit dans le FIFO : il traque
-        # l'arrivee de la requete puis produit la reponse. nc sert de pont
-        # FIFO -> socket. Une connexion oisive coute ~2 s (le handler ferme
-        # le FIFO, nc sort), pas 90 s.
+        # handler detache -> FIFO ; nc sert de pont FIFO -> socket.
+        # connexion oisive ~2 s puis liberation du slot.
         {
             i=0
             while [ ! -s "$TMP_REQ" ] && [ "$i" -lt "$MAX" ]; do
@@ -476,71 +647,14 @@ fi
             sleep "$STEP"
 
             REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
-
             if [ -n "$REQUEST" ]; then
-
-                # preflight eventuel du navigateur : reponse seche avec CORS
-                case "$REQUEST" in
-                    OPTIONS*)
-                        printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, POST, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
-                        ;;
-                    POST*)
-                        # depot de fichiers sur la cle (dpk/sha256/txt...)
-                        if [ -f "$TOKEN_FILE" ]; then
-                            TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
-                            GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
-                            if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
-                                log "UPLOAD REJETE: token invalide"
-                                reply 403 Forbidden '{"status":"error","message":"forbidden"}'
-                            else
-                                handle_post
-                            fi
-                        else
-                            handle_post
-                        fi
-                        ;;
-                    *)
-                        COMMAND="$(printf '%s' "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
-
-                        # application d'un dpk depose sur la cle
-                        if [ "$COMMAND" = "APPLY_DPK" ]; then
-                            if [ -f "$TOKEN_FILE" ]; then
-                                TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
-                                GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
-                                if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
-                                    log "APPLY_DPK REJETE: token invalide"
-                                    reply 403 Forbidden '{"status":"error","message":"forbidden"}'
-                                    COMMAND=""
-                                fi
-                            fi
-                            [ -n "$COMMAND" ] && { apply_dpk "$REQUEST" ; COMMAND="" ; }
-                        fi
-
-                        if [ -n "$COMMAND" ]; then
-                            if [ -f "$TOKEN_FILE" ]; then
-                                TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
-                                GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
-                                if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
-                                    log "REQUEST REJECTED: token invalide (${COMMAND:-<inconnu>})"
-                                    reply 403 Forbidden '{"status":"error","message":"forbidden"}'
-                                else
-                                    handle_request
-                                fi
-                            else
-                                handle_request
-                            fi
-                        fi
-                        ;;
-                esac
-
+                req_dispatch
             fi
         } > "$FIFO" &
         HP="$!"
 
         $RUNNC -l -p "$PORT" < "$FIFO" > "$TMP_REQ" 2>/dev/null
 
-        # si nc est sorti avant le handler (timeout, client parti), lui
-        # laisser <= 3 s de grace puis terminer (pas de zombie qui s'accumule)
         k=0
         while kill -0 "$HP" 2>/dev/null && [ "$k" -lt 30 ]; do
             sleep 0.1
@@ -551,6 +665,29 @@ fi
 
         rm -f "$FIFO"
     done
+}
+
+SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+(
+    # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
+    # tuer le service lance en arriere-plan
+    trap '' HUP
+
+    TCPSVD_BIN=""
+    command -v tcpsvd > /dev/null 2>&1 && TCPSVD_BIN="tcpsvd"
+    if [ -z "$TCPSVD_BIN" ]; then
+        busybox tcpsvd 2>&1 | grep -q "tcpsvd" && TCPSVD_BIN="busybox tcpsvd"
+    fi
+
+    if [ -n "$TCPSVD_BIN" ]; then
+        run_tcpsvd_forever
+        log "REPLI final : boucle FIFO mono-slot apres echecs tcpsvd"
+        fifo_loop
+    else
+        log "tcpsvd indisponible sur cette box -> repli mono-slot FIFO"
+        fifo_loop
+    fi
 ) >> "$LOG" 2>&1 &
 
 PID="$!"
