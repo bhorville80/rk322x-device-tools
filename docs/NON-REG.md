@@ -15,6 +15,11 @@ nreg HELP         # liste des themes
 
 Legende : [OK] valide sur device - source log indiquee.
 
+NB : les traces brutes ayant alimente cette base ont ete purgees apres
+extraction (session 2026-08-23) ; les constats essentiels sont integres
+ci-dessus. La derniere passe device (dpk >= 26.08.2317.3340) repartira
+d'un repertoire log/ vide et regenerera des traces fraiches.
+
 ---
 
 ## 1. Installation / Deploiement
