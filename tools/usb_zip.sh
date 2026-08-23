@@ -49,6 +49,8 @@ mkdir -p "$STAGE/admin" || die "stage impossible"
 cp -f AMORCE deploy.sh "$STAGE/" || die "copie AMORCE/deploy.sh"
 cp -f "$DPK" "$STAGE/" || die "copie du paquet"
 [ -f "$DPK.sha256" ] && cp -f "$DPK.sha256" "$STAGE/"
+cp -f README.md ROADMAP.md TROUBLESHOOTING.md "$STAGE/" 2>/dev/null
+mkdir -p "$STAGE/docs" && cp -f docs/*.md "$STAGE/docs/" 2>/dev/null || true
 cp -rf admin/. "$STAGE/admin/" || die "copie admin/"
 
 # --- creation de l'archive (zip natif, sinon bsdtar, sinon PowerShell) -------

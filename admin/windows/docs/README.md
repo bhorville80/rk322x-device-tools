@@ -6,12 +6,6 @@ and non-regression, all driven from a single USB key.
 
 **This README is only an index.** Each topic lives in its own document:
 
-> **Viewing the .md files**: any Markdown viewer works. Free/portable
-> picks: [MarkText](https://github.com/marktext/marktext/releases)
-> (portable, Win/Linux/Mac), VS Code (portable zip), or `glow` (CLI).
-> GitHub also renders them automatically. Copies ship in `admin/linux/docs`
-> and `admin/windows/docs` so the PC admin kit carries its own docs.
-
 | Want to... | Read |
 |---|---|
 | Install from scratch on a virgin box | [docs/STARTUP.md](docs/STARTUP.md) |
