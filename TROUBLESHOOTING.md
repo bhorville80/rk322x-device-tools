@@ -444,6 +444,82 @@ Carte vue par le noyau mais rien de monté         -> vold/format (cause 3)
 
 **Objectif :** pouvoir laisser la carte insérée au démarrage et l'utiliser comme stockage. La voie logicielle dépend de la cause identifiée par `sd_inspect` ; documenter ici le résultat obtenu.
 
+### Examen de la carte EN DERNIER au boot (v17+)
+
+`BOOT_SD_LAST=1` (défaut) fait traiter la carte **après la fin complète du
+boot** : le hook lance `sd_boot CHECK` en toute dernière étape (après réseau,
+serveurs, mem_tune). Une carte lente ou capricieuse ne retarde plus le
+démarrage, et une carte vue par le noyau mais non montée est montée
+tardivement sur `/mnt/media_rw/sdcard1` (lecture seule si `SD_MOUNT_RO=1`,
+attente d'énumération `SD_WAIT_SEC`, défaut 15 s).
+
+```bash
+sd_boot STATUS        # carte vue ? montée ? config active
+sd_boot MOUNT rw      # montage manuel si besoin
+```
+
+Limite : cela n'agit qu'**après init**. Un blocage au stade loader/driver
+(logo figé) reste du ressource matériel : format FAT32/MBR sans flag boot,
+ou carte SDHC sans UHS.
+
+---
+
+## WEB PANEL
+
+### Every button shows `Erreur : TypeError: Failed to fetch`
+
+The panel is served on port 8000 while the API listens on 8080/8081:
+different ports mean different origins. Without a CORS header the browser
+blocks the response and `fetch()` rejects.
+
+Fixed by adding `Access-Control-Allow-Origin: *` to every reply of
+`server/control_server.sh` and `server/gui_server.sh` (v17+).
+After updating, restart the servers:
+
+```bash
+deploy STOP && deploy EXPOSE
+```
+
+### Buttons answer `{"status":"error","message":"forbidden"}` (403)
+
+A `server/token` file exists on the key: every API call requires
+`?token=<value>`. The panel prompts for it once on the first 403 and keeps
+it in localStorage. To remove the protection, delete `server/token`.
+
+### Command accepted but nothing happens
+
+The watcher runs the action with the uid of whoever launched `EXPOSE`.
+Launched from `adb shell` (uid 2000), root-only actions fail silently in
+`log/watch.log`. Launch with root:
+
+```bash
+su -c 'sh /data/scripts/deploy.sh EXPOSE'
+```
+
+### Ports 8080/8081 unreachable while 8000 answers
+
+The control (8080) and gui (8081) servers are single-connection `nc`
+loops: a silent connection (browser preconnect, port scan) used to
+monopolize the only slot, and a server started from an adb session died
+with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
+(`timeout`), loops ignore SIGHUP, `deploy STOP` also sweeps orphaned
+instances through `/proc/*/cmdline`.
+
+Diagnosis on the box:
+
+```bash
+net_diag PORTS
+ps | grep busybox        # nc processes stuck = old behavior
+```
+
+Recovery:
+
+```bash
+su -c 'sh /data/scripts/deploy.sh STOP'
+su -c 'sh /data/scripts/deploy.sh EXPOSE'
+net_diag PORTS           # 8000/8080/8081 expected
+```
+
 ---
 
 ## Logging Issues

@@ -111,6 +111,7 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Digital display (front LED/VFD) inspection + modification paths
 * [x] Graphical interface inspection (HDMI/fb stack, headless screencap, display-capable apps, input injection, boot visual paths, fullscreen URL action)
 * [x] IR remote inspection + key remap procedure
+* [x] IR receiver auto-detection fix: pwm/remote/rc devices preferred over front-panel keypad (rk29-keypad is POWER-only)
 * [x] Network diagnostics (`net_diag`: link speed/duplex, addresses auto-detect, routes, DNS, connectivity, ports, throughput; deep packet capture if field issues appear)
 * [x] System health diagnostics (`sys_diag`: clock-loss 1970 detection, memory pressure + lmkd, entropy, eMMC write speed, security posture)
 * [x] Chip-level hardware inventory (`device_info`: dynamic sysfs/procfs/getprop/dmesg detection sorted by function - SOC/CPU, RAM/DDR, GPU, eMMC, eth/wireless chips, USB, audio, HDMI, inputs/IR, regulators/RTC, thermal - with init services grouped per function)
@@ -175,15 +176,18 @@ Investigation leads for the headless Leelbox MXQ (24/7 operation):
 * [x] Box compatibility fixes: printf integer conversions broken on this firmware (%d -> %s), awk absent (POSIX sed/cut/tr rewrites), RAM kB shown as Mo
 * [x] PC provisioning stage 8 (linux/windows): V3 tools presence + amorce link; dpk install prints installed version
 * [x] zRAM substitute: `mem_tune OPTIMIZE` probes `modprobe zram` then activates swap compresse (MEM_ZRAM_MB, prio 10) + swappiness adapte; swap on eMMC/USB rejected for a 24/7 box (wear/reliability); settings volatile - re-run after reboot
+* [x] SD card handled LAST at boot: `BOOT_SD_LAST=1` runs `sd_boot CHECK` after everything else (wait for enumeration, late mount to /mnt/media_rw/sdcard1, pstore-ready diagnostic trace) - a slow/problematic card no longer delays boot
 * [x] logd buffers: `mem_tune` trims ring buffers (`logcat -G` + persist.logd.size, LOGD_SIZE_KB in device.conf) to limit eMMC wear after cut_services validation
 * [ ] lmkd thresholds: earlier kills via MEM_LMK_EARLY=1 implemented in `mem_tune`; tune the factor once APPS/MAX baseline measured
 * [x] Memory pressure report: `sys_diag` (MemAvailable %, zRAM presence, lmkd minfree/props) + top consumers in `inspect_system` / `inspect_services`
 * [x] eMMC wear: `life_time` estimates reported in `inspect_system` [5]; flash-write reduction still open (log rotation and manifest caps already in place)
 * [ ] Supervision: auto-restart of httpd + USB watcher after crash/reboot (watchdog loop)
 * [x] Web panel: active config exposure (`/api/CONFIG`) + full action set from the index (state, sync, logs, HDMI, field mode, TV display, reboot)
+* [x] Web panel commands usable from the browser: CORS headers on control (8080) / gui (8081) APIs + token prompt kept in localStorage
 * [x] Dedicated GUI remote port 8081 (`server/gui_server.sh`): fullscreen URL/text display, key/tap injection, live TV screenshot
 * [x] Network depth: `net_diag` - link speed/duplex, DNS latency (ping), internet connectivity checks, throughput test sender-side (`dd` over `nc`, receiver command printed)
 * [ ] Security: restrict adb (5555) and HTTP (8000) to the LAN subnet via iptables
+* [ ] Stop serving server/token through httpd :8000 (whole key root is exposed)
 * [x] Entropy: `entropy_avail` reported in `sys_diag` + `inspect_system` (rngd feed only if TLS stalls observed in the field)
 
 ---

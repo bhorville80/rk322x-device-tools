@@ -42,6 +42,16 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
 }
 
+# reply <code> <status> <body> [content-type]
+# En-tete CORS obligatoire : le panneau est servi sur :8000 et l'API sur
+# :8080 -> origines differentes ; sans Access-Control-Allow-Origin le
+# navigateur bloque la lecture de la reponse (fetch rejette cote IHM).
+reply()
+{
+    printf 'HTTP/1.1 %s %s\r\nContent-Type: %s\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+        "$1" "$2" "${4:-application/json}" "${#3}" "$3"
+}
+
 case "$1" in
     start)
         ;;
@@ -62,11 +72,39 @@ if [ -f "$PIDFILE" ]; then
 fi
 
 (
+    # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
+    # tuer le service lance en arriere-plan
+    trap '' HUP
+
+    # timeout dispo ? une connexion sans donnees (preconnexe navigateur,
+    # scan de port) monopoliserait sinon l'unique slot nc pour toujours
+    HAS_TIMEOUT=0
+    command -v timeout > /dev/null 2>&1 && HAS_TIMEOUT=1
+
     while true
     do
-        busybox nc -l -p "$PORT" > /data/local/tmp/control_request 2>/dev/null
+        if [ "$HAS_TIMEOUT" = "1" ]; then
+            timeout 30 busybox nc -l -p "$PORT" > /data/local/tmp/control_request 2>/dev/null
+        else
+            busybox nc -l -p "$PORT" > /data/local/tmp/control_request 2>/dev/null
+        fi
 
         REQUEST="$(head -n 1 /data/local/tmp/control_request 2>/dev/null)"
+
+        # connexion silencieuse expiree (timeout) : rien a traiter
+        if [ -z "$REQUEST" ]; then
+            rm -f /data/local/tmp/control_request
+            continue
+        fi
+
+        # preflight eventuel du navigateur : reponse seche avec CORS
+        case "$REQUEST" in
+            OPTIONS*)
+                printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+                rm -f /data/local/tmp/control_request
+                continue
+                ;;
+        esac
 
         COMMAND="$(echo "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
 
@@ -75,9 +113,7 @@ fi
             GOT="$(echo "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
             if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
                 log "REQUEST REJECTED: token invalide (${COMMAND:-<inconnu>})"
-                BODY='{"status":"error","message":"forbidden"}'
-                printf 'HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                    "${#BODY}" "$BODY"
+                reply 403 Forbidden '{"status":"error","message":"forbidden"}'
                 rm -f /data/local/tmp/control_request
                 continue
             fi
@@ -102,13 +138,10 @@ fi
                         VER_LINE="$(grep '^version' /data/scripts/VERSION 2>/dev/null | head -n 1)"
                     BODY="### configuration active ($CONF)\n$VER_LINE\n\n$(cat "$CONF" 2>/dev/null)"
                     log "COMMANDE ACCEPTED: CONFIG -> $CONF"
-                    printf 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 200 OK "$BODY" "text/plain; charset=utf-8"
                 else
                     log "COMMANDE REJECTED: CONFIG introuvable"
-                    BODY='{"status":"error","message":"config introuvable"}'
-                    printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 404 Not Found '{"status":"error","message":"config introuvable"}'
                 fi
                 ;;
 
@@ -125,13 +158,10 @@ fi
                     OUT="$(sh "$CHK" 2>&1)"
                     RC=$?
                     log "COMMANDE ACCEPTED: CONF_CHECK (rc=$RC)"
-                    printf 'HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#OUT}" "$OUT"
+                    reply 200 OK "$OUT" "text/plain; charset=utf-8"
                 else
                     log "COMMANDE REJECTED: CONF_CHECK introuvable"
-                    BODY='{"status":"error","message":"conf_check introuvable"}'
-                    printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 404 Not Found '{"status":"error","message":"conf_check introuvable"}'
                 fi
                 ;;
 
@@ -140,21 +170,15 @@ fi
                 V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
                 if ! is_root; then
                     log "COMMANDE REJECTED: TIME_SYNC (root requis)"
-                    BODY='{"status":"error","message":"root requis"}'
-                    printf 'HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 403 Forbidden '{"status":"error","message":"root requis"}'
                 elif [ -z "$V" ]; then
                     log "COMMANDE REJECTED: TIME_SYNC (parametre manquant)"
-                    BODY='{"status":"error","message":"t=YYYYMMDD.HHMMSS attendu"}'
-                    printf 'HTTP/1.1 400 Bad Request\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 400 Bad Request '{"status":"error","message":"t=YYYYMMDD.HHMMSS attendu"}'
                 else
                     date -u -s "$V" > /dev/null 2>&1
                     NEW="$(date '+%Y-%m-%d %H:%M:%S')"
                     log "TIME_SYNC -> $NEW (UTC)"
-                    BODY="{\"status\":\"ok\",\"box_time_utc\":\"$NEW\"}"
-                    printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                        "${#BODY}" "$BODY"
+                    reply 200 OK "{\"status\":\"ok\",\"box_time_utc\":\"$NEW\"}"
                 fi
                 ;;
 
@@ -162,19 +186,13 @@ fi
                 touch "$INCOMING/$COMMAND"
                 log "COMMANDE ACCEPTED: $COMMAND"
 
-                BODY="{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
-
-                printf 'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                    "${#BODY}" "$BODY"
+                reply 200 OK "{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
                 ;;
 
             *)
                 log "COMMANDE REJECTED: inconnue"
 
-                BODY='{"status":"error","message":"unknown command"}'
-
-                printf 'HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-                    "${#BODY}" "$BODY"
+                reply 404 Not Found '{"status":"error","message":"unknown command"}'
                 ;;
         esac
 

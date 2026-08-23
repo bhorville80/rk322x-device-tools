@@ -1,10 +1,12 @@
 #!/system/bin/sh
 # remote_map - personnalisation de la telecommande IR (remap des touches).
 #
-# Principe : le recepteur IR apparait dans /proc/bus/input/devices (ici
-# rk29-keypad) et ses touches sont decrites par un fichier .kl de
-# /system/usr/keylayout ("key <scancode> <KEYCODE>"). Modifier ce fichier
-# remappe la telecommande systeme (toutes applications).
+# Principe : le recepteur IR apparait dans /proc/bus/input/devices et ses
+# touches sont decrites par un fichier .kl de /system/usr/keylayout
+# ("key <scancode> <KEYCODE>"). Modifier ce fichier remappe la telecommande
+# systeme (toutes applications). Sur rk322x le recepteur est souvent le
+# device "pwm" (ex: 110b0030.pwm) ; rk29-keypad ne porte que la touche
+# POWER de la face avant -> detection : pwm/remote/rc AVANT keypad.
 #
 #   remote_map                 etat : device cible, layout, ecart vs origine
 #   remote_map STATUS          idem
@@ -103,10 +105,12 @@ pick_remote()
         echo "[WARN] REMOTE_KL_DEVICE='$WANT' absent des devices input"
     fi
 
-    PICKED="$(printf '%s\n' "$ALL" | grep -iE '^[^|]*(keypad|ir|remote|rc)[^|]*\|' | head -n 1)"
-    if [ -z "$PICKED" ]; then
-        PICKED="$(printf '%s\n' "$ALL" | grep '|0019|' | head -n 1)"
-    fi
+    # recepteur IR reel (pwm/remote/rc/ir) AVANT un keypad bouton physique :
+    # sur rk322x le recepteur est souvent "110b0030.pwm" et rk29-keypad ne
+    # porte que POWER (face avant)
+    PICKED="$(printf '%s\n' "$ALL" | grep -iE '^[^|]*(pwm|remote|[.-]ir|ir[.-]|rc[0-9])[^|]*\|' | head -n 1)"
+    [ -z "$PICKED" ] && PICKED="$(printf '%s\n' "$ALL" | grep -iE '^[^|]*(keypad|ir)[^|]*\|' | head -n 1)"
+    [ -z "$PICKED" ] && PICKED="$(printf '%s\n' "$ALL" | grep '|0019|' | head -n 1)"
     [ -n "$PICKED" ] && { printf '%s\n' "$PICKED"; return 0; }
     return 1
 }

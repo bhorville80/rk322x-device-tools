@@ -233,6 +233,15 @@ esac
 BF="$(gv BOOT_FRONT_CLOCK)"
 case "$BF" in ""|0|1) ok "BOOT_FRONT_CLOCK = ${BF:-<vide, defaut 0>}" ;; *) ko "BOOT_FRONT_CLOCK '$BF' (attendu : 0|1)" ;; esac
 
+BS="$(gv BOOT_SD_LAST)"
+case "$BS" in ""|0|1) ok "BOOT_SD_LAST = ${BS:-<vide, defaut 1>}" ;; *) ko "BOOT_SD_LAST '$BS' (attendu : 0|1)" ;; esac
+
+SR="$(gv SD_MOUNT_RO)"
+case "$SR" in ""|0|1) ok "SD_MOUNT_RO = ${SR:-<vide, defaut 0>}" ;; *) ko "SD_MOUNT_RO '$SR' (attendu : 0|1)" ;; esac
+
+SW="$(gv SD_WAIT_SEC)"
+case "$SW" in "") ok "SD_WAIT_SEC vide (defaut 15)" ;; *[!0-9]*) ko "SD_WAIT_SEC '$SW' (attendu : secondes)" ;; *) ok "SD_WAIT_SEC = $SW" ;; esac
+
 echo ""
 echo "[4] Profil"
 PF="$(gv PROFILE)"
@@ -290,6 +299,9 @@ BOOT_CUT_SERVICES
 BOOT_EXPOSE
 BOOT_WAIT_BOOT
 BOOT_FRONT_CLOCK
+BOOT_SD_LAST
+SD_MOUNT_RO
+SD_WAIT_SEC
 FD_FORMAT
 FD_ROTATE_SEC
 FD_ROTATE_ITEMS

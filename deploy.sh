@@ -48,7 +48,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="amorce boot reboot remote_map front_digit investigate stress_ram net_watch capture crowdsec sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect set_network set_time menu"
+INSTALL_LIST="amorce boot reboot remote_map front_digit investigate stress_ram net_watch capture crowdsec sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time menu"
 
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
@@ -240,9 +240,12 @@ install_from()
     link_bin
 
     echo "[3c] Validation..."
-    VAL_NOTE="OK"
-    if ! verify_install; then
+    if verify_install; then
+        VAL_NOTE="OK"
+        VALID_RC=0
+    else
         VAL_NOTE="ECHEC"
+        VALID_RC=1
     fi
 
     echo "[4] Trace..."
@@ -435,6 +438,24 @@ do_stop()
             echo "[ WARN ] PID invalide dans $(basename "$P")"
         fi
         rm -f "$P"
+    done
+
+    # filet : instances orphelines sans pidfile (cle debranchee entre deux,
+    # pidfile perdu) -> scan des cmdlines dans /proc
+    for D in /proc/[0-9]*; do
+        [ -r "$D/cmdline" ] || continue
+        C="$(tr '\0' ' ' < "$D/cmdline" 2>/dev/null)"
+        case "$C" in
+            *control_server.sh*) N="control_server" ;;
+            *gui_server.sh*)     N="gui_server" ;;
+            *watch_usb.sh*)      N="watch_usb" ;;
+            *)                   continue ;;
+        esac
+        PID="${D#/proc/}"
+        if kill "$PID" 2>/dev/null; then
+            echo "[ OK ] $N orphelin arrete (PID $PID)"
+            FOUND=1
+        fi
     done
 
     if [ "$FOUND" -eq 0 ]; then
@@ -764,13 +785,39 @@ case "$1" in
         }
 
         N=0
-        TOTAL=6
+        TOTAL=8
         collect logcat   logcat -d
         collect dmesg    dmesg
         collect getprop  getprop
         collect ip_link  ip link
         collect mount    mount
         collect ps       ps
+
+        # [7] traces du demarrage PRECEDENT (indispensables apres un boot
+        # bloque : le dmesg live est deja efface par le redemarrage)
+        N=$((N+1))
+        printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "pstore"
+        PST=0
+        for F in /sys/fs/pstore/console-ramoops* /sys/fs/pstore/dmesg-ramoops* /proc/last_kmsg; do
+            [ -f "$F" ] || continue
+            cp -f "$F" "$OUT/pstore_$(basename "$F")" 2>/dev/null && PST=$((PST+1))
+        done
+        if [ "$PST" -gt 0 ]; then
+            echo "[OK] ($PST fichier(s))"
+        else
+            echo "[ -- ] non expose par ce noyau"
+        fi
+
+        # [8] enumeration des peripheriques mmc/SD (carte vue ? mmcblk1 ?)
+        N=$((N+1))
+        printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "mmc"
+        { ls -l /dev/block/mmcblk* 2>/dev/null
+          echo "--- cat /sys/class/mmc_host/*/device type (si present) ---"
+          for M in /sys/class/mmc_host/mmc*/mmc*:*/type; do
+              [ -f "$M" ] && echo "$M : $(cat "$M" 2>/dev/null)"
+          done
+        } > "$OUT/mmc_dev.txt" 2>&1
+        grep -q . "$OUT/mmc_dev.txt" && echo "[OK]" || echo "[ERREUR]"
 
         echo ""
         echo "=== TERMINE ==="

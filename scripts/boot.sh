@@ -18,6 +18,8 @@
 #   BOOT_MEM_TUNE=1       mem_tune OPTIMIZE a chaque boot
 #   BOOT_CUT_SERVICES=1   cut_services CUT a chaque boot
 #   BOOT_EXPOSE=1         pile web demarree a chaque boot (ports 8000/8080/8081)
+#   BOOT_SD_LAST=1        carte SD examinee en TOUT DERNIER (sd_boot CHECK)
+#   BOOT_FRONT_CLOCK=1    horloge frontale custom (front_digit CLOCK)
 
 SCRIPT_ID="$(basename "$0" .sh)"
 
@@ -110,11 +112,17 @@ do_run()
         fi
     fi
 
+    # carte SD examinee EN TOUT DERNIER : une carte lente ou problematique
+    # ne doit ni bloquer ni retarder le reste du demarrage
+    if flag BOOT_SD_LAST; then
+        run_tool "sd_boot CHECK" "$BASE/sd_boot.sh" CHECK
+    fi
+
     # banniere d'accueil rafraichie avec l'etat du jour
     [ -f "$BASE/motd.sh" ] && sh "$BASE/motd.sh" DEFAULT > /dev/null 2>&1
 
     NONE=1
-    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_EXPOSE BOOT_FRONT_CLOCK; do
+    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST; do
         flag "$K" && NONE=0 && break
     done
     [ "$NONE" -eq 1 ] && echo "[boot] aucune action active (device.conf BOOT_*)"
@@ -310,7 +318,8 @@ do_status()
     printf '    %-18s : %s\n' BOOT_MEM_TUNE     "$(config_get BOOT_MEM_TUNE 0)"
     printf '    %-18s : %s\n' BOOT_CUT_SERVICES "$(config_get BOOT_CUT_SERVICES 0)"
     printf '    %-18s : %s\n' BOOT_EXPOSE       "$(config_get BOOT_EXPOSE 0)"
-    printf '    %-18s : %s\n' BOOT_FRONT_CLOCK "$(config_get BOOT_FRONT_CLOCK 0)"
+    printf '    %-18s : %s\n' BOOT_FRONT_CLOCK  "$(config_get BOOT_FRONT_CLOCK 0)"
+    printf '    %-18s : %s\n' BOOT_SD_LAST      "$(config_get BOOT_SD_LAST 0)"
 
     LAST="$(last_run_log)"
     echo ""
@@ -336,7 +345,8 @@ usage()
     echo "  TEST      execute les actions maintenant (identique au lancement boot)"
     echo ""
     echo "Actions pilotees par device.conf : BOOT_MEM_TUNE, BOOT_CUT_SERVICES,"
-    echo "BOOT_EXPOSE, BOOT_FRONT_CLOCK (0|1), BOOT_WAIT_BOOT (secondes, defaut 120)."
+    echo "BOOT_EXPOSE, BOOT_FRONT_CLOCK, BOOT_SD_LAST (0|1),"
+    echo "BOOT_WAIT_BOOT (secondes, defaut 120)."
     echo ""
     return 0
 }

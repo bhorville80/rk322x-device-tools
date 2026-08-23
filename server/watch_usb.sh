@@ -45,6 +45,9 @@ cleanup()
     exit 0
 }
 
+# HUP ignore : la fermeture de la session adb ne doit pas tuer le watcher
+# (le lock stale est de toute facon detecte au prochain demarrage)
+trap '' HUP
 trap cleanup INT TERM
 
 log "========================================"

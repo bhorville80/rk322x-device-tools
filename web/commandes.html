@@ -99,10 +99,30 @@ var API = "http://" + location.hostname + ":8080/api/";
 
 function show(t) { document.getElementById("result").textContent = t; }
 
+function tokUrl(base) {
+    var t = "";
+    try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
+    if (!t) return base;
+    return base + (base.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(t);
+}
+
+function api(cmd) {
+    return fetch(tokUrl(API + cmd)).then(function(r) {
+        if (r.status === 403) {
+            var t = prompt("API protegee par un token (server/token sur la cle).\nEntrer la valeur du token :");
+            if (t && t.trim()) {
+                try { localStorage.setItem("rk_token", t.trim()); } catch (e) {}
+                return api(cmd);
+            }
+            throw new Error("403 forbidden (token requis, reessaie apres saisie)");
+        }
+        return r.text();
+    });
+}
+
 function cmd(command) {
     show("Execution : " + command + "...");
-    fetch(API + command)
-        .then(r => r.text())
+    api(command)
         .then(t => {
             show(command + "\n" + t + "\n\n(l'action tourne sur la box, voir log/watch.log)");
             if (command === "STATE") { setTimeout(pollState, 2500); }
@@ -116,8 +136,7 @@ function timeSync() {
     var v = "" + d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) +
             "." + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
     show("SYNC HORLOGE : envoi " + v + " (UTC)...");
-    fetch(API + "TIME_SYNC?t=" + v)
-        .then(r => r.text())
+    api("TIME_SYNC?t=" + v)
         .then(t => show("SYNC HORLOGE\n" + t))
         .catch(e => show("Erreur : " + e));
 }
@@ -145,7 +164,7 @@ function lancePhase(ph) {
     var b = document.getElementById("r" + ph);
     if (b && b.disabled && ph !== "RETOUR") return;
     show("RECETTE " + ph + " lancee...\n(resultat affiche a la fin)");
-    fetch(API + "RECETTE_" + ph)
+    api("RECETTE_" + ph)
         .catch(e => show("Erreur : " + e));
     pollRecette(b);
 }
@@ -158,7 +177,7 @@ function lanceGlobal() {
     });
     document.getElementById("rALL").disabled = true;
     show("RECETTE COMPLETE lancee...\n(bilan affiche a la fin, quelques minutes)");
-    fetch(API + "RECETTE")
+    api("RECETTE")
         .catch(e => show("Erreur : " + e));
     pollRecette(document.getElementById("rALL"));
 }

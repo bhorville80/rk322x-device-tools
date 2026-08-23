@@ -60,8 +60,8 @@ fi
 
 reply()
 {
-    # reply <code> <status> <body>
-    printf 'HTTP/1.1 %s %s\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
+    # reply <code> <status> <body> ; CORS : panneau sur :8000, API ici :8081
+    printf 'HTTP/1.1 %s %s\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
         "$1" "$2" "${#3}" "$3"
 }
 
@@ -97,11 +97,30 @@ get_ip()
 }
 
 (
+    # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
+    # tuer le service lance en arriere-plan
+    trap '' HUP
+
+    # timeout dispo ? une connexion sans donnees (preconnexe navigateur,
+    # scan de port) monopoliserait sinon l'unique slot nc pour toujours
+    HAS_TIMEOUT=0
+    command -v timeout > /dev/null 2>&1 && HAS_TIMEOUT=1
+
     while true
     do
-        busybox nc -l -p "$PORT" > /data/local/tmp/gui_request 2>/dev/null
+        if [ "$HAS_TIMEOUT" = "1" ]; then
+            timeout 30 busybox nc -l -p "$PORT" > /data/local/tmp/gui_request 2>/dev/null
+        else
+            busybox nc -l -p "$PORT" > /data/local/tmp/gui_request 2>/dev/null
+        fi
 
         REQUEST="$(head -n 1 /data/local/tmp/gui_request 2>/dev/null)"
+
+        # connexion silencieuse expiree (timeout) : rien a traiter
+        if [ -z "$REQUEST" ]; then
+            rm -f /data/local/tmp/gui_request
+            continue
+        fi
 
         ACTION="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/\([^ ?]*\).*#\1#p')"
         QS="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/[^ ?]*?\([^ ]*\).*#\1#p')"

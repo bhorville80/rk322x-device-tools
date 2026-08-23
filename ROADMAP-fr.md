@@ -88,6 +88,7 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 * [x] Mémoire (mem_tune, stress_ram, vitals)
 * [x] Processus (top RAM inspect_system/services)
 * [x] Réseau (net_diag/net_watch/investigate REMOTE)
+* [x] Telecommande IR : detection du recepteur reel (pwm/remote/rc privilegies avant le keypad face avant)
 * [x] Santé générale (sys_diag + vitals WATCH)
 * [x] Rapports (investigate ALL + SEND_LOGS + manifests)
 
@@ -115,6 +116,7 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 * [x] Contrôles post-install (selftest P2 + conf_check P3)
 * [x] Diagnostics auto (recette P1..P7 bout-en-bout)
 * [x] Config auto (conf_check P3 + boot mem_tune)
+* [x] Carte SD examinee en TOUT DERNIER au boot (BOOT_SD_LAST + sd_boot CHECK : enumeration attendue, montage tardif, trace diagnostic)
 
 ---
 
@@ -128,6 +130,7 @@ Ce document présente les fonctionnalités prévues, les améliorations techniqu
 * [ ] Afficher les logs
 * [ ] Suivre les déploiements en temps réel
 * [x] Actions depuis l'interface (commandes.html + endpoints RECETTE)
+* [x] Commandes IHM utilisables depuis le navigateur (CORS sur API 8080/8081 + saisie token cote panneau)
 
 ### Gestion des périphériques
 
@@ -189,6 +192,7 @@ Fonctionnalités envisagées :
 * [x] Validation avant installation (verify_install + dpk sha256)
 * [x] Integrite deployee (manifest recette : sha256 scripts)
 * [ ] Ajouter une gestion des permissions
+* [ ] Ne plus servir server/token via l'HTTP 8000 (racine de cle entierement exposee)
 * [x] Tracabilite (runlog systematique, y compris reboot et BAN iptables)
 
 ## 🗺️ Priorités

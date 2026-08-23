@@ -179,6 +179,16 @@ SYSTEME
                      bootanimation, fichiers systeme
   system_rw RO       Retour lecture-seule (defaut au reboot)
 
+CARTE SD
+  sd_boot STATUS     Carte enumeree ? montee ? config (BOOT_SD_LAST...)
+  sd_boot CHECK      Attente enumeration + montage tardif ; lance
+                     automatiquement en FIN de boot si BOOT_SD_LAST=1
+                     (une carte problematique ne bloque plus le demarrage)
+  sd_boot MOUNT [ro|rw]   Montage manuel sur /mnt/media_rw/sdcard1
+  sd_boot UNMOUNT    Demontage propre
+  sd_inspect         Diagnostic complet : enumeration mmc, montage/vold,
+                     pstore du boot precedent (DMESG = noyau live)
+
 AFFICHEUR FRONTAL
   front_led STATUS   Leds sysfs + noeud fd655 + daemon FD655_Demo
   front_led LED <n> <v>     luminosite (ex : front_led LED green 255)

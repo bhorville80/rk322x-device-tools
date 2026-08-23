@@ -111,7 +111,12 @@ fi
 
 ensure_index
 
-busybox httpd -f -p 0.0.0.0:$PORT -h "$USB" >> "$LOG" 2>&1 &
+    # nohup si dispo : la fermeture de la session adb ne doit pas tuer le serveur
+    if command -v nohup > /dev/null 2>&1; then
+        nohup busybox httpd -f -p 0.0.0.0:$PORT -h "$USB" >> "$LOG" 2>&1 &
+    else
+        busybox httpd -f -p 0.0.0.0:$PORT -h "$USB" >> "$LOG" 2>&1 &
+    fi
 
 PID="$!"
 
@@ -135,21 +140,35 @@ if kill -0 "$PID" 2>/dev/null; then
     echo "$(date '+%Y-%m-%d %H:%M:%S') HTTP SERVER STARTED (PID $PID, PORT $PORT, ROOT $USB)" >> "$LOG"
 
     if [ -f "$SRV/gui_server.sh" ]; then
-        if sh "$SRV/gui_server.sh" start > /dev/null 2>&1; then
-            echo "GUI SERVER: 8081"
-            echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER STARTED (PORT 8081)" >> "$LOG"
-        else
-            echo "GUI SERVER: echec (voir log/gui_server.log)"
-        fi
+        GUI_OUT="$(sh "$SRV/gui_server.sh" start 2>&1)"
+        case "$GUI_OUT" in
+            *"ALREADY RUNNING"*)
+                echo "GUI SERVER: deja actif"
+                ;;
+            *"STARTED"*)
+                echo "GUI SERVER: 8081"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER STARTED (PORT 8081)" >> "$LOG"
+                ;;
+            *)
+                echo "GUI SERVER: echec ($GUI_OUT)"
+                ;;
+        esac
     fi
 
     if [ -f "$SRV/control_server.sh" ]; then
-        if sh "$SRV/control_server.sh" start > /dev/null 2>&1; then
-            echo "CONTROL SERVER: 8080"
-            echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
-        else
-            echo "CONTROL SERVER: echec (voir log/control_server.log)"
-        fi
+        CTRL_OUT="$(sh "$SRV/control_server.sh" start 2>&1)"
+        case "$CTRL_OUT" in
+            *"ALREADY RUNNING"*)
+                echo "CONTROL SERVER: deja actif"
+                ;;
+            *"STARTED"*)
+                echo "CONTROL SERVER: 8080"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
+                ;;
+            *)
+                echo "CONTROL SERVER: echec ($CTRL_OUT)"
+                ;;
+        esac
     fi
 
     if [ -f "$SRV/watch_usb.sh" ]; then
