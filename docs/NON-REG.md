@@ -59,7 +59,7 @@ d'un repertoire log/ vide et regenerera des traces fraiches.
 | reboot HELP + STATUS | [OK] | selftest_19700101-013416 |
 | remote_map HELP / front_digit HELP+STATUS | [OK] | selftest_19700101-013416 |
 | investigate HELP / stress_ram HELP+STATUS | [OK] | selftest_19700101-013416 |
-| crowdsec HELP / capture HELP / net_watch HELP | [OK] | selftest_19700101-013416 |
+| crowdsec HELP *(retire depuis) / capture HELP / net_watch HELP | [OK] | selftest_19700101-013416 |
 | rotate_logs / media / hdmi STATUS | [OK] | selftest_19700101-013416 |
 
 ## 3. Configuration

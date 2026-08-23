@@ -10,6 +10,7 @@ and non-regression, all driven from a single USB key.
 |---|---|
 | Install from scratch on a virgin box | [docs/STARTUP.md](docs/STARTUP.md) |
 | Use the web panel (pages, buttons, console) | [docs/IHM.md](docs/IHM.md) |
+| Find a tool / the full catalogue by theme | [docs/TOOLS.md](docs/TOOLS.md) |
 | Run the functional/energy acceptance sheet | [docs/RECETTE.md](docs/RECETTE.md) |
 | Understand what V1 ships / what is next | [ROADMAP.md](ROADMAP.md) |
 | Diagnose a known failure | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
