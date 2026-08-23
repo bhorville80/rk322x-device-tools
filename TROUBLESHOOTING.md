@@ -763,3 +763,26 @@ Rules:
 Kernel capability gate is unchanged: if `swapon` refuses a file on the
 key it will refuse `/data` too (same filesystem mechanics) - check
 `preflight` (swap section) and `dmesg` first.
+
+### swapon acceptance assurance + live-built syscall binary (v17+)
+
+The swap chain assumed a working `swapon` executor. Two failure modes
+remained: busybox without the swapon/swapoff applets, and a kernel that
+refuses file swap. `mem_tune PROBE` (action [O9]) closes both:
+
+- Detects available agents in order: busybox applet, system binary.
+- If NONE: builds one LIVE - `core/swap.sh` emits a minimal static
+  ELF32 ARMv7 (129 bytes) byte-by-byte via printf, embedding the real
+  target path, calling raw syscall __NR_swapon=167 / __NR_swapoff=168.
+  Dropped in /data/local/tmp (ext4, exec-safe; never on vfat key).
+- mkswap fallback: if the applet is missing too, a pure-dd formatter
+  writes the SWAPSPACE2 magic at end of last page (sufficient for ext4
+  file swap on 4k kernels).
+- Real capability test: 1 MB probe file on the SAME filesystem as the
+  target -> KERNEL_OK / KERNEL_REFUSE / EXEC_IMPOSSIBLE, verdict kept in
+  /data/etc/mem_tune.swap_capability and surfaced by mem_tune STATUS.
+
+Emitter validated offline: magic/entry/phdr/code words checked byte per
+byte for both variants. KERNEL_REFUSE (CONFIG_SWAP off or fstype reject)
+is a firmware limit no userspace build can bypass - PROBE makes that
+explicit instead of failing silently at OPTIMIZE time.

@@ -12,6 +12,12 @@
 #                              - buffers logd reduits (usure eMMC)
 #                            premier passage : valeurs d'origine sauvegardees
 #   mem_tune RESTORE         remet les valeurs d'origine
+#   mem_tune PROBE           sonde fiable de l'acceptation swapon par le
+#                            kernel (fichier test 1 Mo sur /data) + agents
+#                            disponibles ; verdict historise /data/etc/
+#                            mem_tune.swap_capability ; si aucun agent :
+#                            fabrication EN DIRECT d'un mini-binaire ELF
+#                            syscall swapon/swapoff (core/swap.sh)
 #   mem_tune HELP            cette aide
 #
 # Pilotage (config/device.conf) :
@@ -23,6 +29,7 @@
 #   MEM_SWAP_DEV=...     partition swap brute ex /dev/block/mmcblk1p1 (SD)
 #   MEM_SWAP_FILE=...    fichier swap sur la cle ex /mnt/media_rw/<ID>/swap.bin
 #   MEM_SWAP_MB=512      taille du fichier swap (cree au premier OPTIMIZE)
+#   MEM_SWAP_DATA_MB=512 repli /data/local/swap.bin si cle KO (0 = off)
 #
 # NOTE : zram/lmk/sysctl/swap ne survivent pas au reboot -> relancer OPTIMIZE
 # apres demarrage (ou futur watchdog de supervision).
@@ -47,9 +54,20 @@ for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
     fi
 done
 
+# librairie swap durcie : executeurs, ELF syscall genere en direct, sonde
+SWAP_LIB_LOADED=0
+for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
+    if [ -f "$B/core/swap.sh" ]; then
+        . "$B/core/swap.sh"
+        SWAP_LIB_LOADED=1
+        break
+    fi
+done
+
 LMKP="/sys/module/lowmemorykiller/parameters"
 ORIG="/data/etc/mem_tune.orig"
 ZRAM_UNAVAIL="/data/etc/mem_tune.zram_unavailable"
+SWAP_CAP="/data/etc/mem_tune.swap_capability"
 
 command -v config_get >/dev/null 2>&1 || config_get() { echo "$2"; }
 command -v is_root >/dev/null 2>&1 || is_root() { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
@@ -137,6 +155,73 @@ file_swap_on()
     fi
     busybox mkswap "$P_" > /dev/null 2>&1 \
         && busybox swapon -p "$PR_" "$P_" > /dev/null 2>&1
+}
+
+swap_file_on_any()
+{
+    # voie durcie (core/swap.sh : executeurs multiples + ELF genere +
+    # mkswap_lite), repli sur la voie historique si lib absente
+    if [ "$SWAP_LIB_LOADED" -eq 1 ]; then
+        SPRIO_="$3"
+        swap_file_on_hardened "$@"
+    else
+        file_swap_on "$@"
+    fi
+}
+
+do_swap_probe()
+{
+    echo ""
+    echo "=== MEM TUNE - PROBE SWAP ==="
+    if ! is_root; then
+        warn "privileges root requis pour un verdict fiable"
+    fi
+    [ "$SWAP_LIB_LOADED" -eq 1 ] || { err "core/swap.sh introuvable" ; return 1 ; }
+
+    echo "[1] executeurs disponibles..."
+    AG=""
+    if command -v busybox > /dev/null 2>&1 \
+       && busybox swapon --help 2>&1 | grep -q 'Usage'; then
+        AG="busybox applet"
+    elif command -v swapon > /dev/null 2>&1; then
+        AG="binaire systeme ($(command -v swapon))"
+    else
+        AG="AUCUN -> un mini-binaire sera genere en direct (/data/local/tmp/.swapctl-on)"
+    fi
+    ok "agent activation : $AG"
+
+    echo "[2] signature swap..."
+    if command -v busybox > /dev/null 2>&1 && busybox mkswap /dev/null > /dev/null 2>&1; then
+        ok "mkswap busybox"
+    else
+        ok "mkswap absent -> repli mkswap_lite (dd + magie SWAPSPACE2) actif"
+    fi
+
+    echo "[3] sonde kernel (fichier test 1 Mo sur /data)..."
+    V="$(swap_probe_capability /data/local/tmp)"
+    case "$V" in
+        KERNEL_OK)
+            ok "KERNEL_OK : le kernel accepte le swap fichier"
+            ;;
+        KERNEL_REFUSE)
+            warn "KERNEL_REFUSE : swapon refuse par le kernel (CONFIG_SWAP ou fstype)"
+            ;;
+        EXEC_IMPOSSIBLE)
+            warn "EXEC_IMPOSSIBLE : ni applets ni ELF genere executables"
+            ;;
+        *)
+            warn "verdict illisible : $V"
+            ;;
+    esac
+    mkdir -p /data/etc 2>/dev/null
+    if [ -d /data/etc ]; then
+        printf '%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$V" >> "$SWAP_CAP" 2>/dev/null
+        tail -n 3 "$SWAP_CAP" 2>/dev/null | sed 's/^/    /'
+    else
+        echo "    (historique indisponible hors box : verdict $V)"
+    fi
+    echo ""
+    return 0
 }
 
 save_orig()
@@ -237,6 +322,15 @@ do_status()
         row "chaine" "cle ABSENTE -> repli /data ACTIF"
     else
         row "chaine" "[ !! ] aucun swap disque actif (zram seul ou rien)"
+    fi
+    if [ -f "$SWAP_CAP" ]; then
+        row "derniere sonde" "$(tail -n 1 "$SWAP_CAP" 2>/dev/null | tr '|' ' ')"
+    fi
+    if command -v busybox > /dev/null 2>&1 \
+       && busybox swapon --help 2>&1 | grep -q 'Usage'; then
+        : # agent present, rien a signaler
+    elif ! command -v swapon > /dev/null 2>&1; then
+        row "agent swapon" "[ !! ] absent -> PROBE generera un mini-binaire en direct"
     fi
 
     sec 3 "VM tunables"
@@ -355,7 +449,7 @@ do_optimize()
             if swap_listed "$SWF"; then
                 ok "$SWF deja actif (prio 1)"
                 KEY_OK=1
-            elif file_swap_on "$SWF" "$SWMB" 1; then
+            elif swap_file_on_any "$SWF" "$SWMB" 1; then
                 ok "swap cle $SWF actif (${SWMB} Mo, prio 1)"
                 KEY_OK=1
             else
@@ -375,7 +469,7 @@ do_optimize()
                             && ok "retour de la cle : repli $DPF_ desactive (eMMC reposee)" \
                             || warn "repli $DPF_ toujours actif (swapoff refuse)"
                     fi
-                elif file_swap_on "$DPF_" "$DMB_" 2; then
+                elif swap_file_on_any "$DPF_" "$DMB_" 2; then
                     ok "REPLI data $DPF_ actif (${DMB_} Mo, prio 2) : pas de trou de swap"
                 else
                     warn "repli data impossible sur $DPF_ (espace ? swapon refuse ?)"
@@ -495,12 +589,13 @@ run_mem_tune()
         ""|STATUS|status) do_status ;;
         OPTIMIZE|optimize|ON|on)  do_optimize ;;
         RESTORE|restore|OFF|off)  do_restore ;;
+        PROBE|probe)              do_swap_probe ;;
         HELP|help|-h|--help)
             sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
             return 0
             ;;
         *)
-            echo "Usage: mem_tune [STATUS|OPTIMIZE|RESTORE|help]"
+            echo "Usage: mem_tune [STATUS|OPTIMIZE|RESTORE|PROBE|help]"
             return 1
             ;;
     esac
