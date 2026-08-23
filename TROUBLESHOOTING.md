@@ -715,3 +715,18 @@ Every recurring issue should eventually have:
 4. The identified cause.
 5. The solution or workaround.
 6. The affected version, when known.
+
+---
+
+## TOOLS
+
+### crowdsec tool removed (v17+)
+
+The `crowdsec` helper has been withdrawn from the toolkit. Verdict after
+evaluation: CrowdSec ships glibc-linked binaries that cannot run on this
+firmware's bionic kernel userspace, and proot-based alternatives exceed the
+realistic RAM budget of a 2 GB headless box.
+
+Behavioural IDS needs are covered natively by `net_watch`
+(BAN/UNBAN iptables, event log). If CrowdSec is ever required, run it on
+the gateway/PC side instead - not on the box.

@@ -179,7 +179,7 @@ case "$LE" in ""|0|1) ok "MEM_LMK_EARLY = ${LE:-<vide, defaut 0>}" ;; *) ko "MEM
 LG="$(gv LOGD_SIZE_KB)"
 case "$LG" in "") ok "LOGD_SIZE_KB = <vide, defaut 256>" ;; *) is_num "$LG" && { [ "$LG" -eq 0 ] || { [ "$LG" -ge 64 ] && [ "$LG" -le 4096 ]; } } && ok "LOGD_SIZE_KB = $LG" || ko "LOGD_SIZE_KB '$LG' (attendu : 0 ou 64..4096)" ;; esac
 
-for BK in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE; do
+for BK in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_ROTATE_LOGS; do
     BV="$(gv "$BK")"
     case "$BV" in ""|0|1) ok "$BK = ${BV:-<vide, defaut 0>}" ;; *) ko "$BK '$BV' (attendu : 0|1)" ;; esac
 done
@@ -303,6 +303,7 @@ MEM_SWAP_MB
 BOOT_MEM_TUNE
 BOOT_CUT_SERVICES
 BOOT_SET_NETWORK
+BOOT_ROTATE_LOGS
 BOOT_TIME_SYNC
 BOOT_EXPOSE
 BOOT_WAIT_BOOT

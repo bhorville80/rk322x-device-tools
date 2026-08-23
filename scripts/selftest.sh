@@ -129,7 +129,6 @@ main()
     check_rc "investigate HELP"    "0" sh "$BASE/investigate.sh" HELP
     check_rc "stress_ram HELP"     "0" sh "$BASE/stress_ram.sh" HELP
     check_rc "stress_ram STATUS"   "0 1" sh "$BASE/stress_ram.sh" STATUS
-    check_rc "crowdsec HELP"          "0 1" sh "$BASE/crowdsec.sh" HELP
     check_rc "capture HELP"          "0 1" sh "$BASE/capture.sh" HELP
     check_rc "net_watch HELP"          "0 1" sh "$BASE/net_watch.sh" HELP
     check_rc "rotate_logs"         "0 1" sh "$BASE/rotate_logs.sh"

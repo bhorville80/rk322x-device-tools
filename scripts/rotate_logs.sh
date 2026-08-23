@@ -92,6 +92,18 @@ main()
     echo "--- manifests history (keep 10) ---"
     prune_keep "$USB/manifests/history/*.manifest" 10
 
+    # purge par AGE : rapports et captures au-dela de AGE_DAYS jours
+    # (rampre, hardware, stress_ram, ram_steps, gui_shots...)
+    AGE_DAYS="${AGE_DAYS:-14}"
+    if [ "$AGE_DAYS" -gt 0 ] 2>/dev/null && command -v find > /dev/null 2>&1; then
+        echo "--- purge par age (>${AGE_DAYS}j) ---"
+        find "$USB/log" -type f \( -name 'rampre_*' -o -name 'hardware_*' \
+            -o -name 'stress_ram_*' -o -name 'ram_steps_*' \) -mtime +"$AGE_DAYS" \
+            -exec rm -f {} \; 2>/dev/null
+        find "$USB/log/gui_shots" -type f -mtime +"$AGE_DAYS" -exec rm -f {} \; 2>/dev/null
+        echo "  [ OK ] purge d'age appliquee"
+    fi
+
     echo ""
     echo "=== TERMINE ==="
     return 0

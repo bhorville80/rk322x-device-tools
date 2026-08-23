@@ -69,8 +69,6 @@ AMORCE (demarrage rapide, apres le premier INSTALL)
   net_watch BAN ip   Blocage iptables (UNBAN / BANS pour la liste)
   capture START      Capture pcap via tcpdump si depose (server/tcpdump),
                       analyse Wireshark cote PC ; cf. capture STATUS
-  crowdsec STATUS    IDS comportemental : verdict natif/proot + guide
-  front_led DEMO ON  Relance l'horloge frontale (STOP : arret)
   front_digit PROBE  Identifie le format de trame du display FD655 (1 fois)
   front_digit SHOW   Affiche un texte 7-seg (ex: SHOW "12.34")
   front_digit CLOCK  Horloge custom HH.MM (remplace le daemon usine)

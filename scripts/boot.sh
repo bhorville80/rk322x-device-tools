@@ -207,8 +207,13 @@ do_run()
     # banniere d'accueil rafraichie avec l'etat du jour
     [ -f "$BASE/motd.sh" ] && sh "$BASE/motd.sh" DEFAULT > /dev/null 2>&1
 
+    # rotation/purge automatique des logs et rapports anciens
+    if flag BOOT_ROTATE_LOGS; then
+        run_tool "rotate_logs" "$BASE/rotate_logs.sh"
+    fi
+
     NONE=1
-    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST; do
+    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST BOOT_ROTATE_LOGS; do
         flag "$K" && NONE=0 && break
     done
     [ "$NONE" -eq 1 ] && echo "[boot] aucune action active (device.conf BOOT_*)"

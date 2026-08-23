@@ -21,5 +21,16 @@ echo ""
 echo "[build] === 3/3 verification du paquet ==="
 sh "$REPO/tools/dpk.sh" verify || exit 1
 
+# rotation dist/ : ne garder que les KEEP derniers paquets (+ .sha256)
+KEEP=5
+cd "$REPO/dist" 2>/dev/null && {
+    OLD="$(ls -1 *.dpk 2>/dev/null | sort -t_ -k3 | head -n -"$KEEP" 2>/dev/null)"
+    for F in $OLD; do
+        rm -f "$F" "$F.sha256"
+        echo "[build] rotation dist : $F supprime (garde les $KEEP derniers)"
+    done
+    cd "$REPO"
+}
+
 echo ""
 echo "[build] OK"
