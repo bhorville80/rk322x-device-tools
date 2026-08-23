@@ -104,9 +104,16 @@ do_run()
     fi
     if flag BOOT_FRONT_CLOCK; then
         # horloge custom frontale : remplace le daemon usine
+        # bornee par timeout si dispo : la suite du boot (sd_boot, motd)
+        # ne doit jamais dependre d'un outil qui ne rend pas la main
         if [ -f "$BASE/front_digit.sh" ]; then
             echo "[boot] front_digit CLOCK..."
-            sh "$BASE/front_digit.sh" CLOCK > /dev/null 2>&1 \
+            if command -v timeout > /dev/null 2>&1; then
+                timeout 90 sh "$BASE/front_digit.sh" CLOCK > /dev/null 2>&1
+            else
+                sh "$BASE/front_digit.sh" CLOCK > /dev/null 2>&1
+            fi
+            [ $? -eq 0 ] \
                 && echo "[boot] front_digit OK" \
                 || echo "[boot] front_digit ECHEC (PROBE a faire une fois ?)"
         fi

@@ -133,58 +133,89 @@ motd_boot_state()
     fi
 }
 
-motd_web_state()
+# service en ecoute sur le port $1 ? netstat d'abord, puis /proc/net/tcp[6]
+# (port hexa, etat 0A=LISTEN) : meme demarche que la sonde de la recette
+motd_port_listen()
 {
-    KEY_=""
-    for d in /mnt/media_rw/*; do
-        [ -f "$d/deploy.sh" ] && { KEY_="$d"; break; }
-    done
-    ALIVE=0
-    if [ -n "$KEY_" ]; then
-        for P in "$KEY_"/server/*.pid; do
-            [ -f "$P" ] || continue
-            PID="$(cat "$P" 2>/dev/null)"
-            kill -0 "$PID" 2>/dev/null && ALIVE=$((ALIVE+1))
-        done
+    P_="$1"
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q ":$P_ " && return 0
     fi
-    if [ "$ALIVE" -gt 0 ]; then
-        echo "actif ($ALIVE serveurs) - http://\${IP}:8000"
+    if command -v busybox > /dev/null 2>&1; then
+        PH="$(busybox printf '%04X' "$P_" 2>/dev/null)"
     else
-        echo "arrete -> amorce EXPOSE"
+        PH="$(printf '%04X' "$P_" 2>/dev/null)"
     fi
+    [ -n "$PH" ] && grep -qi ":$PH .* 0A " /proc/net/tcp 2>/dev/null && return 0
+    grep -qi ":$PH .* 0A " /proc/net/tcp6 2>/dev/null && return 0
+    return 1
 }
+
+motd_port_tag()
+{
+    if motd_port_listen "$1"; then printf '[OK]' ; else printf '[--]' ; fi
+}
+
+# mention token si server/token protege l'API/GUI
+motd_token_note()
+{
+    for d in /mnt/media_rw/*; do
+        [ -f "$d/deploy.sh" ] || continue
+        [ -f "$d/server/token" ] && { printf '/token' ; return 0 ; }
+    done
+    return 0
+}
+
+# ligne de cadre : texte tronque puis complete a largeur fixe, ASCII seul
+MOTD_W=49
+motd_row()
+{
+    T="$(printf '%s' "$1" | cut -c1-"$MOTD_W")"
+    printf '| %s |\n' "$(printf '%-'"$MOTD_W"'s' "$T")"
+}
+motd_rule_eq() { printf '+%s+\n' "$(printf '%*s' 51 '' | tr ' ' '=')" ; }
+motd_rule_dash() { printf '+%s+\n' "$(printf '%*s' 51 '' | tr ' ' '-')" ; }
 
 do_default()
 {
     mkdir -p "$MOTD_DIR" 2>/dev/null
     IF="$(config_get INTERFACE eth0)"
-    IP=""
     IP="$(ip -4 addr show "$IF" 2>/dev/null | sed -n 's/.*inet \([0-9.]*\).*/\1/p' | head -n 1)"
     VER="$(sed -n 's/^DEPLOY_VERSION=//p' "$(dirname "$0")/../config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
     [ -z "$VER" ] && VER="$(sed -n 's/^DEPLOY_VERSION=//p' /data/scripts/config/device.conf 2>/dev/null | head -n 1 | tr -d '\r')"
-
-    WEB="$(motd_web_state)"
-    WEB="$(printf '%s' "$WEB" | sed "s/\\\${IP}/${IP:-<ip>}/")"
     RECETTE="$(motd_recette_line)"
 
+    DEV="$(getprop ro.product.device 2>/dev/null)"
+    MODEL="$(getprop ro.product.model 2>/dev/null)"
+    AND="$(getprop ro.build.version.release 2>/dev/null)"
+    ID_LINE="$DEV"
+    [ -n "$MODEL" ] && [ "$MODEL" != "$DEV" ] && ID_LINE="$ID_LINE / $MODEL"
+    [ -n "$AND" ] && ID_LINE="$ID_LINE - Android $AND"
+
+    if motd_port_listen 8000; then
+        PANEL="http://${IP:-<ip>}:8000"
+        PORTS="web $(motd_port_tag 8000)   api $(motd_port_tag 8080)$(motd_token_note)   gui $(motd_port_tag 8081)"
+    else
+        PANEL="arrete -> amorce EXPOSE"
+        PORTS="8000 [--]   8080 [--]   8081 [--]"
+    fi
+
     {
-        echo "=============================================="
-        echo "  $(getprop ro.product.device 2>/dev/null) - $(getprop ro.product.model 2>/dev/null)"
-        echo "  Android $(getprop ro.build.version.release 2>/dev/null) / tools v${VER:-?}"
-        echo "----------------------------------------------"
-        echo "  ip       : ${IP:-inconnue} ($IF)   up : $(motd_uptime)"
-        echo "  ram dispo: $(motd_avail_mo) Mo   charge : $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)"
-        echo "  web      : $WEB"
-        echo "  boot     : $(motd_boot_state)"
-        [ -n "$RECETTE" ] && echo "  recette  : $RECETTE"
-        echo "----------------------------------------------"
-        echo "  amorce          etat + commandes"
-        echo "  inspect_all     rapport global      check_state reseau"
-        echo "  boot STATUS     persistance         help  aide complete"
-        echo "  net_watch       surveillance        stress_ram  test RAM"
-        echo "----------------------------------------------"
-        echo "  (genere $(date '+%m-%d %H:%M') - motd DEFAULT pour rafraichir)"
-        echo "=============================================="
+        motd_rule_eq
+        motd_row "RK322X DEVICE TOOLS  v${VER:-?}"
+        [ -n "$ID_LINE" ] && motd_row "$ID_LINE"
+        motd_rule_eq
+        motd_row "PANNEAU WEB : $PANEL"
+        motd_row "services    : $PORTS"
+        motd_rule_dash
+        motd_row "ip ${IP:-inconnue} ($IF)   up $(motd_uptime)"
+        motd_row "ram dispo $(motd_avail_mo) Mo   charge $(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)"
+        motd_row "boot $(motd_boot_state)"
+        [ -n "$RECETTE" ] && motd_row "recette $RECETTE"
+        motd_rule_dash
+        motd_row "aide: help   etat: amorce   global: inspect_all"
+        motd_row "(genere $(date '+%m-%d %H:%M') - motd DEFAULT)"
+        motd_rule_eq
     } > "$MOTD" 2>/dev/null
 
     echo "[ OK ] banniere generee -> $MOTD ($(grep -c . "$MOTD" 2>/dev/null) lignes)"
@@ -264,7 +295,7 @@ usage()
     echo "  SHOW     affiche le message"
     echo "  SET <t>  definit le message (une ligne)"
     echo "  FILE <f> definit le message depuis un fichier (adb push puis FILE)"
-    echo "  DEFAULT  genere la banniere riche (ip/ram/web/boot/recette)"
+    echo "  DEFAULT  genere la banniere (panneau/ports/ip/ram/boot/recette)"
     echo "  ON       active (pose le crochet dans /system/etc/mkshrc)"
     echo "  OFF      desactive (retire le crochet, garde le message)"
     echo ""

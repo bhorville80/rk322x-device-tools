@@ -200,7 +200,7 @@ AFFICHEUR FRONTAL
 ACCES / ACCUEIL
   motd STATUS        Message affiche a l'ouverture d'un adb shell
                      (equivalent MOTD ssh)
-  motd DEFAULT       Genere la banniere (device/ip/outils)
+  motd DEFAULT       Genere la banniere (panneau/ports/ip/ram/boot)
   motd SET <texte>   Definit le message (ou : motd FILE <fichier>)
   motd ON|OFF        Pose/retire le crochet dans /system/etc/mkshrc
                      (remount rw/ro automatique via system_rw)

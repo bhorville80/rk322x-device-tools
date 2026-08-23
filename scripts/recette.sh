@@ -87,6 +87,30 @@ require_root_or_fail()
     return 0
 }
 
+# horloge sortie de l'etat 1970 ? sinon correction best-effort (set_time
+# AUTO) et avertissement : des traces mal datees faussent rotation/purge
+clock_guard()
+{
+    NOW="$(date +%s 2>/dev/null | tr -dc '0-9')"
+    case "$NOW" in ''|*[!0-9]*) return 0 ;; esac
+    [ "$NOW" -ge 1577836800 ] && return 0
+
+    echo "[WARN] horloge box incorrecte ($(date '+%Y-%m-%d %H:%M:%S'))"
+    if [ -f "$BASE/set_time.sh" ]; then
+        sh "$BASE/set_time.sh" AUTO > /dev/null 2>&1
+        NOW="$(date +%s 2>/dev/null | tr -dc '0-9')"
+        case "$NOW" in
+            ''|*[!0-9]*) return 0 ;;
+        esac
+        if [ "$NOW" -ge 1577836800 ]; then
+            echo "       horloge corrigee -> $(date '+%Y-%m-%d %H:%M:%S')"
+        else
+            echo "       toujours fausse : set_time FILE ou provision --fix a faire"
+        fi
+    fi
+    return 0
+}
+
 # ---------------------------------------------------------------- phases
 
 p_install()
@@ -408,6 +432,7 @@ echo "=== RECETTE BOX - $(date '+%Y-%m-%d %H:%M:%S') ==="
 echo "cle : ${KEY:-absente}"
 
 require_root_or_fail "$@" || return 2
+clock_guard
 
 case "$1" in
     P1) p_install ;;
