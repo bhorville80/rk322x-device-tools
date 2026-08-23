@@ -260,9 +260,10 @@ install_from()
         echo "    [ ERREUR ] $SCRIPTS_DIR/deploy.sh"
     fi
 
-    echo "[3b] Panneau web + AMORCE -> racine de la cle..."
+    echo "[3b] Panneau web + AMORCE + docs -> racine de la cle..."
     COPIED=0
-    for F in "$SRC"/web/*.html "$SRC/AMORCE"; do
+    for F in "$SRC"/web/*.html "$SRC/AMORCE" "$SRC"/README.md \
+             "$SRC"/TROUBLESHOOTING.md "$SRC"/ROADMAP.md "$SRC"/ROADMAP-fr.md; do
         [ -f "$F" ] || continue
         DEST="$USB_DIR/$(basename "$F")"
         if find_usb && cp -f "$F" "$DEST" 2>/dev/null; then
@@ -272,6 +273,14 @@ install_from()
             echo "    [ WARN ] cle inaccessible, $(basename "$F") non copie"
         fi
     done
+    # documentations detaillees -> docs/ sur la cle (servi par :8000/docs/)
+    if find_usb; then
+        mkdir -p "$USB_DIR/docs" 2>/dev/null
+        for F in "$SRC"/docs/*.md; do
+            [ -f "$F" ] || continue
+            cp -f "$F" "$USB_DIR/docs/" 2>/dev/null && { echo "    [ OK ] docs/$(basename "$F")"; COPIED=1; }
+        done
+    fi
     [ "$COPIED" -eq 0 ] && echo "    [ -- ] rien a copier (source sans panneau web/AMORCE)"
 
     link_bin

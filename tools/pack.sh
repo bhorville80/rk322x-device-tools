@@ -44,7 +44,7 @@ VERSION="$(sed -n 's/^DEPLOY_VERSION=//p' config/device.conf 2>/dev/null | tr -d
 [ -n "$VERSION" ] || die "DEPLOY_VERSION illisible dans config/device.conf"
 
 # --- entrees du paquet ------------------------------------------------------
-INPUTS="AMORCE INSTALLER.sh deploy.sh scripts server config web docs"
+INPUTS="AMORCE INSTALLER.sh deploy.sh scripts server config web docs README.md TROUBLESHOOTING.md ROADMAP.md ROADMAP-fr.md"
 
 MISSING=""
 for F in $INPUTS; do
