@@ -203,8 +203,15 @@ write_key()
 show_page()
 {
     echo ""
-    echo "=== CONFIGURATION ACTIVE ==="
+    echo "=== CONFIG - configuration interactive ==="
     echo "fichier : $CONF"
+    P_="$(sed -n 's/^PROFILE=//p' "$CONF" 2>/dev/null | head -n 1 | tr -d '\r')"
+    if [ -n "$P_" ]; then
+        echo "profil  : $P_ ACTIF"
+        echo "          (attention : ce sont les valeurs de BASE ci-dessous ;"
+        echo "           les surcharges du profil s'appliquent en plus)"
+        echo "          gestion : profile DIFF $P_ / profile OFF"
+    fi
     echo ""
 
     N=0
@@ -217,7 +224,7 @@ show_page()
     done
 
     echo ""
-    echo "modifier : entrer un numero | entree seule = quitter | HELP = aide"
+    echo "numero -> modifier la cle | ENTREE = quitter | CHECK = conf_check | HELP = aide"
 }
 
 edit_flow()
