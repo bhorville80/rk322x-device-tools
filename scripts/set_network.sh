@@ -36,23 +36,42 @@ main()
 
     ip link set "$IFACE" up
 
-    echo "[2] Nettoyage ancienne configuration..."
+    # adresse courante : si elle est deja conforme, ON NE TOUCHE PAS aux
+    # adresses (un flush couperait l'acces reseau / adb reseau en plein vol)
+    CUR_IP="$(ip -4 addr show "$IFACE" 2>/dev/null | sed -n 's/.*inet \([0-9.]*\).*/\1/p' | head -n 1)"
+    [ -z "$CUR_IP" ] && CUR_IP="$(ifconfig "$IFACE" 2>/dev/null | sed -n 's/.*inet addr:\([0-9.]*\).*/\1p')"
 
-    ip addr flush dev "$IFACE"
+    if [ "$CUR_IP" = "$IP" ]; then
+        echo "[2] Adresse deja conforme ($IP) -> aucune modification d'adresse"
+    else
+        echo "[2] Bascule d'adresse SANS COUPURE ($CUR_IP -> $IP)..."
+        # on AJOUTE d'abord la nouvelle ; l'ancienne n'est retiree qu'apres
+        if ip addr add "$IP/$PREFIX" dev "$IFACE" 2>/dev/null; then
+            [ -n "$CUR_IP" ] && ip addr del "$CUR_IP" dev "$IFACE" 2>/dev/null
+            echo "    [ OK ] $IP active"
+        else
+            echo "    [WARN] ajout de $IP refuse - adresse actuelle ($CUR_IP) CONSERVEE"
+        fi
+    fi
 
-    echo "[3] Configuration IP..."
-
-    ip addr add "$IP/$PREFIX" dev "$IFACE"
-
-    echo "[4] Route par défaut..."
+    echo "[3] Route par defaut..."
 
     ip route del default 2>/dev/null
-    ip route add default via "$GATEWAY" dev "$IFACE"
+    if ip route add default via "$GATEWAY" dev "$IFACE" 2>/dev/null; then
+        echo "    [ OK ] via $GATEWAY"
+    else
+        echo "    [WARN] route par defaut non posee (gateway joignable ?)"
+    fi
 
-    echo "[5] DNS..."
+    echo "[4] DNS..."
 
     setprop net.dns1 "$DNS"
     setprop net.dns2 "8.8.8.8"
+
+    echo
+    echo "=== CONFIGURATION ==="
+
+    ip addr show "$IFACE"
 
     echo
     echo "=== CONFIGURATION ==="
