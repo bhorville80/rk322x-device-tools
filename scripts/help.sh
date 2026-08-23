@@ -129,9 +129,17 @@ VERIFICATION
                        menu inspect all / menu serveur expose
 
 INSPECTION
-  inspect_all        Rapport global : lance TOUS les inspect_* +
-                     check_state + thermal + cut_services/front_led
-                     STATUS, synthese rc par outil en fin de rapport
+  inspect_all        Rapport standard : coeur de verification
+                      (check_state, inspect_system, device_info,
+                      inspect_services, thermal, net_diag,
+                      sys_diag, sd_inspect, cut_services,
+                      front_led) + synthese rc par outil
+                      Les analyses one-shot (inspect_gui/display/
+                      remote/user) sont EXCLUES du standard :
+                      inspect_all LIST = classification avec
+                      raison/attentes ; inspect_all FORCE =
+                      tout apres presentation et confirmation
+                      (FORCE YES = sans question, scripts)
   inspect_user       Methodes de creation utilisateur dispo
                       (pm create-user, cmd user, busybox...)
                       option : nom d'utilisateur exemple

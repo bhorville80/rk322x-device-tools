@@ -111,7 +111,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `nreg [theme]` | non-regression executable (10 themes, miroir docs/NON-REG.md) : deploiement, outils, configuration, memoire, boot, reseau, wifi, diagnostic, sd, traces ; un seul theme possible (`nreg 4`, `nreg mem`) ; bilan PASS/FAIL |
 | `config [SHOW/GET/SET/CHECK]` | configuration interactive : page complete numerotee puis modification par numero avec validation par type (IP/port/booleen/enum) ; `config SET CLE val` pour scripts |
 | `manage [service/web/ports]` | etat & gestion centralises : services (wifi/bt/ssh/front_digit), sante pile web (ports 8000/8080/8081, panneau, api, token), actions (`manage web restart`, `manage service wifi-off`) ; delegue aux outils dedies sans les dupliquer |
-| `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
+| `inspect_all [FORCE]` | rapport standard : coeur de verification (10 outils) + synthese rc ; analyses one-shot exclues (gui/display/remote/user) ; `LIST` = classification avec raison/attentes, `FORCE` = tout apres presentation + confirmation (`FORCE YES` scriptable) |
 | `motd ON/SET/DEFAULT` | banniere adb (cadre ASCII) : URL panneau web, etat ports 8000/8080/8081, ip/ram/boot/recette ; activation manuelle uniquement (`ON`, jamais automatique) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |

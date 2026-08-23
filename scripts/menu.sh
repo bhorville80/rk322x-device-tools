@@ -218,7 +218,8 @@ help_inspect()
 {
     cat << 'EOF'
 inspect - analyses de la box
-  all               toutes les analyses (inspect_all)
+  all               analyses coeur (inspect_all ; FORCE = tout
+                    avec presentation raison/attentes + confirmation)
   device            puces/materiel (device_info)
   system            systeme (inspect_system)
   services          services init (inspect_services)

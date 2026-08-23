@@ -74,6 +74,8 @@ main()
 
     check_rc "help"                "0" sh "$BASE/help.sh"
     check_rc "menu"                "0" sh "$BASE/menu.sh"
+    check_rc "inspect_all HELP"    "0" sh "$BASE/inspect_all.sh" HELP
+    check_rc "inspect_all LIST"    "0" sh "$BASE/inspect_all.sh" LIST
     check_rc "nreg HELP"           "0" sh "$BASE/nreg.sh" HELP
     check_rc "recette HELP"        "0" sh "$BASE/recette.sh" HELP
     check_rc "config HELP"         "0" sh "$BASE/config.sh" HELP
