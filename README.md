@@ -112,7 +112,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
 | `deploy TOKEN ON/OFF/<valeur>/STATUS` | protection optionnelle API 8080 + GUI 8081 par secret partage (`server/token`) ; panneau : saisie unique par navigateur |
 
-| `sync_usb` `disable_wireless` `media` `check_state` `inspect_*` `hdmi` `field_mode` `show_key` `boxhelp` `rotate_logs` `set_network` `set_time` | outils d'origine (v1-v2) - documentes dans les sections ADB/Reseau/Wireless ci-dessus |
+| `sync_usb` `disable_wireless` `media` `check_state` `inspect_*` `hdmi` `field_mode` `show_key` `rotate_logs` `set_network` `set_time` | outils d'origine (v1-v2) - documentes dans les sections ADB/Reseau/Wireless ci-dessus |
 
 ### Nouveautes v13..v17
 
@@ -209,12 +209,6 @@ The toolkit provides several scripts installed in `/data/bin`.
 
 ```bash
 /data/bin/sync_usb
-```
-
-### Add a script to the USB drive
-
-```bash
-/data/bin/add_script_to_usb <script>
 ```
 
 ### Disable Wi-Fi / Bluetooth

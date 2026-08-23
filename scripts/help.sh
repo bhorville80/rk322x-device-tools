@@ -229,9 +229,7 @@ RESEAU / DIAGNOSTIC
 MAINTENANCE
   sync_usb           Synchronise /data/scripts -> cle USB
                      + validation post-copie (cmp octet a octet)
-  sync_usb STATUS    Compare sans copier : identiques/divergents
-  add_to_bin <s>     Ajoute un script dans /data/bin
-  add_script_to_usb  Copie un fichier vers la racine cle
+   sync_usb STATUS    Compare sans copier : identiques/divergents
 
 RESEAU / HEURE   (commande apres INSTALL)
   set_time STATUS    Heure actuelle + sources disponibles (verdict)
