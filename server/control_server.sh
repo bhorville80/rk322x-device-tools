@@ -392,6 +392,31 @@ cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
             reply 200 OK "{\"status\":\"ok\",\"epoch\":${E_:-0},\"box_time\":\"$H_\"}"
             ;;
 
+        # reponse synchrone : inspection processus / RAM [N10] (lecture seule)
+        PROC|DEV|PROBE|LAUNCHER)
+            case "$COMMAND" in
+                PROC)     TOOL_="inspect_proc.sh"  ARGS_="" ;;
+                DEV)      TOOL_="inspect_dev.sh"   ARGS_="AUDIT" ;;
+                PROBE)    TOOL_="mem_tune.sh"      ARGS_="PROBE" ;;
+                LAUNCHER) TOOL_="launcher_toggle.sh" ARGS_="STATUS" ;;
+            esac
+            T_=""
+            if [ -f "/data/scripts/$TOOL_" ]; then
+                T_="/data/scripts/$TOOL_"
+            elif [ -f "$USB/scripts/$TOOL_" ]; then
+                T_="$USB/scripts/$TOOL_"
+            fi
+            if [ -n "$T_" ]; then
+                OUT="$(sh "$T_" $ARGS_ 2>&1)"
+                RC=$?
+                log "COMMANDE ACCEPTED: $COMMAND ($TOOL_, rc=$RC)"
+                reply 200 OK "$OUT" "text/plain; charset=utf-8"
+            else
+                log "COMMANDE REJECTED: $COMMAND introuvable ($TOOL_)"
+                reply 404 "Not Found" "{\"status\":\"error\",\"message\":\"$TOOL_ introuvable\"}"
+            fi
+            ;;
+
         # reglage du nombre de listeners (factory tcpsvd) : 1..7
         MAXCONN)
             CFG_F=""

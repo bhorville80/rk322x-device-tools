@@ -94,13 +94,26 @@ Results are displayed in the black output block under the buttons.
 - Persistent "Failed to fetch" -> see TROUBLESHOOTING, WEB PANEL section.
 - After any script update: `deploy STOP && deploy EXPOSE`.
 
-## Metriques - mode parallele (V1+)
+## Metriques - onglets, un bouton = un rapport (V17)
 
-Chaque action ([N5] VITALS / [N6] CHECK STATE / [C1] CONF CHECK) a une case
-a cocher et une puce d'etat : ⏳ EN COURS (clignotante), ✓ OK, ✗ ECHEC.
-**LANCER LA SELECTION** execute les cases cochees via un pool borne par le
-selecteur **max parallele** (1-4). Les resultats s'empilent horodates dans
-le bloc Releve.
+La page est organisee en **onglets thematiques** :
+
+| Onglet | Actions |
+|---|---|
+| DIAGNOSTIC | [N5] VITALS, [N6] CHECK STATE, [C1] CONF CHECK, [N8] SYS DIAG |
+| PROCESSUS / RAM | [N10] PROCESSUS PSS, [N11] CAPACITES DEV (AUDIT) |
+| SWAP | [O9] PROBE SWAPON |
+| LAUNCHER TV | [C4] LAUNCHER ETAT |
+
+Regle d'or : **un bouton = sa zone noire de rapport dediee** (sortie
+horodatee dans la carte du bouton, jamais melangee avec les autres).
+Chaque carte porte sa case a cocher et sa puce d'etat : ⏳ EN COURS
+(clignotante), ✓ OK, ✗ ECHEC. **LANCER LA SELECTION** execute toutes les
+cases cochees (tous onglets confondus) via un pool borne par le selecteur
+**max parallele** (1-4), departs decalés 300 ms.
+
+Endpoints API 8080 ajoutes pour ces actions : PROC / DEV / PROBE /
+LAUNCHER (reponse synchrone text/plain, meme pattern que CONF_CHECK).
 
 Selecteur **listeners box** (1-7, defaut 3) : nombre de connexions
 simultanees acceptees par l'API 8080 quand le firmware busybox fournit
