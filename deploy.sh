@@ -262,8 +262,8 @@ install_from()
 
     echo "[3b] Panneau web + AMORCE + docs -> racine de la cle..."
     COPIED=0
-    for F in "$SRC"/web/*.html "$SRC/AMORCE" "$SRC"/README.md \
-             "$SRC"/TROUBLESHOOTING.md "$SRC"/ROADMAP.md; do
+    for F in "$SRC"/web/*.html "$SRC/AMORCE" "$SRC"/INSTALLER.sh \
+             "$SRC"/README.md "$SRC"/TROUBLESHOOTING.md "$SRC"/ROADMAP.md; do
         [ -f "$F" ] || continue
         DEST="$USB_DIR/$(basename "$F")"
         if find_usb && cp -f "$F" "$DEST" 2>/dev/null; then
@@ -313,6 +313,20 @@ install_from()
 
     post_install_boot
 
+    IP_HINT="$(sed -n 's/^IP=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+    echo ""
+    echo "=== PROCHAINES ETAPES ==="
+    echo "  1) config CHECK          valider la configuration"
+    echo "  2) nreg                  non-regression (10 themes)"
+    echo "  3) manage                etat global services / web / ports"
+    if [ "$(sed -n 's/^BOOT_EXPOSE=//p' "$SCRIPTS_DIR/config/device.conf" | head -n 1)" = "1" ]; then
+        echo "  4) IHM deja lancee : http://${IP_HINT:-<ip-box>}:8000/"
+    else
+        echo "  4) demarrer l'IHM : deploy STOP ; deploy EXPOSE"
+        echo "     puis : http://${IP_HINT:-<ip-box>}:8000/"
+    fi
+    echo "  5) reboot de controle    -> tout doit revenir SEUL (boot STATUS)"
+    echo "  Procedure complete sur la cle : docs/STARTUP.md"
     echo ""
     echo "=== TERMINE ==="
     echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | VERSION | STATUS | CLEAN | HELP"
