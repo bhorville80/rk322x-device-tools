@@ -43,6 +43,7 @@ LMKP="/sys/module/lowmemorykiller/parameters"
 ORIG="/data/etc/mem_tune.orig"
 
 command -v config_get >/dev/null 2>&1 || config_get() { echo "$2"; }
+command -v is_root >/dev/null 2>&1 || is_root() { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
 
 sec()  { echo ""; echo "--- [$1] $2 ---"; }
 row()  { printf '  %-24s %s\n' "$1" "$2"; }
@@ -194,7 +195,7 @@ do_optimize()
     echo ""
     echo "=== MEM TUNE - OPTIMIZE ==="
 
-    if [ "$(id -u 2>/dev/null)" != "0" ]; then
+    if ! is_root; then
         err "privileges root requis (su -c \"sh $0 OPTIMIZE\")"
         return 1
     fi
@@ -275,7 +276,7 @@ do_restore()
     echo ""
     echo "=== MEM TUNE - RESTORE ==="
 
-    if [ "$(id -u 2>/dev/null)" != "0" ]; then
+    if ! is_root; then
         err "privileges root requis (su -c \"sh $0 RESTORE\")"
         return 1
     fi

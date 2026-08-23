@@ -65,6 +65,38 @@ A successful root shell should report:
 uid=0(root)
 ```
 
+Under `su`, both **uid and gid are 0**: `uid=0(root) gid=0(root) groups=...`.
+
+### Root detected as missing even under `su` (`privileges root requis`)
+
+**Observed:** after `su -c "sh deploy.sh INSTALL"`, the script still reports
+`[ERREUR] privileges root requis`, although plain `id` shows `uid=0(root) gid=0(root)`.
+
+**Diagnosis:** old Android toolbox builds (common on RK322x boxes, Android 4.4/5.1)
+do not support the `-u` option: `id -u` fails and outputs nothing, so any
+`[ "$(id -u)" != "0" ]` test evaluates as "not root".
+
+**Solution (applied in the codebase):** every root check now uses a robust
+`is_root()` helper that first tries `id -u`, then falls back to parsing the
+raw `id` output:
+
+```sh
+is_root()
+{
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
+}
+```
+
+If a very old copy of the scripts is still installed on the box
+(`/data/scripts/core/config.sh` without `is_root`), re-run INSTALL from an
+up-to-date key/package.
+
 If root access is unavailable, check the device image and root configuration.
 
 ---

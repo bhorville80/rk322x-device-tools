@@ -2,6 +2,18 @@
 
 PORT=8080
 
+# detection root robuste : id -u, sinon parsing du "id" brut (vieux toolbox)
+is_root()
+{
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
+}
+
 USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
 if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
     USB=""
@@ -126,7 +138,7 @@ fi
             # reponse synchrone : remise a l'heure de la box (t=YYYYMMDD.HHMMSS, UTC)
             TIME_SYNC)
                 V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
-                if [ "$(id -u 2>/dev/null)" != "0" ]; then
+                if ! is_root; then
                     log "COMMANDE REJECTED: TIME_SYNC (root requis)"
                     BODY='{"status":"error","message":"root requis"}'
                     printf 'HTTP/1.1 403 Forbidden\r\nContent-Type: application/json\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \

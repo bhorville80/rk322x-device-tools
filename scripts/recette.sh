@@ -36,6 +36,7 @@ for B in "$BASE" "$BASE/../scripts" /data/scripts; do
     fi
 done
 command -v config_get >/dev/null 2>&1 || config_get() { echo "$2"; }
+command -v is_root >/dev/null 2>&1 || is_root() { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
 
 KEY=""
 for d in /mnt/media_rw/*; do
@@ -78,7 +79,7 @@ ihm_note()
 
 require_root_or_fail()
 {
-    if [ "$(id -u 2>/dev/null)" != "0" ]; then
+    if ! is_root; then
         echo ""
         echo "[ERREUR] privileges root requis : su -c \"sh $0 $*\""
         return 1

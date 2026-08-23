@@ -27,7 +27,7 @@ for B in "$(dirname "$0")" "$(dirname "$0")/core" "$(dirname "$0")/../scripts/co
 done
 
 # garde-fou si config.sh introuvable
-command -v require_root > /dev/null 2>&1 || require_root() { [ "$(id -u 2>/dev/null)" = "0" ]; }
+command -v require_root > /dev/null 2>&1 || require_root() { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
 command -v config_get   > /dev/null 2>&1 || config_get() { echo "$2"; }
 
 WIFI_IFS="wlan0 p2p0"

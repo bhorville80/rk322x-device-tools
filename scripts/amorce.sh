@@ -34,7 +34,14 @@ conf_ver()
 
 is_root()
 {
-    [ "$(id -u 2>/dev/null)" = "0" ]
+    # id -u sinon parsing du "id" brut (vieux toolbox sans option -u)
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
 }
 
 run_priv()

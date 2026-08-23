@@ -169,7 +169,9 @@ if ($state -and "$state".Trim() -eq "device") {
 Write-Host ""
 Write-Host "--- [2] Root ---"
 
-$RootOk = ((Rget "su -c id -u") -eq "0")
+# id -u peut echouer sur les vieux toolbox : on accepte aussi "uid=0(...)"
+$RootOut = (Rget "su -c id -u 2>&1; su -c id")
+$RootOk  = (($RootOut -eq "0") -or ($RootOut -match "uid=0\("))
 if ($RootOk) {
     Ok "acces root (su)"
 } else {

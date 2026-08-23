@@ -170,12 +170,15 @@ check_root()
 {
     echo ""
     echo "--- [2] Root ---"
-    R="$(trim "$(rget 'su -c id -u')")"
-    if [ "$R" = "0" ]; then
-        ROOT_OK=1
+    # id -u peut echouer sur les vieux toolbox : on accepte aussi "uid=0(...)"
+    R="$(trim "$(rget 'su -c id -u 2>/dev/null; su -c id')")"
+    case "$R" in
+        0|*"uid=0("*) ROOT_OK=1 ;;
+        *) ROOT_OK="" ;;
+    esac
+    if [ -n "$ROOT_OK" ]; then
         ok "acces root (su)"
     else
-        ROOT_OK=""
         warn "acces root" "indisponible ($(rget 'id -u' 2>/dev/null))${FIX:+ : corrections impossibles}"
     fi
     if [ "$FIX" = "1" ] && [ -z "$ROOT_OK" ]; then

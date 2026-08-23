@@ -58,9 +58,22 @@ config_get()
     fi
 }
 
+# detection root robuste : sous su, uid=0 ET gid=0 ; mais les vieux
+# toolbox Android n'ont pas "id -u" -> on parse aussi le "id" brut
+is_root()
+{
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
+}
+
 require_root()
 {
-    if [ "$(id -u 2>/dev/null)" != "0" ]; then
+    if ! is_root; then
         echo "[ERREUR] privileges root requis"
         if [ -n "$*" ]; then
             echo "         relancer par exemple : su -c \"sh $0 $*\""

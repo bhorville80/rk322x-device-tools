@@ -1,12 +1,48 @@
 #!/system/bin/sh
 
+# detection root robuste : id -u, sinon parsing du "id" brut (vieux
+# toolbox sans option -u ; sous su : uid=0(root) gid=0(root))
+is_root()
+{
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
+}
+
 # gardes partages (require_root, require_busybox)
-for B in "$(dirname "$0")/scripts" "$(dirname "$0")" /data/scripts; do
+for B in \
+    "$(dirname "$0")/scripts" \
+    "$(dirname "$0")" \
+    "$(dirname "$0")/../scripts" \
+    "$(pwd)/scripts" \
+    "/data/scripts" ; do
     if [ -f "$B/core/config.sh" ]; then
         . "$B/core/config.sh"
         break
     fi
 done
+
+# filet de securite : config.sh introuvable (deploy.sh lance seul) ->
+# definitions minimales pour ne jamais echouer en "require_root: not found"
+if ! command -v require_root > /dev/null 2>&1; then
+    require_root()
+    {
+        if ! is_root; then
+            echo "[ERREUR] privileges root requis"
+            echo "         relancer par exemple : su -c \"sh $0 $*\""
+            return 1
+        fi
+        return 0
+    }
+    require_busybox()
+    {
+        command -v busybox > /dev/null 2>&1
+    }
+fi
 
 SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
@@ -20,7 +56,7 @@ case "$1" in
     ""|HELP|help|-h|--help|VERSION|version|STATUS|status)
         ;;
     *)
-        if [ "$(id -u 2>/dev/null)" != "0" ] && command -v su > /dev/null 2>&1; then
+        if ! is_root && command -v su > /dev/null 2>&1; then
             echo "[*] uid non root : relance automatique via su..."
             exec su -c "sh $0 $*"
         fi
