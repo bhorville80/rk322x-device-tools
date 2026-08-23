@@ -10,8 +10,10 @@ Cle montee noexec : toujours "sh <chemin>", jamais ./ .
 
 [2] ENSUITE (sur la box)
 
-  amorce
-  recette            bilan complet + cle prete pour retour
+  menu               dispatcher par sujet : install recette optim
+                     inspect diag logs serveur cle
+  menu recette tout  bilan complet + cle prete pour retour
+  amorce             rappel des commandes
 
 [3] INTERFACE WEB (panneau depuis un navigateur du LAN)
 

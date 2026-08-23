@@ -42,10 +42,18 @@ run_tool()
 
 deploy_cmd()
 {
-    if [ -f "$BASE/deploy.sh" ]; then
-        sh "$BASE/deploy.sh" "$@"
+    D=""
+    [ -f "$BASE/deploy.sh" ] && D="$BASE/deploy.sh"
+    if [ -z "$D" ]; then
+        # lance depuis la cle sans installation locale : deploy.sh a la racine
+        for d in /mnt/media_rw/*; do
+            [ -f "$d/deploy.sh" ] && { D="$d/deploy.sh"; break; }
+        done
+    fi
+    if [ -n "$D" ]; then
+        sh "$D" "$@"
     else
-        echo "[ERREUR] deploy.sh absent"
+        echo "[ERREUR] deploy.sh absent (ni local ni sur cle)"
         return 127
     fi
 }
@@ -79,7 +87,12 @@ st_optim()
     SW="$(cat /proc/sys/vm/swappiness 2>/dev/null)"
     ZS="$(cat /sys/block/zram0/disksize 2>/dev/null)"
     NBSWAP="$(sed -n '2,$p' /proc/swaps 2>/dev/null | grep -cv '^$')"
-    printf '  %-10s swappiness=%s  swaps actifs=%s\n' "memoire" "${SW:-?}" "${NBSWAP:-0}${ZS:+ (zram size $((ZS / 1048576)) Mo)}"
+    ZNOTE=""
+    case "$ZS" in
+        ''|*[!0-9]*) ;;
+        *) [ "$ZS" -gt 0 ] && ZNOTE=" (zram $((ZS / 1048576)) Mo)" ;;
+    esac
+    printf '  %-10s swappiness=%s  swaps actifs=%s%s\n' "memoire" "${SW:-?}" "${NBSWAP:-0}" "$ZNOTE"
 }
 
 st_serveur()
@@ -181,7 +194,7 @@ optim - optimisation memoire / allegement
   cut-status        ce que cut_services couperait
   wireless-off      coupe wifi/bt (disable_wireless OFF)
   wireless-on       retablit wifi/bt (disable_wireless ON)
-  wireless-status    etat radio
+  wireless-status   etat radio
 EOF
 }
 

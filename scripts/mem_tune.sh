@@ -344,7 +344,7 @@ do_optimize()
             fi
             ;;
         *)
-            echo "[3] lowmemorykiller : inchange (MEM_LMK_EARLY=0)"
+            echo "[4] lowmemorykiller : inchange (MEM_LMK_EARLY=0)"
             ;;
     esac
 

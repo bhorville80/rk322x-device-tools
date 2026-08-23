@@ -83,6 +83,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 
 | Outil | Role |
 |---|---|
+| `menu [sujet [action]]` | dispatcher par sujet : install recette optim inspect diag logs serveur cle ; vue d'ensemble sans argument, aide par sujet, lancement par action (ex : `menu optim mem`, `menu recette tout`) |
 | `boot INSTALL/REMOVE/STATUS/TEST` | persistance au boot : hook `/system/etc/init/*.rc` (repli install-recovery.sh), actions `BOOT_*` du device.conf (mem_tune, cut_services, pile web) |
 | `reboot [s]/CANCEL/STATUS/RECOVERY/BOOTLOADER` | redemarrage controle (immediat, differe annulable, recovery/fastboot) |
 | `remote_map STATUS/DEVICES/LIST/LEARN/MAP/RESET` | personnalisation telecommande IR : remap scancode->KEYCODE dans le .kl cible (backup auto, effectif au reboot) |
@@ -102,7 +103,7 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `device_info` | inventaire puces/materiel trie par fonctionnalite + services par fonction |
 | `thermal STATUS/ECO/PERF` | profil CPU/thermique (eco conseille en 24/7) |
 | `conf_check` | validation config (+profils+secrets) et etat d'application des optimisations |
-| `mem_tune STATUS/OPTIMIZE/RESTORE` | memoire : zram, swappiness, lmk, buffers logd |
+| `mem_tune STATUS/OPTIMIZE/RESTORE` | memoire : zram (degrade propre si backend kernel casse), swap disque optionnel (`MEM_SWAP_DEV` partition SD brute / `MEM_SWAP_FILE` fichier cle, prio 1), swappiness, lmk, buffers logd |
 | `run_state` | outils lances / jamais lances / echecs (analyse log/exec) |
 | `recette [P1..P7/RETOUR/MANIFEST]` | recette bout-en-bout, phases ou globale, manifest certifie |
 | `inspect_all` | rapport global : tous les inspect/check avec rc par outil |
@@ -111,6 +112,22 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
 
 | `sync_usb` `disable_wireless` `media` `check_state` `inspect_*` `hdmi` `field_mode` `show_key` `boxhelp` `rotate_logs` `set_network` `set_time` | outils d'origine (v1-v2) - documentes dans les sections ADB/Reseau/Wireless ci-dessus |
+
+### Nouveautes v13..v17
+
+* **Dispatcher `menu`** : un point d'entree par sujet (install, recette,
+  optim, inspect, diag, logs, serveur, cle) avec etat rapide et aides.
+* **Deploy fiabilise** : `INSTALL` bascule tout seul sur le `.dpk` quand
+  la cle est au layout zip (deploy.sh + paquet, sans `scripts/`) ;
+  le "dernier .dpk" est trie sur le BUILD_ID (le lexical plaçait v9
+  apres v13) cote box comme cote PC.
+* **Recette P7 honnete** : detection de ports en cascade netstat ->
+  /proc/net/tcp -> sonde wget fonctionnelle (les ports fantomes 0/3
+  des vieux firmwares sont elimines).
+* **mem_tune durci + swap disque** : backend lz4 casse -> WARN +
+  marqueur `zram_unavailable` au lieu d'un echec de phase ; nouveau
+  swap sur espace physique (`MEM_SWAP_DEV`/`MEM_SWAP_FILE/MEM_SWAP_MB`,
+  desactive par defaut, usure flash a considerer).
 
 ### Nouveautes v5..v12
 
