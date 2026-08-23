@@ -16,6 +16,7 @@
 #
 # Pilotage (config/device.conf) :
 #   BOOT_MEM_TUNE=1       mem_tune OPTIMIZE a chaque boot
+#   BOOT_TRIM_CACHES=1    pm trim-caches a chaque boot (caches apps purges)
 #   BOOT_CUT_SERVICES=1   cut_services CUT a chaque boot
 #   BOOT_SET_NETWORK=1    set_network a chaque boot (route+DNS non persistants)
 #   BOOT_TIME_SYNC=1      set_time AUTO a chaque boot (sortie de l'etat 1970)
@@ -154,6 +155,15 @@ do_run()
     if flag BOOT_MEM_TUNE; then
         run_tool "mem_tune OPTIMIZE" "$BASE/mem_tune.sh" OPTIMIZE
     fi
+    if flag BOOT_TRIM_CACHES; then
+        # purge des caches apps (ART/dalvik) : pics de /data liberes,
+        # sante eMMC ; sans effet sur les donnees utilisateur
+        if command -v pm > /dev/null 2>&1; then
+            pm trim-caches 999G > /dev/null 2>&1 \
+                && echo "[ OK ] trim-caches : caches apps purges" \
+                || echo "[WARN] trim-caches refuse"
+        fi
+    fi
     if flag BOOT_CUT_SERVICES; then
         run_tool "cut_services CUT" "$BASE/cut_services.sh" CUT
     fi
@@ -213,7 +223,7 @@ do_run()
     fi
 
     NONE=1
-    for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST BOOT_ROTATE_LOGS; do
+    for K in BOOT_MEM_TUNE BOOT_TRIM_CACHES BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST BOOT_ROTATE_LOGS; do
         flag "$K" && NONE=0 && break
     done
     [ "$NONE" -eq 1 ] && echo "[boot] aucune action active (device.conf BOOT_*)"
@@ -439,6 +449,7 @@ do_status()
     echo ""
     echo "  Actions (device.conf) :"
     printf '    %-18s : %s\n' BOOT_MEM_TUNE     "$(config_get BOOT_MEM_TUNE 0)"
+    printf '    %-18s : %s\n' BOOT_TRIM_CACHES  "$(config_get BOOT_TRIM_CACHES 0)"
     printf '    %-18s : %s\n' BOOT_CUT_SERVICES "$(config_get BOOT_CUT_SERVICES 0)"
     printf '    %-18s : %s\n' BOOT_SET_NETWORK "$(config_get BOOT_SET_NETWORK 0)"
     printf '    %-18s : %s\n' BOOT_TIME_SYNC   "$(config_get BOOT_TIME_SYNC 0)"
