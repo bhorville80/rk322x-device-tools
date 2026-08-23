@@ -164,6 +164,9 @@ case "$SM" in keys|password|any|"") ok "SSH_MODE = ${SM:-<vide, defaut keys>}" ;
 WA="$(gv WIRELESS_AIRPLANE)"
 case "$WA" in 0|1|"") ok "WIRELESS_AIRPLANE = ${WA:-<vide, defaut 0>}" ;; *) ko "WIRELESS_AIRPLANE '$WA' (attendu : 0|1)" ;; esac
 
+WR="$(gv WEB_RUN)"
+case "$WR" in 0|1|"") ok "WEB_RUN = ${WR:-<vide, defaut 0>} (console panneau)" ;; *) ko "WEB_RUN '$WR' (attendu : 0|1)" ;; esac
+
 ZM="$(gv MEM_ZRAM_MB)"
 case "$ZM" in "") ok "MEM_ZRAM_MB = <vide, defaut 512>" ;; *) is_num "$ZM" && ok "MEM_ZRAM_MB = $ZM" || ko "MEM_ZRAM_MB '$ZM' (attendu : Mo, nombre)" ;; esac
 
@@ -304,6 +307,7 @@ BOOT_FRONT_CLOCK
 BOOT_SD_LAST
 SD_MOUNT_RO
 SD_WAIT_SEC
+WEB_RUN
 FD_FORMAT
 FD_ROTATE_SEC
 FD_ROTATE_ITEMS

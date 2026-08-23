@@ -341,6 +341,37 @@ handle_request()
             reply 200 OK "{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
             ;;
 
+        # console distante (equivalent adb shell) : une ligne, sortie bornee.
+        # Double garde : WEB_RUN=1 dans device.conf ET token obligatoire.
+        RUN)
+            CFG_F=""
+            if [ -f /data/scripts/config/device.conf ]; then
+                CFG_F=/data/scripts/config/device.conf
+            elif [ -f "$USB/scripts/config/device.conf" ]; then
+                CFG_F="$USB/scripts/config/device.conf"
+            fi
+            WEB_RUN=""
+            [ -n "$CFG_F" ] && WEB_RUN="$(sed -n 's/^WEB_RUN=//p' "$CFG_F" 2>/dev/null | head -n 1 | tr -d '\r')"
+            if [ "$WEB_RUN" != "1" ] || [ ! -f "$TOKEN_FILE" ]; then
+                log "COMMANDE REJECTED: RUN (WEB_RUN='${WEB_RUN:-vide}', token=$([ -f "$TOKEN_FILE" ] && echo oui || echo non))"
+                reply 403 Forbidden '{"status":"error","message":"console desactivee : WEB_RUN=1 dans device.conf et token actif requis"}'
+            else
+                CMD_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]cmd=\([^ &]*\).*#\1#p')"
+                CMD_="$(busybox httpd -d "$CMD_" 2>/dev/null || printf '%s' "$CMD_")"
+                log "RUN: $CMD_"
+                if command -v timeout > /dev/null 2>&1; then
+                    OUT="$(timeout 15 sh -c "$CMD_" 2>&1)"
+                else
+                    OUT="$(sh -c "$CMD_" 2>&1)"
+                fi
+                RC_RUN=$?
+                OUT="$(printf '%s' "$OUT" | head -c 8192)"
+                log "RUN rc=$RC_RUN ($(printf '%s' "$OUT" | wc -c) octets)"
+                reply 200 OK "rc=$RC_RUN
+$OUT" "text/plain; charset=utf-8"
+            fi
+            ;;
+
         *)
             log "COMMANDE REJECTED: inconnue"
 
