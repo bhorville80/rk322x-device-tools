@@ -26,6 +26,17 @@ button:hover { background:#444; }
 .apistatus b.up   { color:#7c7; border-color:#3a5a3a; }
 .apistatus b.warn { color:#fc6; border-color:#a86; }
 .apistatus b.down { color:#e66; border-color:#a55; }
+.actrow { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:8px; }
+label.act { display:inline-flex; align-items:center; gap:6px;
+            background:#1b1b1b; border:1px solid #333; border-radius:6px;
+            padding:8px 10px; cursor:pointer; font-size:14px; }
+.aid { color:#9cf; font-family:monospace; }
+.chip { display:inline-block; min-width:64px; text-align:center; font-size:11px;
+        border-radius:4px; padding:1px 4px; border:1px solid #444; color:#888; }
+.chip.pending { color:#fc6; border-color:#a86; animation:blink 1s infinite; }
+.chip.ok      { color:#7c7; border-color:#3a5a3a; }
+.chip.ko      { color:#e66; border-color:#a55; }
+@keyframes blink { 50% { opacity:.35; } }
 </style>
 </head>
 
@@ -50,10 +61,26 @@ button:hover { background:#444; }
   <b id="as8081">8081 gui...</b>
 </div>
 
-<button onclick="loadVitals()">[N5] VITALS (refresh)</button>
-<button onclick="askState()">[N6] CHECK STATE</button>
-<button onclick="confCheck()">[C1] CONF CHECK</button>
-<span class="dim"> vitals charge a l'ouverture ; releves ecrits dans log/ sur la cle</span>
+<div class="actrow">
+  <label class="act"><input type="checkbox" id="cb-N5" checked>
+    <span class="aid">[N5]</span> VITALS <span class="chip" id="chip-N5"></span></label>
+  <label class="act"><input type="checkbox" id="cb-N6" checked>
+    <span class="aid">[N6]</span> CHECK STATE <span class="chip" id="chip-N6"></span></label>
+  <label class="act"><input type="checkbox" id="cb-C1">
+    <span class="aid">[C1]</span> CONF CHECK <span class="chip" id="chip-C1"></span></label>
+</div>
+
+<button onclick="launchSelected()">&#9654; LANCER LA SELECTION</button>
+<span class="dim"> max parallele :
+<select id="maxth">
+  <option>1</option><option>2</option><option>3</option><option>4</option>
+</select>
+| depart decale + retries auto ; puce par action :
+⏳ en cours / ✓ ok / ✗ echec</span><br><br>
+<button onclick="loadVitals()">[N5] seul</button>
+<button onclick="askState()">[N6] seul</button>
+<button onclick="confCheck()">[C1] seul</button>
+<span class="dim"> releves ecrits dans log/ sur la cle</span>
 
 <h2>Releve</h2>
 <div id="out">Chargement des signes vitaux...</div>
@@ -140,6 +167,100 @@ function confCheck() {
     api("CONF_CHECK")
         .then(t => show("CONF CHECK\n" + t))
         .catch(e => show("Erreur : " + e));
+}
+
+/* ---- mode parallele : selection + pool avec max de threads ---- */
+
+var ACTIONS = {
+    N5: { run: function () {
+        return api("VITALS").then(function (t) { return t; });
+    } },
+    N6: { run: function () {
+        return new Promise(function (done) {
+            var stamp0 = "";
+            fetch("/log/state_last.txt", {cache:"no-store"})
+                .then(r => r.ok ? r.text() : "")
+                .then(t => { stamp0 = t.slice(0, 40); })
+                .catch(() => {});
+            var tries = 0;
+            (function poll() {
+                api("STATE").catch(function () {});
+                setTimeout(function () {
+                    fetch("/log/state_last.txt", {cache:"no-store"})
+                        .then(r => { if (!r.ok) throw 0; return r.text(); })
+                        .then(t => {
+                            if (t.slice(0, 40) === stamp0 && tries < 8) {
+                                tries++; setTimeout(poll, 2000); return;
+                            }
+                            done(t);
+                        })
+                        .catch(() => {
+                            if (tries++ < 8) { setTimeout(poll, 2000); }
+                            else { done("(etat indisponible)"); }
+                        });
+                }, tries === 0 ? 1500 : 2000);
+            })();
+        });
+    } },
+    C1: { run: function () {
+        return api("CONF_CHECK");
+    } }
+};
+
+function setChip(id, cls, txt) {
+    var c = document.getElementById("chip-" + id);
+    if (c) { c.className = "chip " + cls; c.textContent = txt; }
+}
+
+function appendOut(id, status, txt) {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    var stamp = p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+    var box = document.getElementById("out");
+    box.textContent += "\n\n========== [" + id + "] " + status +
+                       " - " + stamp + " ==========\n" + txt;
+    box.scrollTop = box.scrollHeight;
+}
+
+function getChecked() {
+    return Object.keys(ACTIONS).filter(function (id) {
+        var cb = document.getElementById("cb-" + id);
+        return cb && cb.checked;
+    });
+}
+
+function launchSelected() {
+    var ids = getChecked();
+    if (!ids.length) { show("aucune action cochee"); return; }
+    var max = parseInt(document.getElementById("maxth").value, 10) || 1;
+    var queue = ids.slice(), active = 0;
+
+    ids.forEach(function (id) { setChip(id, "pending", "EN COURS"); });
+    show("lancement de " + ids.length + " action(s), max parallele = " + max);
+
+    return new Promise(function (finished) {
+        (function pump() {
+            if (!queue.length && active === 0) { finished(); return; }
+            while (active < max && queue.length) {
+                (function (id) {
+                    active++;
+                    ACTIONS[id].run()
+                        .then(function (txt) {
+                            appendOut(id, "OK", txt);
+                            setChip(id, "ok", "OK");
+                        })
+                        .catch(function (e) {
+                            appendOut(id, "ECHEC", String(e));
+                            setChip(id, "ko", "ECHEC");
+                        })
+                        .then(function () {
+                            active--;
+                            setTimeout(pump, 300);   /* depart decale */
+                        });
+                })(queue.shift());
+            }
+        })();
+    });
 }
 
 loadVitals();
