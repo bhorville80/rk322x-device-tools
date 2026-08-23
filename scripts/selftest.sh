@@ -89,6 +89,8 @@ main()
     check_rc "aliases STATUS"      "0 1" sh "$BASE/aliases.sh" STATUS
     check_rc "profile"             "0" sh "$BASE/profile.sh"
     check_rc "profile LIST"        "0" sh "$BASE/profile.sh" LIST
+    check_rc "ramstep HELP"        "0" sh "$BASE/ramstep.sh" HELP
+    check_rc "rampre HELP"         "0" sh "$BASE/rampre.sh" HELP
     check_rc "conf_check"          "0" sh "$BASE/conf_check.sh"
     check_rc "run_state"           "0" sh "$BASE/run_state.sh"
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS

@@ -132,6 +132,15 @@ VERIFICATION
                       SWITCH <nom> / OFF / SAVE <nom> ; un profil
                       surcharge les cles de device.conf quand
                       PROFILE=<nom> est actif
+  rampre             Empreinte memoire AVANT installation (box vierge,
+                      adb push puis su sh) : echantillonne /proc/meminfo
+                      120 s par defaut, top PSS debut/fin, pressions
+                      lmk detectees ; rapport autonome sur la cle
+  ramstep [sec]      Deploiement instrumente : enchaine mem_tune,
+                      thermal ECO, cut_services, reseau/horloge,
+                      STOP+EXPOSE avec MESURE RAM avant/apres chaque
+                      etape et pause d'observation (defaut 30 s) ;
+                      chronologie des gains dans log/ram_steps_*.txt
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle
