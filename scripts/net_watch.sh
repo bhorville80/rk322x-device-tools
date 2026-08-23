@@ -175,7 +175,7 @@ do_daemon()
             [ -n "$AL" ] && printf '%s\n' "$AL" >> "$EVTF" 2>/dev/null
             sleep "$INT"
         done
-    ) &
+    ) >/dev/null 2>&1 &
     echo "$!" > "$PIDFILE"
     echo "[ OK ] daemon net_watch lance (PID $!, toutes les ${INT}s)"
     echo "       csv : $CSVF"

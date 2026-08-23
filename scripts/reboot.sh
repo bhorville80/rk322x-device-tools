@@ -144,7 +144,7 @@ do_schedule()
         trace "reboot programme ($N s)"
         rm -f "$PIDFILE" 2>/dev/null
         power_exec ""
-    ) &
+    ) >/dev/null 2>&1 &
     BP=$!
     echo "$BP" > "$PIDFILE"
     echo "[ OK ] reboot programme dans ${N}s (PID $BP)"
