@@ -173,6 +173,12 @@ case "$ZM" in "") ok "MEM_ZRAM_MB = <vide, defaut 512>" ;; *) is_num "$ZM" && ok
 DM="$(gv MEM_SWAP_DATA_MB)"
 case "$DM" in "") ok "MEM_SWAP_DATA_MB = <vide, defaut 512>" ;; *) is_num "$DM" && ok "MEM_SWAP_DATA_MB = $DM" || ko "MEM_SWAP_DATA_MB '$DM' (attendu : Mo, nombre ; 0 = repli off)" ;; esac
 
+BP="$(gv BACKGROUND_PROC_LIMIT)"
+case "$BP" in "") ok "BACKGROUND_PROC_LIMIT = <vide, inchange>" ;; *) is_num "$BP" && [ "$BP" -le 50 ] && ok "BACKGROUND_PROC_LIMIT = $BP" || ko "BACKGROUND_PROC_LIMIT '$BP' (attendu : 0..50 ou vide)" ;; esac
+
+AF="$(gv ALWAYS_FINISH_ACTIVITIES)"
+case "$AF" in ""|1) ok "ALWAYS_FINISH_ACTIVITIES = ${AF:-<vide, inchange>}" ;; 0) ok "ALWAYS_FINISH_ACTIVITIES = 0" ;; *) ko "ALWAYS_FINISH_ACTIVITIES '$AF' (attendu : 0|1 ou vide)" ;; esac
+
 SWV="$(gv MEM_SWAPPINESS)"
 case "$SWV" in "") ok "MEM_SWAPPINESS = <vide, defaut 100>" ;; *) is_num "$SWV" && [ "$SWV" -le 200 ] && ok "MEM_SWAPPINESS = $SWV" || ko "MEM_SWAPPINESS '$SWV' (attendu : 0..200)" ;; esac
 
@@ -300,6 +306,8 @@ MEM_ZRAM_MB
 MEM_SWAPPINESS
 MEM_LMK_EARLY
 LOGD_SIZE_KB
+BACKGROUND_PROC_LIMIT
+ALWAYS_FINISH_ACTIVITIES
 MEM_SWAP_DEV
 MEM_SWAP_FILE
 MEM_SWAP_DATA_MB

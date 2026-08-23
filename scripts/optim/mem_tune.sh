@@ -30,6 +30,10 @@
 #   MEM_SWAP_FILE=...    fichier swap sur la cle ex /mnt/media_rw/<ID>/swap.bin
 #   MEM_SWAP_MB=512      taille du fichier swap (cree au premier OPTIMIZE)
 #   MEM_SWAP_DATA_MB=512 repli /data/local/swap.bin si cle KO (0 = off)
+#   BACKGROUND_PROC_LIMIT=1  process d'apps caches max (settings global ;
+#                        vide = inchange) - gros gain PSS en headless
+#   ALWAYS_FINISH_ACTIVITIES=1 activities finies des qu'quittees
+#                        (vide = inchange)
 #
 # NOTE : zram/lmk/sysctl/swap ne survivent pas au reboot -> relancer OPTIMIZE
 # apres demarrage (ou futur watchdog de supervision).
@@ -354,6 +358,12 @@ do_status()
     row LOGD_SIZE_KB "$(config_get LOGD_SIZE_KB 256) Ko"
     row MEM_SWAP_MB "$(config_get MEM_SWAP_MB 512) Mo (cle)"
     row MEM_SWAP_DATA_MB "$(config_get MEM_SWAP_DATA_MB 512) Mo (repli /data, 0=off)"
+    if command -v settings > /dev/null 2>&1; then
+        row BACKGROUND_PROC_LIMIT \
+            "$(config_get BACKGROUND_PROC_LIMIT 1) (actuel : $(settings get global background_process_limit 2>/dev/null))"
+        row ALWAYS_FINISH_ACTIVITIES \
+            "$(config_get ALWAYS_FINISH_ACTIVITIES 1) (actuel : $(settings get global always_finish_activities 2>/dev/null))"
+    fi
 
     if [ -f "$ORIG" ]; then
         echo ""
@@ -518,6 +528,31 @@ do_optimize()
         fi
     fi
 
+    # [6] leviers ART : moins de process d'apps residentes (headless)
+    BP="$(config_get BACKGROUND_PROC_LIMIT 1)"
+    case "$BP" in ''|*[!0-9]*) BP="" ;; esac
+    AF="$(config_get ALWAYS_FINISH_ACTIVITIES 1)"
+    case "$AF" in 0|1) ;; *) AF="" ;; esac
+    if [ -z "$BP" ] && [ -z "$AF" ]; then
+        echo "[6] leviers ART : inchanges (cles vides)"
+    else
+        echo "[6] leviers ART (ActivityManager)..."
+        if ! command -v settings > /dev/null 2>&1; then
+            warn "commande settings absente sur ce firmware"
+        else
+            if [ -n "$AF" ]; then
+                settings put global always_finish_activities "$AF" \
+                    && ok "always_finish_activities = $AF (pas d'activities gardees)" \
+                    || warn "always_finish_activities refuse"
+            fi
+            if [ -n "$BP" ]; then
+                settings put global background_process_limit "$BP" \
+                    && ok "background_process_limit = $BP (process caches limites)" \
+                    || warn "background_process_limit refuse"
+            fi
+        fi
+    fi
+
     echo ""
     if [ "$RC" -eq 0 ]; then
         echo "[ OK ] profil optimise applique"
@@ -547,6 +582,14 @@ do_restore()
     OS="$(sed -n 's/^swappiness=//p' "$ORIG")"
     OM="$(sed -n 's/^minfree=//p' "$ORIG")"
     OL="$(sed -n 's/^logd_kb=//p' "$ORIG")"
+
+    # leviers ART : retour aux defauts firmware (suppression des overrides)
+    if command -v settings > /dev/null 2>&1; then
+        settings delete global background_process_limit > /dev/null 2>&1 \
+            && ok "background_process_limit : defaut firmware"
+        settings delete global always_finish_activities > /dev/null 2>&1 \
+            && ok "always_finish_activities : defaut firmware"
+    fi
 
     if [ -n "$OS" ] && is_num "$OS"; then
         echo "$OS" > /proc/sys/vm/swappiness 2>/dev/null \
