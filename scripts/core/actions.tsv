@@ -1,0 +1,50 @@
+# Registre des actions [Theme+numero] - source unique de verite.
+# Format TSV : ID<TAB>libelle<TAB>commande
+# La commande s'execute depuis /data/scripts (ou scripts/) ; "%BASE%"
+# est remplace par ce repertoire. "-" = action cote PC / navigateur,
+# non executable sur la box.
+#
+# Themes : P Prepa | I Install | C Config | O Optim | R Re-check
+#          N iNspection | S Serveur | M Metriques | W Web IHM | B Boot
+
+A2	Empreinte RAM avant install (120 s)	sh %BASE%/rampre.sh 120
+
+C1	Validation de la configuration	sh %BASE%/conf_check.sh
+C2	Revue interactive de la config	sh %BASE%/config.sh
+
+O1	Profil thermique ECO	sh %BASE%/thermal.sh ECO
+O2	Optimisation memoire	sh %BASE%/mem_tune.sh OPTIMIZE
+O3	Test de tenue RAM (pression)	sh %BASE%/stress_ram.sh
+O4	Releve vitals post-optimisation	sh %BASE%/vitals.sh STATUS
+O5	Allegement services/paquets	sh %BASE%/cut_services.sh CUT
+O6	Etat allegement	sh %BASE%/cut_services.sh STATUS
+O7	Contre-verification globale	sh %BASE%/check_state.sh
+
+R1	Non-regression : 10 themes	sh %BASE%/nreg.sh
+R2	Selftest outils	sh %BASE%/selftest.sh
+
+N1	Classification inspections	sh %BASE%/inspect_all.sh LIST
+N2	Inspections coeur	sh %BASE%/inspect_all.sh
+N3	Inventaire puces	sh %BASE%/device_info.sh
+N4	Rapport materiel complet (SAVE)	sh %BASE%/hw_report.sh SAVE
+
+S1	Vue globale services/web/ports	sh %BASE%/manage.sh
+S2	Sante pile web	sh %BASE%/manage.sh web
+S3	Arret puis demarrage pile	sh %BASE%/deploy.sh STOP ; sh %BASE%/deploy.sh EXPOSE
+S4	Etat installation vs cle	sh %BASE%/deploy.sh STATUS
+S5	Paquets cle vs installe	sh %BASE%/show_key.sh
+
+B1	Redemarrage de la box	reboot
+
+W0	Ouvrir le panneau	navigateur
+W1	IHM Accueil	navigateur
+W2	IHM Commandes	navigateur
+W3	IHM Cle	navigateur
+W4	IHM upload dpk	navigateur
+W5	IHM Metriques	navigateur
+W6	IHM Telecommande	navigateur
+W7	IHM Infos	navigateur
+N5	Vitals instantane	sh %BASE%/vitals.sh STATUS
+N6	Check state complet	sh %BASE%/check_state.sh
+N7	Diagnostic reseau	sh %BASE%/net_diag.sh
+N8	Sante systeme rapide	sh %BASE%/sys_diag.sh

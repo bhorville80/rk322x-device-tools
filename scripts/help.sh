@@ -139,6 +139,9 @@ VERIFICATION
                       STOP+EXPOSE avec MESURE RAM avant/apres chaque
                       etape et pause d'observation (defaut 30 s) ;
                       chronologie des gains dans log/ram_steps_*.txt
+  xrun               Lance une action par son identifiant [Theme+numero]
+                      du registre core/actions.tsv (ex : xrun C1,
+                      xrun S2 ; xrun LIST = catalogue complet)
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle
