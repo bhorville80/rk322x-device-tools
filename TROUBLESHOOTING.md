@@ -730,3 +730,36 @@ realistic RAM budget of a 2 GB headless box.
 Behavioural IDS needs are covered natively by `net_watch`
 (BAN/UNBAN iptables, event log). If CrowdSec is ever required, run it on
 the gateway/PC side instead - not on the box.
+
+---
+
+## SWAP
+
+### Swap chain: key file with /data fallback (v17+)
+
+Context: zram is impossible on this firmware (broken lz4 backend, see
+entry above), so disk swap is the only swap available. The original V1
+design used a single 512 MB `swap.bin` on the USB key
+(`MEM_SWAP_FILE=auto`, priority 1, re-armed each boot by
+`BOOT_MEM_TUNE=1`). Failure mode: unplug/lose/rekey the USB stick and
+the box runs with NO swap at all until someone notices.
+
+Solution (v17): explicit two-link chain in `mem_tune`:
+
+| Link | Path | Priority | When |
+|---|---|---|---|
+| Key file | `/mnt/media_rw/*/swap.bin` | 1 | normal operation |
+| Data fallback | `/data/local/swap.bin` | 2 | only when the key link fails |
+
+Rules:
+- OPTIMIZE activates the key first; only on failure it creates/enables
+  the data fallback (`MEM_SWAP_DATA_MB=512`, 0 = disabled).
+- When the key comes back, the next OPTIMIZE swaps off the fallback and
+  rests the eMMC ("retour de la cle" log line).
+- STATUS shows every link state plus a one-line chain verdict
+  ("JAMAIS sans swap" / "cle ACTIF seule" / "repli /data ACTIF").
+- The boot path needs no change: BOOT_MEM_TUNE runs the same OPTIMIZE.
+
+Kernel capability gate is unchanged: if `swapon` refuses a file on the
+key it will refuse `/data` too (same filesystem mechanics) - check
+`preflight` (swap section) and `dmesg` first.

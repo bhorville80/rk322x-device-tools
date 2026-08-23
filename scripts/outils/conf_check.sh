@@ -170,6 +170,9 @@ case "$WR" in 0|1|"") ok "WEB_RUN = ${WR:-<vide, defaut 0>} (console panneau)" ;
 ZM="$(gv MEM_ZRAM_MB)"
 case "$ZM" in "") ok "MEM_ZRAM_MB = <vide, defaut 512>" ;; *) is_num "$ZM" && ok "MEM_ZRAM_MB = $ZM" || ko "MEM_ZRAM_MB '$ZM' (attendu : Mo, nombre)" ;; esac
 
+DM="$(gv MEM_SWAP_DATA_MB)"
+case "$DM" in "") ok "MEM_SWAP_DATA_MB = <vide, defaut 512>" ;; *) is_num "$DM" && ok "MEM_SWAP_DATA_MB = $DM" || ko "MEM_SWAP_DATA_MB '$DM' (attendu : Mo, nombre ; 0 = repli off)" ;; esac
+
 SWV="$(gv MEM_SWAPPINESS)"
 case "$SWV" in "") ok "MEM_SWAPPINESS = <vide, defaut 100>" ;; *) is_num "$SWV" && [ "$SWV" -le 200 ] && ok "MEM_SWAPPINESS = $SWV" || ko "MEM_SWAPPINESS '$SWV' (attendu : 0..200)" ;; esac
 
@@ -299,6 +302,8 @@ MEM_LMK_EARLY
 LOGD_SIZE_KB
 MEM_SWAP_DEV
 MEM_SWAP_FILE
+MEM_SWAP_DATA_MB
+MEM_SWAP_DATA_MB
 MEM_SWAP_MB
 BOOT_MEM_TUNE
 BOOT_CUT_SERVICES

@@ -56,7 +56,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 | Outil | Role |
 |---|---|
-| mem_tune | zram/swap cle/swappiness/LMK/logd (OPTIMIZE/STATUS/RESTORE) |
+| mem_tune | zram/swap chaine cle->repli /data/swappiness/LMK/logd (OPTIMIZE/STATUS/RESTORE) ; STATUS affiche l'etat de chaque maillon |
 | cut_services | allegement services+paquets (CUT/APPS/RESTORE/STATUS) |
 | thermal | profils ECO/PERF + temperatures |
 | stress_ram | pression RAM controlee + rapport |

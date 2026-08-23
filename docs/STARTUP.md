@@ -75,8 +75,11 @@ Attendu : bloc `[5] Demarrage automatique... [ OK ]` puis `TERMINE`.
 - [O2] `mem_tune STATUS` puis `mem_tune OPTIMIZE`  (swappiness/LMK/logd)
 - [O3] `stress_ram`                                (tenue sous pression)
 - [O4] `vitals`                                    (releve post-coupure)
-- [O4b] swap sur la cle : actif par defaut (MEM_SWAP_FILE=auto,
-  512 Mo, swappiness 40) - mem_tune OPTIMIZE le cree/reactive
+- [O4b] swap disque : actif par defaut (MEM_SWAP_FILE=auto, 512 Mo,
+  prio 1 sur la cle ; swappiness 40). Repli automatique sur /data
+  (MEM_SWAP_DATA_MB=512, prio 2) si la cle est absente/refusee :
+  la chaine garantit JAMAIS sans swap. mem_tune OPTIMIZE cree/reactive ;
+  au retour de la cle le repli est desactive seul (eMMC reposee)
 - [O5] `cut_services STATUS` puis `cut_services CUT` (allegement ~120-150 Mo)
 - [O6] headless : `field_mode OFF` puis `hdmi OFF` (optionnel)
 - [O7] contre-verif : `check_state` ; `conf_check | tail -5` ; `nreg memoire`

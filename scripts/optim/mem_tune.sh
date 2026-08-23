@@ -115,6 +115,30 @@ swap_listed()
     [ -n "$1" ] && grep -qF "$1" /proc/swaps 2>/dev/null
 }
 
+data_swap_file()
+{
+    echo "/data/local/swap.bin"
+}
+
+file_swap_on()
+{
+    # cree (si besoin) puis active un fichier swap : $1=chemin $2=Mo $3=prio
+    P_="$1" ; MB_="$2" ; PR_="$3"
+    case "$MB_" in ''|*[!0-9]*) return 1 ;; esac
+    [ "$MB_" -gt 0 ] || return 1
+    SZ_WANT=$((MB_ * 1024 * 1024))
+    mkdir -p "$(dirname "$P_")" 2>/dev/null
+    GOT_SZ="$(wc -c < "$P_" 2>/dev/null | tr -dc '0-9')"
+    case "${GOT_SZ:-0}" in ''|*[!0-9]*) GOT_SZ=0 ;; esac
+    if [ "$GOT_SZ" -ne "$SZ_WANT" ]; then
+        rm -f "$P_" 2>/dev/null
+        busybox dd if=/dev/zero of="$P_" bs=1048576 count="$MB_" > /dev/null 2>&1 \
+            || return 1
+    fi
+    busybox mkswap "$P_" > /dev/null 2>&1 \
+        && busybox swapon -p "$PR_" "$P_" > /dev/null 2>&1
+}
+
 save_orig()
 {
     [ -f "$ORIG" ] && return 0
@@ -190,8 +214,29 @@ do_status()
         row "swap disque (dev)" "$SD_ ($ST_)"
     fi
     if [ -n "$SF_" ]; then
-        swap_listed "$SF_" && ST_="ACTIF" || ST_="inactif"
+        swap_listed "$SF_" && ST_="ACTIF prio 1" || ST_="inactif"
         row "swap fichier (cle)" "$SF_ ($ST_)"
+    fi
+    DMB_="$(config_get MEM_SWAP_DATA_MB)"
+    case "$DMB_" in ''|0) ;; *)
+        DPF_="$(data_swap_file)"
+        if swap_listed "$DPF_"; then
+            row "swap fichier (data)" "$DPF_ (ACTIF prio 2, repli)"
+        elif [ -f "$DPF_" ]; then
+            row "swap fichier (data)" "$DPF_ (present, inactif ; prend effet si cle absente)"
+        else
+            row "swap fichier (data)" "$DPF_ (repli arme, ${DMB_} Mo a la demande)"
+        fi
+    ;; esac
+    # synthese chaine : que se passe-t-il si la cle disparait ?
+    if [ -n "$SF_" ] && swap_listed "$SF_" && [ "${DMB_:--}" != "0" ]; then
+        row "chaine" "cle ACTIF -> repli /data arme : JAMAIS sans swap"
+    elif [ -n "$SF_" ] && swap_listed "$SF_"; then
+        row "chaine" "cle ACTIF seule (repli data desactive)"
+    elif swap_listed "$(data_swap_file)"; then
+        row "chaine" "cle ABSENTE -> repli /data ACTIF"
+    else
+        row "chaine" "[ !! ] aucun swap disque actif (zram seul ou rien)"
     fi
 
     sec 3 "VM tunables"
@@ -213,6 +258,8 @@ do_status()
     row MEM_SWAPPINESS "$(config_get MEM_SWAPPINESS 100)"
     row MEM_LMK_EARLY "$(config_get MEM_LMK_EARLY 0)"
     row LOGD_SIZE_KB "$(config_get LOGD_SIZE_KB 256) Ko"
+    row MEM_SWAP_MB "$(config_get MEM_SWAP_MB 512) Mo (cle)"
+    row MEM_SWAP_DATA_MB "$(config_get MEM_SWAP_DATA_MB 512) Mo (repli /data, 0=off)"
 
     if [ -f "$ORIG" ]; then
         echo ""
@@ -303,33 +350,40 @@ do_optimize()
                 warn "swapon refuse sur $SWD (partition de type swap requise)"
             fi
         fi
+        KEY_OK=0
         if [ -n "$SWF" ]; then
             if swap_listed "$SWF"; then
-                ok "$SWF deja actif"
+                ok "$SWF deja actif (prio 1)"
+                KEY_OK=1
+            elif file_swap_on "$SWF" "$SWMB" 1; then
+                ok "swap cle $SWF actif (${SWMB} Mo, prio 1)"
+                KEY_OK=1
             else
-                SZ_WANT=0
-                is_num "$SWMB" && [ "$SWMB" -gt 0 ] && SZ_WANT=$((SWMB * 1024 * 1024))
-                if [ "$SZ_WANT" -eq 0 ]; then
-                    warn "MEM_SWAP_FILE defini mais MEM_SWAP_MB invalide ($SWMB)"
-                else
-                    mkdir -p "$(dirname "$SWF")" 2>/dev/null
-                    GOT_SZ="$(wc -c < "$SWF" 2>/dev/null | tr -dc '0-9')"
-                    case "${GOT_SZ:-0}" in ''|*[!0-9]*) GOT_SZ=0 ;; esac
-                    if [ "$GOT_SZ" -ne "$SZ_WANT" ]; then
-                        echo "    creation du fichier swap (${SWMB} Mo)..."
-                        rm -f "$SWF" 2>/dev/null
-                        busybox dd if=/dev/zero of="$SWF" bs=1048576 count="$SWMB" > /dev/null 2>&1
-                    fi
-                    if busybox mkswap "$SWF" > /dev/null 2>&1 \
-                       && busybox swapon -p 1 "$SWF" > /dev/null 2>&1; then
-                        ok "swap fichier $SWF actif (${SWMB} Mo, prio 1)"
-                    else
-                        warn "swap fichier impossible sur $SWF"
-                        warn "(fichier absent/illisible, ou swapon refuse par le kernel)"
-                    fi
-                fi
+                warn "swap cle impossible sur $SWF"
+                warn "(absente, pleine, ou swapon refuse par le kernel)"
             fi
         fi
+        # repli DATA : ne sert que si la cle n'est pas operationnelle ;
+        # au retour de la cle il est automatiquement desactive (eMMC reposee)
+        DMB_="$(config_get MEM_SWAP_DATA_MB 512)"
+        case "$DMB_" in ''|0) ;;
+            *)
+                DPF_="$(data_swap_file)"
+                if [ "$KEY_OK" -eq 1 ]; then
+                    if swap_listed "$DPF_"; then
+                        busybox swapoff "$DPF_" > /dev/null 2>&1 \
+                            && ok "retour de la cle : repli $DPF_ desactive (eMMC reposee)" \
+                            || warn "repli $DPF_ toujours actif (swapoff refuse)"
+                    fi
+                elif file_swap_on "$DPF_" "$DMB_" 2; then
+                    ok "REPLI data $DPF_ actif (${DMB_} Mo, prio 2) : pas de trou de swap"
+                else
+                    warn "repli data impossible sur $DPF_ (espace ? swapon refuse ?)"
+                fi
+            ;;
+        esac
+        NSW="$(sed -n '2,$p' /proc/swaps 2>/dev/null | grep -cv '^$')"
+        [ "${NSW:-0}" -gt 0 ] || warn "AUCUN swap actif apres OPTIMIZE (zram + disque)"
     fi
 
     SW="$(config_get MEM_SWAPPINESS 100)"
