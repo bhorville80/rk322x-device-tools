@@ -88,6 +88,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | device_info | inventaire materiel par fonctionnalite |
 | sys_diag | sante rapide charge/memoire/stockage |
 | sd_inspect | carte SD montage/erreurs/espace |
+| inspect_usb | cle USB x adb : montage/droits uid2000/adbd 5555 |
 | hw_report | rapport materiel COMPLET recherche web (SAVE = fichier cle) |
 | investigate | collecte contextuelle ALL/scenario |
 | capture | captures ecran/logcat |

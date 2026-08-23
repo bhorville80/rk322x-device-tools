@@ -45,6 +45,7 @@ C|inspect_services|inspect_services.sh|services init running vs allegement appli
 C|thermal|thermal.sh STATUS|temperatures + gouverneur CPU|gouverneur conforme au profil (eco conseille 24/7), temp < 70C
 C|net_diag|net_diag.sh|connectivite : ip/route/dns/ping/ports|IP = conf, passerelle joignable, DNS resolvent
 C|sys_diag|sys_diag.sh|sante rapide charge/memoire/stockage|charge raisonnable, stockage suffisant
+C|inspect_usb|inspect_usb.sh|cle USB visible/ecriture/adbd USB+5555|cle montee rw, adb reseau ou USB actif
 C|sd_inspect|sd_inspect.sh|carte SD : montage/erreurs/espace|montee (ro si SD_MOUNT_RO), pas d'erreur bloc
 C|cut_services|cut_services.sh STATUS|etat de l'allegement services/paquets|listes coupees conformes a la configuration
 C|front_led|front_led.sh STATUS|LED frontale|etat reporte (informatif)

@@ -166,6 +166,9 @@ INSPECTION
                       raison/attentes ; inspect_all FORCE =
                       tout apres presentation et confirmation
                       (FORCE YES = sans question, scripts)
+  inspect_usb        Cle USB disponible pour adb ? montage/ro-rw/
+                     ecriture reelle, permissions uid 2000, adbd USB
+                     et reseau 5555, synthese KEY_VISIBLE/ADB_*
   inspect_user       Methodes de creation utilisateur dispo
                       (pm create-user, cmd user, busybox...)
                       option : nom d'utilisateur exemple
