@@ -34,6 +34,21 @@ ls /mnt/media_rw/*/INSTALLER.sh       # la cle est vue
 
 ---
 
+## Phase A - Empreinte memoire AVANT installation (box vierge)
+
+```bash
+# depuis le PC
+adb push scripts\rampre.sh /data/local/tmp/
+adb shell ; su
+sh /data/local/tmp/rampre.sh 120        # 120 s d'echantillonnage
+```
+
+Attendu : rapport `rampre_<TS>.txt` sur la cle/sdcard avec MemAvailable
+moy/min/max, top PSS debut/fin, pressions lmk detectees.
+**C'est la ligne de base qui permettra de chiffrer les benefices.**
+
+---
+
 ## Phase 1 - Installation + hook + application
 
 ```bash
@@ -113,6 +128,23 @@ manage service        # vue rapide services restants
 
 Note : BOOT_MEM_TUNE=1 et BOOT_CUT_SERVICES=1 reappliquent tout ceci
 automatiquement a chaque demarrage.
+
+---
+
+## Phase 2ter - Deploiement INSTRUMENTE (ramstep)
+
+Applique les optimisations UNE PAR UNE avec mesure RAM avant/apres
+et 30 s d'observation par etape :
+
+```bash
+ramstep 30
+```
+
+Etapes isolees : mem_tune OPTIMIZE -> thermal ECO -> cut_services CUT ->
+reseau+horloge -> STOP+EXPOSE (effet du demarrage serveurs).
+Chronologie des gains : `log/ram_steps_<TS>.txt` (delta_prev par etape).
+
+Variante unitaire : `ramstep ONE "<label>" <commande...>`.
 
 ---
 
