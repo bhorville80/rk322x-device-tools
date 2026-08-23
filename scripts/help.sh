@@ -127,6 +127,11 @@ VERIFICATION
                       adb shell equivaut a su -c sh <script> ;
                       binaire systeme existant jamais ecrase ;
                       STATUS/LIST/REMOVE ; persistant aux reboots
+  profile            Profils de configuration nommes (repertoire
+                      config/profiles/) : LIST / SHOW / DIFF /
+                      SWITCH <nom> / OFF / SAVE <nom> ; un profil
+                      surcharge les cles de device.conf quand
+                      PROFILE=<nom> est actif
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle

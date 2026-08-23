@@ -87,6 +87,8 @@ main()
     check_rc "hw_report HELP"      "0" sh "$BASE/hw_report.sh" HELP
     check_rc "aliases HELP"        "0" sh "$BASE/aliases.sh" HELP
     check_rc "aliases STATUS"      "0 1" sh "$BASE/aliases.sh" STATUS
+    check_rc "profile"             "0" sh "$BASE/profile.sh"
+    check_rc "profile LIST"        "0" sh "$BASE/profile.sh" LIST
     check_rc "conf_check"          "0" sh "$BASE/conf_check.sh"
     check_rc "run_state"           "0" sh "$BASE/run_state.sh"
     check_rc "inspect_gui STATUS"  "0" sh "$BASE/inspect_gui.sh" STATUS

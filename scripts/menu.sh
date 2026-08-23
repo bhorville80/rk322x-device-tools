@@ -352,6 +352,8 @@ pilotage - vues d'ensemble et configuration
                     (nreg 4 | nreg mem ; liste : nreg HELP)
   config            config interactive : page complete puis
                     modification par numero (config SET pour scripts)
+  profile           profils nommes : SWITCH/OFF/SAVE/DIFF
+                    (surcharge device.conf via PROFILE=)
 EOF
 }
 
@@ -359,6 +361,7 @@ do_pilotage()
 {
     case "$1" in
         manage)     shift ; run_tool manage.sh "$@" ;;
+        profile|profils) shift ; run_tool profile.sh "$@" ;;
         nreg)       shift ; run_tool nreg.sh "$@" ;;
         config)     shift ; run_tool config.sh "$@" ;;
         ""|help|-h) help_pilotage ;;
@@ -380,7 +383,7 @@ main()
         logs|log)            shift ; do_logs "$@" ;;
         serveur|server|web)  shift ; do_serveur "$@" ;;
         cle|usb|key)         shift ; do_cle "$@" ;;
-        manage|nreg|config|pilotage)
+        manage|nreg|config|pilotage|profile)
                              shift ; do_pilotage "$@" ;;
         help|-h|--help)
             sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
