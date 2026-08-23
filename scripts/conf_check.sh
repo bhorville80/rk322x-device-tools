@@ -176,6 +176,63 @@ case "$LE" in ""|0|1) ok "MEM_LMK_EARLY = ${LE:-<vide, defaut 0>}" ;; *) ko "MEM
 LG="$(gv LOGD_SIZE_KB)"
 case "$LG" in "") ok "LOGD_SIZE_KB = <vide, defaut 256>" ;; *) is_num "$LG" && { [ "$LG" -eq 0 ] || { [ "$LG" -ge 64 ] && [ "$LG" -le 4096 ]; } } && ok "LOGD_SIZE_KB = $LG" || ko "LOGD_SIZE_KB '$LG' (attendu : 0 ou 64..4096)" ;; esac
 
+for BK in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_EXPOSE; do
+    BV="$(gv "$BK")"
+    case "$BV" in ""|0|1) ok "$BK = ${BV:-<vide, defaut 0>}" ;; *) ko "$BK '$BV' (attendu : 0|1)" ;; esac
+done
+BW="$(gv BOOT_WAIT_BOOT)"
+if [ -z "$BW" ]; then
+    warn "BOOT_WAIT_BOOT vide (defaut 120)"
+elif is_num "$BW"; then
+    ok "BOOT_WAIT_BOOT = $BW"
+else
+    ko "BOOT_WAIT_BOOT invalide ('$BW', attendu : secondes)"
+fi
+
+RK="$(gv REMOTE_KL_DEVICE)"
+if [ -z "$RK" ]; then
+    warn "REMOTE_KL_DEVICE vide (device IR autodetecte)"
+else
+    case "$RK" in
+        *[!a-zA-Z0-9_.-]*) ko "REMOTE_KL_DEVICE '$RK' (caracteres autorises : a-z A-Z 0-9 _ . -)" ;;
+        *) ok "REMOTE_KL_DEVICE = $RK" ;;
+    esac
+fi
+
+FF="$(gv FD_FORMAT)"
+case "$FF" in ""|raw|hdr|full) ok "FD_FORMAT = ${FF:-<vide, PROBE a faire>}" ;; *) ko "FD_FORMAT '$FF' (attendu : raw|hdr|full)" ;; esac
+
+FS="$(gv FD_ROTATE_SEC)"
+if [ -z "$FS" ]; then
+    warn "FD_ROTATE_SEC vide (defaut 5)"
+elif is_num "$FS"; then
+    ok "FD_ROTATE_SEC = $FS"
+else
+    ko "FD_ROTATE_SEC invalide ('$FS', attendu : secondes)"
+fi
+
+FI="$(gv FD_ROTATE_ITEMS)"
+case "$FI" in
+    "") ok "FD_ROTATE_ITEMS = <vide, defaut TIME IP>" ;;
+    *)
+        BAD=""
+        for TOK in $FI; do
+            case "$TOK" in
+                TIME|IP|RAM|UP) ;;
+                *) BAD="$BAD $TOK" ;;
+            esac
+        done
+        if [ -z "$BAD" ]; then
+            ok "FD_ROTATE_ITEMS = $FI"
+        else
+            ko "FD_ROTATE_ITEMS : items inconnus:$BAD (attendus : TIME IP RAM UP)"
+        fi
+        ;;
+esac
+
+BF="$(gv BOOT_FRONT_CLOCK)"
+case "$BF" in ""|0|1) ok "BOOT_FRONT_CLOCK = ${BF:-<vide, defaut 0>}" ;; *) ko "BOOT_FRONT_CLOCK '$BF' (attendu : 0|1)" ;; esac
+
 echo ""
 echo "[4] Profil"
 PF="$(gv PROFILE)"
@@ -225,6 +282,15 @@ MEM_ZRAM_MB
 MEM_SWAPPINESS
 MEM_LMK_EARLY
 LOGD_SIZE_KB
+BOOT_MEM_TUNE
+BOOT_CUT_SERVICES
+BOOT_EXPOSE
+BOOT_WAIT_BOOT
+BOOT_FRONT_CLOCK
+FD_FORMAT
+FD_ROTATE_SEC
+FD_ROTATE_ITEMS
+REMOTE_KL_DEVICE
 SSH_PORT
 SSH_MODE
 SSH_BIN
@@ -264,14 +330,19 @@ else
     ZM="$(gv MEM_ZRAM_MB)" ; case "$ZM" in '') ZM=512 ;; esac
     if [ "$ZM" = "0" ]; then
         printf '  [ N/A      ] %-26s cible=desactive\n' "zram (MEM_ZRAM_MB)"
+    elif [ ! -e /sys/block/zram0 ] && [ ! -b /dev/zram0 ]; then
+        printf '  [ N/A      ] %-26s zram absent du kernel\n' "zram (MEM_ZRAM_MB)"
+    elif grep -q zram0 /proc/swaps 2>/dev/null; then
+        printf '  [ APPLIQUE ] %-26s zram0 actif (%s Mo)\n' "zram (MEM_ZRAM_MB)" "$ZM"
+        TOT_N=$((TOT_N+1))
+        APP_N=$((APP_N+1))
+    elif [ -f "/data/etc/mem_tune.zram_unavailable" ]; then
+        # mem_tune OPTIMIZE a constate un backend compression casse :
+        # limite firmware definitive, pas un oubli d'application
+        printf '  [ INDISPON.] %-26s backend kernel casse (cf. mem_tune)\n' "zram (MEM_ZRAM_MB)"
     else
         TOT_N=$((TOT_N+1))
-        if grep -q zram0 /proc/swaps 2>/dev/null; then
-            printf '  [ APPLIQUE ] %-26s zram0 actif (%s Mo)\n' "zram (MEM_ZRAM_MB)" "$ZM"
-            APP_N=$((APP_N+1))
-        else
-            printf '  [ PAS LANCE] %-26s cible=%s Mo\n' "zram (MEM_ZRAM_MB)" "$ZM"
-        fi
+        printf '  [ PAS LANCE] %-26s cible=%s Mo\n' "zram (MEM_ZRAM_MB)" "$ZM"
     fi
 
     SWV="$(gv MEM_SWAPPINESS)" ; case "$SWV" in '') SWV=100 ;; esac

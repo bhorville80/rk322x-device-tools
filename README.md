@@ -26,11 +26,11 @@ adb shell
 su
 ```
 
-> **Note (v3):** `deploy` et `amorce` s'elevent automatiquement via `su` pour les actions privilegiees - plus besoin de taper `su` d'abord.
+> **Note :** `deploy`, `amorce` et la plupart des outils sensibles s'elevent automatiquement via `su` pour les actions privilegiees - plus besoin de taper `su` d'abord.
 
 ---
 
-## V3 / DEMARRAGE RAPIDE
+## DEMARRAGE RAPIDE
 
 La cle est montee en **noexec** : toujours `sh <chemin>`, jamais `./script`.
 
@@ -79,10 +79,19 @@ deployes), snapshot device/allconf, diff de derive vs precedent -
 dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 `docs/RECETTE.md`.
 
-### Outils v3
+### Outils
 
 | Outil | Role |
 |---|---|
+| `boot INSTALL/REMOVE/STATUS/TEST` | persistance au boot : hook `/system/etc/init/*.rc` (repli install-recovery.sh), actions `BOOT_*` du device.conf (mem_tune, cut_services, pile web) |
+| `reboot [s]/CANCEL/STATUS/RECOVERY/BOOTLOADER` | redemarrage controle (immediat, differe annulable, recovery/fastboot) |
+| `remote_map STATUS/DEVICES/LIST/LEARN/MAP/RESET` | personnalisation telecommande IR : remap scancode->KEYCODE dans le .kl cible (backup auto, effectif au reboot) |
+| `front_digit PROBE/SHOW/CLOCK/ROTATE [s]/RAW/STOP` | afficheur 4 digits custom (FD655) : texte 7-seg, horloge HH.MM, rotation toutes les N s (TIME IP RAM UP) ; format trame auto-detecte par PROBE |
+| `stress_ram [mo] [s]/STATUS/CLEAN` | provocation RAM surveillee : remplissage tmpfs, kills lmkd, recuperation |
+| `net_watch STATUS/WATCH/DAEMON/LOGSCAN/BAN` | surveillance reseau temps reel zero-dependance : connexions, alertes scan/bruteforce, blocage iptables |
+| `capture STATUS/START/LIST/CLEAN` | captures pcap via tcpdump depose (non fourni), rotation 80 Mo, analyse PC |
+| `crowdsec STATUS/GUIDE/NATIVE` | IDS comportemental : faisabilite proot vs mode natif net_watch |
+| `investigate DISPLAY/REMOTE/ALL` | enquetes forensiques : processus ecrivant sur /dev/fd655_dev (+strace), noyau IR/getevent, rapports sauvegardes |
 | `cut_services STATUS/CUT [SAFE\|FULL]/APPS [MAX]/RESTORE` | allègement services init + paquets usine, gain RAM mesure |
 | `system_rw RW/RO/STATUS` | bascule /system lecture-ecriture |
 | `front_led STATUS/LED/TRIGGER/BLINK/OFF/DEMO STOP` | afficheur frontal (leds sysfs + horloge FD655) |
@@ -100,6 +109,24 @@ dans `manifests/recette/`. Fiche de recette imprimable dans le livrable :
 | `motd ON/SET/DEFAULT` | message d'accueil adb shell (type MOTD ssh) |
 | `ssh_server START/STOP/STATUS` | SSH dropbear optionnel - binaire non fourni, jamais lance auto |
 | `deploy VERSION/STATUS/CLEAN [DRY]` | versions, etat deploiement, assainissement |
+
+| `sync_usb` `disable_wireless` `media` `check_state` `inspect_*` `hdmi` `field_mode` `show_key` `boxhelp` `rotate_logs` `set_network` `set_time` | outils d'origine (v1-v2) - documentes dans les sections ADB/Reseau/Wireless ci-dessus |
+
+### Nouveautes v5..v12
+
+* **Persistance** : `boot INSTALL` pose un hook `/system/etc/init/*.rc`
+  (repli install-recovery) qui relance au boot mem_tune, cut_services,
+  la pile web et l'horloge frontale (`BOOT_*` du device.conf).
+  `reboot [s]/RECOVERY/BOOTLOADER` complete.
+* **Display frontal** : `front_digit PROBE` identifie le format de trame
+  FD655 puis SHOW/CLOCK/ROTATE (texte 7-seg, horloge HH.MM, rotation 5 s).
+* **Telecommande IR** : `remote_map LEARN/MAP/RESET` remap les touches
+  dans le .kl cible (backup auto, effectif au reboot).
+* **Reseau / securite** : `net_watch` (surveillance connexions, alertes
+  scan/bruteforce, BAN iptables), `capture` (pcap si tcpdump depose),
+  `crowdsec` (verdict natif/proot + guide).
+* **Diagnostic** : `investigate DISPLAY/REMOTE/ALL` (qui ecrit quoi ou),
+  `stress_ram` (provocation RAM surveillee, kills lmkd, recuperation).
 
 ### Sequence d'allegement 24/7
 

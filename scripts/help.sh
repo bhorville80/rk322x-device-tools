@@ -45,8 +45,39 @@ AMORCE (demarrage rapide, apres le premier INSTALL)
   amorce INSTALL     Met a jour depuis la cle
   amorce EXPOSE      Serveurs HTTP/GUI sur la cle
   amorce SELFTEST    Verifie tous les outils
+  boot INSTALL       Persiste optimisations au boot (hook init rc,
+                     repli install-recovery) ; boot TEST/STATUS/REMOVE
+  boot (sans arg)    Execute les actions BOOT_* du device.conf
+  reboot [s]         Redemarre (immediat ou dans N s, CANCEL pour annuler)
+  reboot RECOVERY    Recovery / BOOTLOADER : fastboot
+  remote_map STATUS  Telecommande IR : device cible + layout + remaps actifs
+  remote_map DEVICES Liste devices input -> layout .kl attendu
+  remote_map LEARN   Capte les appuis IR et propose les commandes MAP
+  remote_map MAP     Remap touches (ex: MAP 102=HOME) ; RESET = origine
+                      (effectif au reboot ; backup auto au premier MAP)
+  investigate DISPLAY Enquete afficheur : qui ecrit sur /dev/fd655_dev,
+                      lecture brute, strace daemon, traces kernel/init
+  investigate REMOTE Enquete telecommande : noyau IR, getevent, layouts
+  investigate ALL    Rapport complet sauvegarde sur la cle
+  stress_ram [mo]    Test de provocation RAM avec surveillance : remplissage
+                     tmpfs par paliers, tenue, relachement ; detecte les
+                     kills lmkd/oom et la recuperation (rapport sur cle)
+  net_watch STATUS   Surveillance reseau zero-dependance : etats de
+                     connexions, top IP, alertes scan/bruteforce
+  net_watch DAEMON   Echantillonnage continu (csv + evenements sur cle)
+  net_watch LOGSCAN  IP agressives dans les logs serveurs -> BAN suggere
+  net_watch BAN ip   Blocage iptables (UNBAN / BANS pour la liste)
+  capture START      Capture pcap via tcpdump si depose (server/tcpdump),
+                      analyse Wireshark cote PC ; cf. capture STATUS
+  crowdsec STATUS    IDS comportemental : verdict natif/proot + guide
+  front_led DEMO ON  Relance l'horloge frontale (STOP : arret)
+  front_digit PROBE  Identifie le format de trame du display FD655 (1 fois)
+  front_digit SHOW   Affiche un texte 7-seg (ex: SHOW "12.34")
+  front_digit CLOCK  Horloge custom HH.MM (remplace le daemon usine)
+  front_digit ROTATE Rotation toutes les N s (TIME IP RAM UP) ; STOP
+                     BOOT_FRONT_CLOCK=1 -> horloge auto au boot
   1ere fois          voir le fichier AMORCE a la racine de la cle
-                     (su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL')
+                      (su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL')
 
 VERIFICATION
   check_state        Etat IP / wireless / bluetooth / HDMI

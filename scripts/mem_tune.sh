@@ -41,6 +41,7 @@ done
 
 LMKP="/sys/module/lowmemorykiller/parameters"
 ORIG="/data/etc/mem_tune.orig"
+ZRAM_UNAVAIL="/data/etc/mem_tune.zram_unavailable"
 
 command -v config_get >/dev/null 2>&1 || config_get() { echo "$2"; }
 command -v is_root >/dev/null 2>&1 || is_root() { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
@@ -61,6 +62,16 @@ zram_ready()
     [ -e /sys/block/zram0 ] && return 0
     [ -b /dev/zram0 ] && return 0
     return 1
+}
+
+zram_set_size()
+{
+    # $1 taille en octets ; retourne 0 si le kernel accepte la taille
+    # (relecture identique). Un backend de compression casse (lz4/lzo
+    # absent du firmware) rejette l'ecriture sans message exploitable.
+    echo "$1" > /sys/block/zram0/disksize 2>/dev/null || return 1
+    GOT="$(cat /sys/block/zram0/disksize 2>/dev/null)"
+    [ "${GOT:-0}" -eq "$1" ] 2>/dev/null
 }
 
 try_load_zram()
@@ -206,19 +217,31 @@ do_optimize()
     ZMB="$(config_get MEM_ZRAM_MB 512)"
     if [ "$ZMB" != "0" ] && is_num "$ZMB"; then
         echo "[1] zram (${ZMB} Mo)..."
+        rm -f "$ZRAM_UNAVAIL" 2>/dev/null
         if zram_active; then
             ok "deja actif"
         elif ! try_load_zram; then
             warn "module zram indisponible sur ce kernel (pas de swap compresse)"
-        else
-            echo "$((ZMB * 1024 * 1024))" > /sys/block/zram0/disksize 2>/dev/null
-            if busybox mkswap /dev/zram0 > /dev/null 2>&1 \
-               && busybox swapon -p 10 /dev/zram0 > /dev/null 2>&1; then
-                ok "zram0 actif (${ZMB} Mo, prio 10)"
+            echo "kernel sans zram exploitable" > "$ZRAM_UNAVAIL" 2>/dev/null
+        elif ! zram_set_size "$((ZMB * 1024 * 1024))"; then
+            # seconde chance : certains vieux kernels exigent l'algorithme
+            # de compression avant disksize ; sinon backend casse (dmesg:
+            # "Cannot initialise lz4 compressing backend")
+            echo lzo > /sys/block/zram0/comp_algorithm 2>/dev/null
+            if zram_set_size "$((ZMB * 1024 * 1024))"; then
+                ok "disksize accepte (apres comp_algorithm=lzo)"
             else
-                err "activation zram impossible (mkswap/swapon)"
-                RC=1
+                warn "zram ignore par ce kernel (backend compression casse,"
+                warn "cf. dmesg | grep lz4) -> pas de swap compresse possible"
+                warn "contournement : MEM_ZRAM_MB=0 dans device.conf"
+                echo "kernel sans backend compression fonctionnel" > "$ZRAM_UNAVAIL" 2>/dev/null
             fi
+        elif busybox mkswap /dev/zram0 > /dev/null 2>&1 \
+           && busybox swapon -p 10 /dev/zram0 > /dev/null 2>&1; then
+            ok "zram0 actif (${ZMB} Mo, prio 10)"
+        else
+            err "activation zram impossible (mkswap/swapon)"
+            RC=1
         fi
     fi
 
@@ -317,16 +340,31 @@ do_restore()
     return 0
 }
 
-case "$1" in
-    ""|STATUS|status) do_status ;;
-    OPTIMIZE|optimize|ON|on)  do_optimize ;;
-    RESTORE|restore|OFF|off)  do_restore ;;
-    HELP|help|-h|--help)
-        sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
-        exit 0
-        ;;
-    *)
-        echo "Usage: mem_tune [STATUS|OPTIMIZE|RESTORE|help]"
-        exit 1
-        ;;
-esac
+run_mem_tune()
+{
+    case "$1" in
+        ""|STATUS|status) do_status ;;
+        OPTIMIZE|optimize|ON|on)  do_optimize ;;
+        RESTORE|restore|OFF|off)  do_restore ;;
+        HELP|help|-h|--help)
+            sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+            return 0
+            ;;
+        *)
+            echo "Usage: mem_tune [STATUS|OPTIMIZE|RESTORE|help]"
+            return 1
+            ;;
+    esac
+}
+
+if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then
+    run_mem_tune "$@" >> "$RUNLOG_FILE" 2>&1
+    RC=$?
+    runlog_end "$RC"
+    cat "$RUNLOG_FILE"
+else
+    run_mem_tune "$@"
+    RC=$?
+fi
+
+exit "$RC"

@@ -476,17 +476,33 @@ sh /mnt/media_rw/4E28-7C59/deploy.sh SEND_LOGS
 
 Document confirmed issues below.
 
-### Template
+### 2026-08-23 - Recette NO-GO (P2/P4/P7) sur Leelbox rk322x
 
 ```text
-Date:
-Device:
-Version:
-Problem:
-Symptoms:
-Diagnosis:
-Solution:
-Status:
+Date:      2026-08-23
+Device:    Leelbox rk322x_box, Android 7.1.2 (SDK 25)
+Version:   v4
+Problem:   recette -> verdict NO-GO (phases P2 P4 P7)
+Symptoms:  P2 selftest KO (ssh_server STATUS rc=127) ;
+           P4 mem_tune OPTIMIZE rc=1 sans trace exec ;
+           P7 ports 0/3, panneau ko, aucun log http/gui/control sur la cle.
+Diagnosis: P2 : selftest pointait $BASE/../server/ -> /data/server inexistant
+              (server/ jamais installe cote box, manifest le confirme).
+           P4 : kernel expose zram0 mais backend lz4 casse
+              (dmesg : "Cannot initialise lz4 compressing backend",
+              fs_mgr: swapon failed au boot) -> mkswap/swapon en erreur.
+              mem_tune ne tracait rien (runlog non branche).
+           P7 : deploy EXPOSE dependait de server/ SUR LA CLE uniquement ;
+              absent -> echec silencieux. Le label "api CONFIG repond"
+              etait affiche avant le test (trompeur).
+Solution:  v5 : server/*.sh installes dans /data/scripts/server a l'INSTALL,
+              EXPOSE et selftest utilisent l'installation d'abord ;
+              mem_tune : relecture disksize + tentative comp_algorithm=lzo,
+              backend casse -> WARN + marqueur /data/etc/mem_tune.zram_unavailable
+              (conf_check affiche INDISPON., plus de faux "PAS LANCE") ;
+              runlog branche sur mem_tune ; recette P7 affiche la sortie EXPOSE
+              en cas d'echec et sonde les ports via /proc/net/tcp si netstat absent.
+Status:    Corrige en v5. zram reste impossible sur ce firmware (limite kernel).
 ```
 
 ---

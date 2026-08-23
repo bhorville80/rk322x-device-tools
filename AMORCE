@@ -13,6 +13,25 @@ Cle montee noexec : toujours "sh <chemin>", jamais ./ .
   amorce
   recette            bilan complet + cle prete pour retour
 
+[3] INTERFACE WEB (panneau depuis un navigateur du LAN)
+
+  amorce EXPOSE      demarre la pile web (obligatoire une fois par boot)
+  puis ouvrir        http://<ip-box>:8000   accueil / cle / commandes / metriques
+  arreter            amorce STOP
+
+[4] PERSISTANCE AU REBOOT
+
+  boot INSTALL       pose le hook init : au prochain reboot, mem_tune +
+                     pile web lances tout seuls (cf. BOOT_* device.conf)
+  boot STATUS        etat du hook + dernier passage
+  reboot             redemarrage immediat (reboot 30 = differe,
+                     reboot CANCEL = annule ; RECOVERY/BOOTLOADER aussi)
+
+[5] DISPLAY FRONTAL ET TELECOMMANDE
+
+  front_digit PROBE  une fois : identifie le format d'ecriture du display
+  front_digit CLOCK  horloge custom (ou ROTATE 5 TIME IP pour rotation 5 s)
+  remote_map LEARN   capte les touches IR puis MAP scancode=KEYCODE
+
 Aide : help        Rapport global : inspect_all
-Web  : http://<ip-box>:8000 (accueil/cle/commandes/metriques)
 ===============================================================

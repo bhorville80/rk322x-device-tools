@@ -48,7 +48,7 @@ This document tracks planned features, improvements and technical work for the p
 * [x] Add deployment validation (end of INSTALL/PKG: `sh -n` on every deployed script + `/data/bin` links check; result traced in `VERSION`, rc=1 on failure)
 * [x] Add automatic error detection (validation fails loudly and propagates through dpk install)
 * [x] Add deployment cleanup (`deploy CLEAN [DRY]`: keeps 3 backups + 10 manifests + 11 gui_shots, purges dpk staging/tmp residuals/tombstones, rotates exec logs)
-* [ ] Improve rollback capabilities
+* [x] Improve rollback capabilities (auto backup + deploy RESTORE)
 
 ### Configuration
 
@@ -61,9 +61,9 @@ This document tracks planned features, improvements and technical work for the p
 ### Logging
 
 * [x] Improve log formatting
-* [ ] Add deployment summaries
-* [ ] Add error levels
-* [ ] Improve log collection
+* [x] Add deployment summaries (recette bilan GO/NO-GO per phase)
+* [x] Add error levels (phase rc + verdict NO-GO phases list)
+* [x] Improve log collection (SEND_LOGS + recette RETOUR + rotate_logs)
 * [x] Add log rotation (`rotate_logs`, auto-run after SEND_LOGS, ROTATE_LOGS trigger)
 * [x] Tool execution state report (`run_state`: launched vs never-launched per installed script, derived from `log/exec` traces - count, last timestamp, last rc, failures)
 
@@ -129,11 +129,11 @@ This document tracks planned features, improvements and technical work for the p
 
 ## Automation
 
-* [ ] Automate device initialization
-* [ ] Automate time configuration
-* [ ] Automate network configuration
-* [ ] Automate script installation
-* [ ] Automate log collection
+* [x] Automate device initialization (amorce + boot init hook)
+* [x] Automate time configuration (set_time AUTO/FILE/RTC/INIT/SET)
+* [x] Automate network configuration (set_network static/dhcp)
+* [x] Automate script installation (deploy INSTALL/PKG + bin links)
+* [x] Automate log collection (SEND_LOGS + rotate_logs in recette)
 * [x] Add deployment health checks (`recette`: end-to-end one-shot - install/selftest/conf_check/mem_tune/inspect_all/run_state/expose verification, GO-NO-GO verdict, SEND_LOGS closure + "cle prete pour analyse retour" ; triggerable from the web panel)
 
 ---
@@ -142,7 +142,7 @@ This document tracks planned features, improvements and technical work for the p
 
 Potential future features:
 
-* [ ] Web-based administration interface
+* [x] Web-based administration interface (panneau 4 pages : index/cle/commandes/metriques)
 * [ ] Remote device management
 * [ ] Multi-device deployment
 * [ ] Centralized deployment server

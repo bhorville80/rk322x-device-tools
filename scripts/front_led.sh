@@ -156,6 +156,34 @@ do_all()
     done
 }
 
+do_demo_on()
+{
+    BIN=""
+    for C in /system/bin/FD655_Demo /system/xbin/FD655_Demo \
+             "$(dirname "$0")/FD655_Demo" ; do
+        [ -x "$C" ] && { BIN="$C"; break; }
+    done
+    if [ -z "$BIN" ]; then
+        echo "[ERREUR] binaire FD655_Demo introuvable (reboot pour relancer l'horloge)"
+        return 1
+    fi
+
+    for PID in $(demo_pids); do
+        echo "[ -- ] deja actif (PID $PID)"
+        return 0
+    done
+
+    "$BIN" > /dev/null 2>&1 &
+    sleep 1
+    NEW="$(demo_pids | head -n 1)"
+    if [ -n "$NEW" ]; then
+        echo "[ OK ] horloge FD655 relancee (PID $NEW)"
+        return 0
+    fi
+    echo "[ ERREUR ] FD655_Demo ne reste pas actif"
+    return 1
+}
+
 do_demo_stop()
 {
     KILLED=0
@@ -191,6 +219,7 @@ usage()
     echo "  BLINK <nom> <on> <off>  clignotement ms (timer)"
     echo "  ON | OFF            toutes les leds au max / a zero"
     echo "  DEMO STOP           arrete l'horloge FD655_Demo (reboot la relance)"
+    echo "  DEMO ON             relance l'horloge FD655_Demo"
     echo ""
     return 1
 }
@@ -202,7 +231,11 @@ case "$1" in
     BLINK|blink)      shift; do_blink "$@" ;;
     ON|on)            do_all 255 ;;
     OFF|off)          do_all 0 ;;
-    DEMO|demo)        shift; case "${1:-}" in STOP|stop) do_demo_stop ;; *) usage ;; esac ;;
+    DEMO|demo)        shift; case "${1:-}" in
+                          STOP|stop) do_demo_stop ;;
+                          ON|on|START|start) do_demo_on ;;
+                          *) usage ;;
+                      esac ;;
     HELP|help|-h|--help) usage ;;
     *)                usage ;;
 esac

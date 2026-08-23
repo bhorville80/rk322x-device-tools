@@ -44,9 +44,12 @@ AMORCE                 bootstrap quick-start (cat /mnt/media_rw/*/AMORCE)
 deploy.sh              INSTALL | PKG | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION
 web/                   panneau web : index/cle/commandes/metriques.html copies a la
                        racine de la cle (INSTALL/PKG)
-scripts/               all tools + core modules: cut_services, system_rw, mem_tune,
-                       front_led, inspect_all, device_info, amorce, motd, net_diag,
-                       vitals, disable_wireless, set_network, set_time (AUTO/FILE/RTC/INIT/SET)
+scripts/               all tools + core modules: deploy helpers (amorce, boot, reboot),
+                       display/front panel (front_led, front_digit), IR remote (remote_map),
+                       memory (mem_tune, stress_ram), network/security (net_watch, capture,
+                       crowdsec, net_diag), forensics (investigate, inspect_*, sys_diag,
+                       vitals, sd_inspect, device_info), maintenance (cut_services, system_rw,
+                       field_mode, motd, set_network, set_time, rotate_logs, sync_usb...)
 server/                HTTP server + control API + GUI remote + ssh_server (optional)
 config/device.conf     device profile (+ profiles/ overlay ; secrets.conf jamais embarque)
 docs/                  RECETTE.md (fiche de recette box/linux/win + protocole NRG)

@@ -138,26 +138,56 @@ p_runstate()
     return "$RC"
 }
 
+port_listening()
+{
+    # $1 port decimal ; netstat sinon /proc/net/tcp (port hexa, etat 0A=LISTEN)
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q ":$1 " && return 0
+    fi
+    # busybox printf : %04X garanti (builtin mksh incertain sur vieux firmware)
+    if command -v busybox > /dev/null 2>&1; then
+        PH="$(busybox printf '%04X' "$1" 2>/dev/null)"
+    else
+        PH="$(printf '%04X' "$1" 2>/dev/null)"
+    fi
+    [ -n "$PH" ] && grep -qi ":$PH .* 0A " /proc/net/tcp 2>/dev/null && return 0
+    grep -qi ":$PH .* 0A " /proc/net/tcp6 2>/dev/null && return 0
+    return 1
+}
+
 p_expose()
 {
     echo "--- [P7] EXPOSE ---"
     sh "$BASE/deploy.sh" STOP > /dev/null 2>&1
-    sh "$BASE/deploy.sh" EXPOSE > /dev/null 2>&1
+    EXPOSE_OUT="$(sh "$BASE/deploy.sh" EXPOSE 2>&1)"
+    RC_EXPOSE=$?
     sleep 3
 
     PORTS=0
     for p in 8000 8080 8081; do
-        netstat -tln 2>/dev/null | grep -q ":$p " && PORTS=$((PORTS+1))
+        port_listening "$p" && PORTS=$((PORTS+1))
     done
     IDX="$(busybox wget -qO- http://127.0.0.1:8000/index.html 2>/dev/null | grep -c RK322X)"
-    API_NOTE="token actif (controle API saute)"
+    API_NOTE="api CONFIG : non verifiee"
     API_OK=1
-    if [ -n "$KEY" ] && [ ! -f "$KEY/server/token" ]; then
-        API_NOTE="api CONFIG repond"
+    if [ -n "$KEY" ] && [ -f "$KEY/server/token" ]; then
+        API_NOTE="token actif (controle API saute)"
+    else
         API_N="$(busybox wget -qO- http://127.0.0.1:8080/api/CONFIG 2>/dev/null | grep -c DEPLOY_VERSION)"
-        [ "${API_N:-0}" -gt 0 ] && API_OK=1 || API_OK=0
+        if [ "${API_N:-0}" -gt 0 ]; then
+            API_NOTE="api CONFIG repond"
+            API_OK=1
+        else
+            API_NOTE="api CONFIG injoignable"
+            API_OK=0
+        fi
     fi
     echo "    ports 8000/8080/8081 : $PORTS/3, panneau:$([ "$IDX" -gt 0 ] && echo ok || echo ko), $API_NOTE"
+
+    if [ "$RC_EXPOSE" -ne 0 ] || [ "$PORTS" -lt 3 ] || [ "${IDX:-0}" -eq 0 ]; then
+        echo "    sortie deploy EXPOSE :"
+        printf '%s\n' "$EXPOSE_OUT" | tail -n 8 | sed 's/^/      /'
+    fi
 
     RC=0
     [ "$PORTS" -eq 3 ] || RC=1

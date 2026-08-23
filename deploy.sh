@@ -48,7 +48,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="amorce sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect set_network set_time"
+INSTALL_LIST="amorce boot reboot remote_map front_digit investigate stress_ram net_watch capture crowdsec sync_usb disable_wireless boxhelp media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect set_network set_time"
 
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
@@ -181,7 +181,7 @@ install_from()
     echo "[1] Sauvegarde existant..."
     backup_existing || return 1
 
-    mkdir -p "$SCRIPTS_DIR/core" "$SCRIPTS_DIR/config" "$BIN_DIR"
+    mkdir -p "$SCRIPTS_DIR/core" "$SCRIPTS_DIR/config" "$SCRIPTS_DIR/server" "$BIN_DIR"
 
     echo "[2] Copie des scripts..."
     if cp -f "$SRC"/scripts/*.sh "$SCRIPTS_DIR/" 2>/dev/null; then
@@ -193,6 +193,18 @@ install_from()
         echo "    [ OK ] $SCRIPTS_DIR/core"
     else
         echo "    [ ERREUR ] $SCRIPTS_DIR/core"
+    fi
+    # server/ installe aussi cote box : EXPOSE et selftest ne dependent
+    # plus du contenu de la cle (serveurs web/gui/control/ssh/watcher)
+    NSRV=0
+    for F in "$SRC"/server/*.sh; do
+        [ -f "$F" ] || continue
+        cp -f "$F" "$SCRIPTS_DIR/server/" 2>/dev/null && NSRV=$((NSRV+1))
+    done
+    if [ "$NSRV" -gt 0 ]; then
+        echo "    [ OK ] $SCRIPTS_DIR/server ($NSRV scripts)"
+    else
+        echo "    [ WARN ] server/ absent dans la source (EXPOSE degrade)"
     fi
     if cp -f "$SRC/config/device.conf" "$SCRIPTS_DIR/config/" 2>/dev/null; then
         echo "    [ OK ] $SCRIPTS_DIR/config/device.conf"
@@ -365,8 +377,20 @@ do_expose()
         return 1
     fi
 
-    require_usb || return 1
-    sh "$USB_DIR/server/start_server.sh"
+    # start_server : installation locale d'abord (fiable), cle en secours
+    STARTER=""
+    [ -f "$SCRIPTS_DIR/server/start_server.sh" ] && STARTER="$SCRIPTS_DIR/server/start_server.sh"
+    if [ -z "$STARTER" ]; then
+        require_usb || return 1
+        if [ -f "$USB_DIR/server/start_server.sh" ]; then
+            STARTER="$USB_DIR/server/start_server.sh"
+        else
+            echo "[ERREUR] start_server.sh introuvable (ni $SCRIPTS_DIR/server/ ni cle)"
+            echo "         relancer : deploy INSTALL"
+            return 1
+        fi
+    fi
+    sh "$STARTER"
 }
 
 do_stop()

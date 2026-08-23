@@ -93,8 +93,30 @@ main()
     check_rc "sync_usb STATUS"     "0 1" sh "$BASE/sync_usb.sh" STATUS
     check_rc "disable_wireless ST" "0" sh "$BASE/disable_wireless.sh" STATUS
     check_rc "front_led STATUS"    "0" sh "$BASE/front_led.sh" STATUS
-    check_rc "ssh_server STATUS"   "0 1" sh "$BASE/../server/ssh_server.sh" STATUS
+    SSH_SH=""
+    for C in "$BASE/server/ssh_server.sh" "$BASE/../server/ssh_server.sh" \
+             "/data/scripts/server/ssh_server.sh"; do
+        [ -f "$C" ] && { SSH_SH="$C"; break; }
+    done
+    if [ -n "$SSH_SH" ]; then
+        check_rc "ssh_server STATUS"   "0 1" sh "$SSH_SH" STATUS
+    else
+        t_ko "ssh_server STATUS" "script introuvable (deploy INSTALL)"
+    fi
     check_rc "amorce"              "0" sh "$BASE/amorce.sh"
+    check_rc "boot HELP"           "0" sh "$BASE/boot.sh" HELP
+    check_rc "boot STATUS"         "0 1" sh "$BASE/boot.sh" STATUS
+    check_rc "reboot HELP"         "0" sh "$BASE/reboot.sh" HELP
+    check_rc "reboot STATUS"       "0" sh "$BASE/reboot.sh" STATUS
+    check_rc "remote_map HELP"     "0" sh "$BASE/remote_map.sh" HELP
+    check_rc "front_digit HELP"    "0" sh "$BASE/front_digit.sh" HELP
+    check_rc "front_digit STATUS"  "0" sh "$BASE/front_digit.sh" STATUS
+    check_rc "investigate HELP"    "0" sh "$BASE/investigate.sh" HELP
+    check_rc "stress_ram HELP"     "0" sh "$BASE/stress_ram.sh" HELP
+    check_rc "stress_ram STATUS"   "0 1" sh "$BASE/stress_ram.sh" STATUS
+    check_rc "crowdsec HELP"          "0 1" sh "$BASE/crowdsec.sh" HELP
+    check_rc "capture HELP"          "0 1" sh "$BASE/capture.sh" HELP
+    check_rc "net_watch HELP"          "0 1" sh "$BASE/net_watch.sh" HELP
     check_rc "rotate_logs"         "0 1" sh "$BASE/rotate_logs.sh"
     check_rc "media"               "0" sh "$BASE/core/media.sh"
     check_rc "hdmi STATUS"         "0" sh "$BASE/hdmi.sh" STATUS

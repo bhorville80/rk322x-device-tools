@@ -1,4 +1,4 @@
-# FICHE DE RECETTE - RK322X DEVICE TOOLS v4
+# FICHE DE RECETTE - RK322X DEVICE TOOLS v12
 
 Recette fonctionnelle + energetique de la box Leelbox MXQ (rk322x,
 Android 7.1.2, 2 Go RAM, headless 24/7).
@@ -9,7 +9,7 @@ Trois cotes testes : BOX (local), PC LINUX, PC WINDOWS.
 
 | Item            | Valeur                        |
 |-----------------|-------------------------------|
-| Paquet          | rk322x-tools_v4_<BUILD_ID>    |
+| Paquet          | rk322x-tools_v12_<BUILD_ID>   |
 | Date/recetteur  | _____________________________ |
 | IP box / cle    | 192.168.50.20 / _____________ |
 | Etat initial    | ( ) usine   ( ) provisionnee  |
@@ -33,6 +33,11 @@ Installation du livrable :
 | B08| device_info               | puces par fonctionnalite + services groupes    |       |
 | B09| inspect_all               | toutes sections, synthese rc en fin            |       |
 | B10| STOP puis EXPOSE          | serveurs relances : 8000/8080/8081 + watcher   |       |
+| B11| boot INSTALL puis boot STATUS| hook init actif, dernier passage trace      |       |
+| B12| front_digit PROBE         | format trame memorise, SHOW "12.34" visible    |       |
+| B13| remote_map STATUS         | device cible + layout, 0 modification          |       |
+| B14| net_watch STATUS          | etats de connexions + top IP distantes        |       |
+| B15| motd DEFAULT              | banniere riche generee (16 lignes)             |       |
 
 ## 3. Cas de test - PANNEAU WEB (http://192.168.50.20:8000)
 
