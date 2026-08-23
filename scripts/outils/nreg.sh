@@ -45,6 +45,16 @@ FAIL=0
 t_ok() { printf '  [ OK ] %-46s\n' "$1"; PASS=$((PASS+1)); }
 t_ko() { printf '  [ KO ] %-46s (%s)\n' "$1" "$2"; FAIL=$((FAIL+1)); }
 
+# resout un outil : box plate (/data/scripts) ou depot thematise
+TOOL_PATH()
+{
+    for C in "$BASE/$1" /data/scripts/"$1" "$BASE"/../*/"$1" \
+             "$BASE/../core/$1" /data/scripts/core/"$1"; do
+        [ -f "$C" ] && { echo "$C"; return 0; }
+    done
+    return 1
+}
+
 # verif generique par code retour
 check_rc()
 {
@@ -146,23 +156,23 @@ th_outils()
 {
     section 2 "Outils (piliers)"
 
-    check_rc "help"      "0" sh "$BASE/help.sh"
-    check_rc "menu"      "0" sh "$BASE/menu.sh"
-    check_rc "run_state" "0" sh "$BASE/run_state.sh"
+    check_rc "help"      "0" sh "$(TOOL_PATH help.sh)"
+    check_rc "menu"      "0" sh "$(TOOL_PATH menu.sh)"
+    check_rc "run_state" "0" sh "$(TOOL_PATH run_state.sh)"
 }
 
 th_configuration()
 {
     section 3 Configuration
 
-    check_rc "conf_check conforme" "0" sh "$BASE/conf_check.sh"
+    check_rc "conf_check conforme" "0" sh "$(TOOL_PATH conf_check.sh)"
 }
 
 th_memoire()
 {
     section Memoire
 
-    check_rc "mem_tune STATUS" "0" sh "$BASE/mem_tune.sh" STATUS
+    check_rc "mem_tune STATUS" "0" sh "$(TOOL_PATH mem_tune.sh)" STATUS
     RUN_SWAP="$(cat /proc/sys/vm/swappiness 2>/dev/null | tr -dc '0-9')"
     check_eq "swappiness runtime = conf ($CFG_SWAP)" "$CFG_SWAP" "${RUN_SWAP:-?}"
 }
@@ -171,7 +181,7 @@ th_boot()
 {
     section Boot
 
-    check_rc "boot STATUS" "0 1" sh "$BASE/boot.sh" STATUS
+    check_rc "boot STATUS" "0 1" sh "$(TOOL_PATH boot.sh)" STATUS
     for K in BOOT_MEM_TUNE BOOT_CUT_SERVICES BOOT_EXPOSE; do
         V="$(config_get "$K" "")"
         case "$V" in
@@ -210,17 +220,17 @@ th_diagnostic()
 {
     section "Diagnostics rapides"
 
-    check_rc "thermal STATUS" "0" sh "$BASE/thermal.sh" STATUS
-    check_rc "vitals STATUS"  "0" sh "$BASE/vitals.sh" STATUS
-    check_rc "hdmi STATUS"    "0" sh "$BASE/hdmi.sh" STATUS
-    check_rc "media"          "0" sh "$BASE/core/media.sh"
+    check_rc "thermal STATUS" "0" sh "$(TOOL_PATH thermal.sh)" STATUS
+    check_rc "vitals STATUS"  "0" sh "$(TOOL_PATH vitals.sh)" STATUS
+    check_rc "hdmi STATUS"    "0" sh "$(TOOL_PATH hdmi.sh)" STATUS
+    check_rc "media"          "0" sh "$(TOOL_PATH ../core/media.sh)"
 }
 
 th_sd()
 {
     section "Carte SD"
 
-    check_rc "sd_boot STATUS" "0" sh "$BASE/sd_boot.sh" STATUS
+    check_rc "sd_boot STATUS" "0" sh "$(TOOL_PATH sd_boot.sh)" STATUS
 }
 
 th_traces()

@@ -4,7 +4,7 @@
 > Toute evolution ne doit pas casser ces acquis. Source : logs recette/selftest/exec
 > du 2026-08-23 (horloge box 1970, session 00h04 -> 01h40).
 
-**Verification executable : outil `nreg`** (scripts/nreg.sh) - les 10 themes
+**Verification executable : outil `nreg`** (scripts/outils/nreg.sh) - les 10 themes
 ci-dessous sont relancables a tout moment :
 
 ```bash
@@ -132,6 +132,8 @@ d'un repertoire log/ vide et regenerera des traces fraiches.
 | O3 | check_state : WARN Passerelle absente sur eth0 | CORRIGE (BOOT_SET_NETWORK=1) - A REVALIDER sur device |
 | O4 | Horloge box en 1970 toute la session | CORRIGE (BOOT_TIME_SYNC=1 + passerelle O3) - A REVALIDER sur device |
 | O5 | Residus 'box'/'test' + JAMAIS obsoletes sur le device | CORRIGE (link_bin purge les liens morts au INSTALL) - A REVALIDER sur device |
+| O6 | Chaine swap cle -> repli /data + sonde PROBE acceptation swapon (+ build direct syscall si agent absent) | CODE LIVRE (mem_tune OPTIMIZE/STATUS/PROBE [O9], core/swap.sh) - A VALIDER sur device |
+| O7 | Leviers RAM additionnels : BACKGROUND_PROC_LIMIT/ALWAYS_FINISH_ACTIVITIES, BOOT_TRIM_CACHES, KSM+scheduler (inspect_dev 4b), launcher_toggle [C4] | CODE LIVRE - A VALIDER sur device |
 
 Tous les points sont traites cote depot ; la derniere passe device
 (dpk >= 26.08.2317.4931) valide leur fermeture avec traces fraiches.

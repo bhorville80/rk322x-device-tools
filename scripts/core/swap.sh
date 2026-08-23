@@ -112,10 +112,6 @@ swap_elf_emit()  # $1 = on|off  $2 = chemin cible reel  $3 = fichier sortant
     [ "$GOT_F_" = "$FSZ" ] || return 1
 }
 
-swap_elf_ensure()  # SUPPRIME : emission directe par swap_on_cmd/swap_off_cmd
-{
-    return 1
-}
 
 # ------------------------------------------------------------- signature swap
 

@@ -16,9 +16,10 @@ for B in "$(dirname "$0")" "$(dirname "$0")/../scripts" /data/scripts; do
     fi
 done
 
-for B in "$(dirname "$0")/../scripts" "$(dirname "$0")" /data/scripts /data/scripts/core; do
-    if [ -f "$B/core/config.sh" ]; then
-        . "$B/core/config.sh"
+for B in "$(dirname "$0")/../scripts/core" "$(dirname "$0")" \
+         /data/scripts /data/scripts/core; do
+    if [ -f "$B/config.sh" ]; then
+        . "$B/config.sh"
         break
     fi
 done

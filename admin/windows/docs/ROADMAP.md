@@ -18,11 +18,13 @@ One-page summary of what V1 delivers on a stock RK322X TV box
       box clock), Cle (upload with browser sha256 + APPLY_DPK key update +
       direct downloads), Commandes (clock sync, state, logs, HDMI, ECO/PERF,
       reboot, hardware report, recette phases P1..P7 + manifest),
-      Metriques (vitals/state/conf), Telecommande (TV screen mirror,
+      Metriques en onglets (DIAGNOSTIC / PROCESSUS-RAM / SWAP / LAUNCHER TV,
+      un bouton = un rapport dedie), Telecommande (TV screen mirror,
       click-to-TAP, keys, TEXT/URL, remote console RUN), Infos (static data).
 - [x] **Servers** - busybox httpd :8000 (static key), control API :8080
       (FIFO detached handlers, POST upload, APPLY_DPK, RUN console gated by
-      WEB_RUN+token), GUI TV :8081 (KEY/TAP/TEXT/URL/SHOT), optional dropbear.
+      WEB_RUN+token, diagnostics PROC/DEV/PROBE/LAUNCHER), GUI TV :8081
+      (KEY/TAP/TEXT/URL/SHOT), optional dropbear.
 - [x] **Tooling** - 50+ tools: nreg (10-theme non-regression runner),
       config (interactive editor with type validation), profile manager,
       manage dispatcher, inspect_all heart/exploration classes, hw_report
@@ -57,13 +59,17 @@ One-page summary of what V1 delivers on a stock RK322X TV box
 
 #### Configuration & optimisations
 - [ ] [C1] conforme / [C3] ping OK
-- [ ] [O1] ECO actif ; [O2] mem_tune applique ; swap.bin 512 Mo swapon
+- [ ] [O1] ECO actif ; [O2] mem_tune applique ; chaine swap cle -> repli
+      /data active (JAMAIS sans swap) ; [O9] PROBE verdict KERNEL_OK archive
 - [ ] [O5] cut_services CUT : gains PSS chiffres vs baseline
 - [ ] [O8] ramstep 30 s : chronologie ram_steps archivee
 
 #### Verification & inspection
 - [ ] [R1] nreg 10/10 themes PASS
 - [ ] [R2] selftest 0 FAIL
+- [ ] [N10] inspect_proc : candidats RAM identifies (baseline detournement)
+- [ ] [N11] inspect_dev : KSM/scheduler verifies avant tout daemon maison
+- [ ] [C4] launcher_toggle STATUS vert (voie A/B prete si besoin UI TV)
 - [ ] [N4] hw_report SAVE genere (analyse puces a fournir)
 
 #### Serveur & IHM
