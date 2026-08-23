@@ -31,6 +31,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | boot | hook init persistant (INSTALL/REMOVE/STATUS/TEST) |
 | amorce | bilan demarrage + raccourcis |
 | sd_boot | carte SD examinee en dernier au boot |
+| preflight | verif commandes critiques box + verdicts features (autonome) |
 
 ## Configuration
 
@@ -87,6 +88,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | device_info | inventaire materiel par fonctionnalite |
 | sys_diag | sante rapide charge/memoire/stockage |
 | sd_inspect | carte SD montage/erreurs/espace |
+| inspect_usb | cle USB x adb : montage/droits uid2000/adbd 5555 |
 | hw_report | rapport materiel COMPLET recherche web (SAVE = fichier cle) |
 | investigate | collecte contextuelle ALL/scenario |
 | capture | captures ecran/logcat |
@@ -130,3 +132,9 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 linux : provision.sh, logpull.sh, set_box_time.sh, vitals_history.sh,
 write_set_heure.sh - equivalents PowerShell/BAT sous windows/.
+
+identification : identify_box.ps1 (windows) - etat de la box vue du PC :
+adb absent / box absente (VID attendus 18D1/2207/1F3A + procedure P2-P3) /
+visible hors adb (pilote ou debogage USB) / joignable (carte d'identite
+modele-board-android-build-serial-eth0 + coherence device.conf ; -Full =
+device_info [N3] sur la box).

@@ -132,3 +132,9 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 linux : provision.sh, logpull.sh, set_box_time.sh, vitals_history.sh,
 write_set_heure.sh - equivalents PowerShell/BAT sous windows/.
+
+identification : identify_box.ps1 (windows) - etat de la box vue du PC :
+adb absent / box absente (VID attendus 18D1/2207/1F3A + procedure P2-P3) /
+visible hors adb (pilote ou debogage USB) / joignable (carte d'identite
+modele-board-android-build-serial-eth0 + coherence device.conf ; -Full =
+device_info [N3] sur la box).
