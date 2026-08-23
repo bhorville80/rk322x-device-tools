@@ -69,8 +69,14 @@ function tokUrl(base) {
     return base + (base.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(t);
 }
 
-function api(path) {
-    return fetch(tokUrl(API + path)).then(function(r) {
+function api(path, noRetry) {
+    var opts = {cache: "no-store"};
+    if (typeof AbortController === "function") {
+        var ac = new AbortController();
+        setTimeout(function () { ac.abort(); }, 20000);
+        opts.signal = ac.signal;
+    }
+    return fetch(tokUrl(API + path), opts).then(function(r) {
         if (r.status === 403) {
             var t = prompt("API protegee par un token (server/token sur la cle).\nEntrer la valeur du token :");
             if (t && t.trim()) {
@@ -81,6 +87,16 @@ function api(path) {
             throw new Error("403 forbidden (token requis)");
         }
         return r.text();
+    }).catch(function(e) {
+        if (e && e.message && e.message.indexOf("403") === 0) throw e;
+        if (!noRetry) {
+            return new Promise(function(res) {
+                setTimeout(function() { res(api(path, true)); }, 1500);
+            });
+        }
+        var cause = (e && e.message) ? e.message : "" + e;
+        if (e && e.name === "AbortError") cause = "delai de 20 s depasse";
+        throw new Error("API 8080 injoignable (" + cause + ") - lancer deploy EXPOSE sur la box");
     });
 }
 

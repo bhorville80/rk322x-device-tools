@@ -468,17 +468,27 @@ ou carte SDHC sans UHS.
 
 ### Every button shows `Erreur : TypeError: Failed to fetch`
 
-The panel is served on port 8000 while the API listens on 8080/8081:
-different ports mean different origins. Without a CORS header the browser
-blocks the response and `fetch()` rejects.
+Two independent causes, both fixed in v17+:
 
-Fixed by adding `Access-Control-Allow-Origin: *` to every reply of
-`server/control_server.sh` and `server/gui_server.sh` (v17+).
+1. **Response never sent back** (root cause): the API servers used
+   `nc -l > request_file` then printed the reply AFTER `nc` had already
+   exited - the response went to the log, the browser got an empty
+   connection after ~30 s and every click failed. Fixed by piping the
+   handler INTO `nc` (`{ wait for request ; handle } | nc -l ...`), so the
+   reply really travels on the socket while the connection is open.
+2. **CORS**: panel is served on :8000 while the API listens on 8080/8081 -
+   different origins. Without `Access-Control-Allow-Origin: *` the browser
+   blocks the response and `fetch()` rejects.
+
 After updating, restart the servers:
 
 ```bash
 deploy STOP && deploy EXPOSE
 ```
+
+Panel side hardening (same version): 20 s timeout per call, one automatic
+retry (the single-slot servers can refuse a connection while busy), and an
+explicit error message pointing at the port badges.
 
 ### Buttons answer `{"status":"error","message":"forbidden"}` (403)
 

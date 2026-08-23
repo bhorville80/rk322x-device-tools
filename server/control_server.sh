@@ -34,6 +34,7 @@ PIDFILE="$USB/server/control_server.pid"
 LOG="$USB/log/control_server.log"
 INCOMING="$USB/incoming"
 TOKEN_FILE="$USB/server/token"
+TMP_REQ="/data/local/tmp/control_request"
 
 mkdir -p "$USB/server" "$USB/log" "$INCOMING"
 
@@ -46,10 +47,95 @@ log()
 # En-tete CORS obligatoire : le panneau est servi sur :8000 et l'API sur
 # :8080 -> origines differentes ; sans Access-Control-Allow-Origin le
 # navigateur bloque la lecture de la reponse (fetch rejette cote IHM).
+# Content-Length calcule en OCTETS (wc -c) : ${#var} compte des caracteres
+# et tronquerait les corps UTF-8 (text/plain accentues).
 reply()
 {
+    LEN="$(printf '%s' "$3" | wc -c | tr -dc '0-9')"
     printf 'HTTP/1.1 %s %s\r\nContent-Type: %s\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-        "$1" "$2" "${4:-application/json}" "${#3}" "$3"
+        "$1" "$2" "${4:-application/json}" "$LEN" "$3"
+}
+
+# traite la requete courante (variables REQUEST/COMMAND deja extraites) et
+# ecrit la reponse HTTP sur stdout -> pipee vers nc -> socket navigateur
+handle_request()
+{
+    log "REQUEST: ${COMMAND:-<inconnu>}"
+
+    case "$COMMAND" in
+
+        # reponse synchrone : contenu de la configuration active
+        CONFIG)
+            CONF=""
+            if [ -f /data/scripts/config/device.conf ]; then
+                CONF="/data/scripts/config/device.conf"
+            elif [ -f "$USB/scripts/config/device.conf" ]; then
+                CONF="$USB/scripts/config/device.conf"
+            fi
+
+            if [ -n "$CONF" ]; then
+                VER_LINE="version installee : inconnue"
+                [ -f /data/scripts/VERSION ] && \
+                    VER_LINE="$(grep '^version' /data/scripts/VERSION 2>/dev/null | head -n 1)"
+                BODY="### configuration active ($CONF)\n$VER_LINE\n\n$(cat "$CONF" 2>/dev/null)"
+                log "COMMANDE ACCEPTED: CONFIG -> $CONF"
+                reply 200 OK "$BODY" "text/plain; charset=utf-8"
+            else
+                log "COMMANDE REJECTED: CONFIG introuvable"
+                reply 404 "Not Found" '{"status":"error","message":"config introuvable"}'
+            fi
+            ;;
+
+        # reponse synchrone : validation de la configuration active (conf_check)
+        CONF_CHECK)
+            CHK=""
+            if [ -f /data/scripts/conf_check.sh ]; then
+                CHK="/data/scripts/conf_check.sh"
+            elif [ -f "$USB/scripts/conf_check.sh" ]; then
+                CHK="$USB/scripts/conf_check.sh"
+            fi
+
+            if [ -n "$CHK" ]; then
+                OUT="$(sh "$CHK" 2>&1)"
+                RC=$?
+                log "COMMANDE ACCEPTED: CONF_CHECK (rc=$RC)"
+                reply 200 OK "$OUT" "text/plain; charset=utf-8"
+            else
+                log "COMMANDE REJECTED: CONF_CHECK introuvable"
+                reply 404 "Not Found" '{"status":"error","message":"conf_check introuvable"}'
+            fi
+            ;;
+
+        # reponse synchrone : remise a l'heure de la box (t=YYYYMMDD.HHMMSS, UTC)
+        TIME_SYNC)
+            V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
+            if ! is_root; then
+                log "COMMANDE REJECTED: TIME_SYNC (root requis)"
+                reply 403 Forbidden '{"status":"error","message":"root requis"}'
+            elif [ -z "$V" ]; then
+                log "COMMANDE REJECTED: TIME_SYNC (parametre manquant)"
+                reply 400 Bad Request '{"status":"error","message":"t=YYYYMMDD.HHMMSS attendu"}'
+            else
+                date -u -s "$V" > /dev/null 2>&1
+                NEW="$(date '+%Y-%m-%d %H:%M:%S')"
+                log "TIME_SYNC -> $NEW (UTC)"
+                reply 200 OK "{\"status\":\"ok\",\"box_time_utc\":\"$NEW\"}"
+            fi
+            ;;
+
+        HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE|VITALS|RECETTE|RECETTE_P1|RECETTE_P2|RECETTE_P3|RECETTE_P4|RECETTE_P5|RECETTE_P6|RECETTE_P7|RECETTE_RETOUR|RECETTE_MANIFEST)
+            touch "$INCOMING/$COMMAND"
+            log "COMMANDE ACCEPTED: $COMMAND"
+
+            reply 200 OK "{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
+            ;;
+
+        *)
+            log "COMMANDE REJECTED: inconnue"
+
+            reply 404 "Not Found" '{"status":"error","message":"unknown command"}'
+            ;;
+    esac
 }
 
 case "$1" in
@@ -76,127 +162,61 @@ fi
     # tuer le service lance en arriere-plan
     trap '' HUP
 
-    # timeout dispo ? une connexion sans donnees (preconnexe navigateur,
-    # scan de port) monopoliserait sinon l'unique slot nc pour toujours
-    HAS_TIMEOUT=0
-    command -v timeout > /dev/null 2>&1 && HAS_TIMEOUT=1
+    # attente de l'arrivee de la requete : sleep fractionnaire si supporte,
+    # sinon pas de 1 s (bornes ajustees pour ~6 s d'attente max)
+    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=50; else STEP="1"; MAX=6; fi
+
+    # timeout dispo ? ceinture de securite si un client reste connecte
+    # sans lire pendant un traitement long (CONF_CHECK)
+    RUNNC="busybox nc"
+    command -v timeout > /dev/null 2>&1 && RUNNC="timeout 90 busybox nc"
 
     while true
     do
-        if [ "$HAS_TIMEOUT" = "1" ]; then
-            timeout 30 busybox nc -l -p "$PORT" > /data/local/tmp/control_request 2>/dev/null
-        else
-            busybox nc -l -p "$PORT" > /data/local/tmp/control_request 2>/dev/null
-        fi
+        rm -f "$TMP_REQ"
 
-        REQUEST="$(head -n 1 /data/local/tmp/control_request 2>/dev/null)"
+        # La reponse est PIPEE DANS nc : elle part reellement sur la socket
+        # tant que la connexion est ouverte. nc ecrit la requete recue dans
+        # TMP_REQ ; on ne genere la reponse qu'APRES son arrivee complete.
+        {
+            i=0
+            while [ ! -s "$TMP_REQ" ] && [ "$i" -lt "$MAX" ]; do
+                sleep "$STEP"
+                i=$((i + 1))
+            done
+            sleep "$STEP"
 
-        # connexion silencieuse expiree (timeout) : rien a traiter
-        if [ -z "$REQUEST" ]; then
-            rm -f /data/local/tmp/control_request
-            continue
-        fi
+            REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
 
-        # preflight eventuel du navigateur : reponse seche avec CORS
-        case "$REQUEST" in
-            OPTIONS*)
-                printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
-                rm -f /data/local/tmp/control_request
-                continue
-                ;;
-        esac
+            if [ -n "$REQUEST" ]; then
 
-        COMMAND="$(echo "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
+                # preflight eventuel du navigateur : reponse seche avec CORS
+                case "$REQUEST" in
+                    OPTIONS*)
+                        printf 'HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET, OPTIONS\r\nAccess-Control-Allow-Headers: *\r\nContent-Length: 0\r\nConnection: close\r\n\r\n'
+                        ;;
+                    *)
+                        COMMAND="$(printf '%s' "$REQUEST" | sed -n 's#GET /api/\([^ ?]*\).*#\1#p')"
 
-        if [ -f "$TOKEN_FILE" ]; then
-            TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
-            GOT="$(echo "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
-            if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
-                log "REQUEST REJECTED: token invalide (${COMMAND:-<inconnu>})"
-                reply 403 Forbidden '{"status":"error","message":"forbidden"}'
-                rm -f /data/local/tmp/control_request
-                continue
+                        if [ -f "$TOKEN_FILE" ]; then
+                            TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
+                            GOT="$(printf '%s' "$REQUEST" | sed -n 's#.*token=\([0-9a-zA-Z]*\).*#\1#p')"
+                            if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
+                                log "REQUEST REJECTED: token invalide (${COMMAND:-<inconnu>})"
+                                reply 403 Forbidden '{"status":"error","message":"forbidden"}'
+                            else
+                                handle_request
+                            fi
+                        else
+                            handle_request
+                        fi
+                        ;;
+                esac
+
             fi
-        fi
+        } | $RUNNC -l -p "$PORT" > "$TMP_REQ" 2>/dev/null
 
-        log "REQUEST: ${COMMAND:-<inconnu>}"
-
-        case "$COMMAND" in
-
-            # reponse synchrone : contenu de la configuration active
-            CONFIG)
-                CONF=""
-                if [ -f /data/scripts/config/device.conf ]; then
-                    CONF="/data/scripts/config/device.conf"
-                elif [ -f "$USB/scripts/config/device.conf" ]; then
-                    CONF="$USB/scripts/config/device.conf"
-                fi
-
-                if [ -n "$CONF" ]; then
-                    VER_LINE="version installee : inconnue"
-                    [ -f /data/scripts/VERSION ] && \
-                        VER_LINE="$(grep '^version' /data/scripts/VERSION 2>/dev/null | head -n 1)"
-                    BODY="### configuration active ($CONF)\n$VER_LINE\n\n$(cat "$CONF" 2>/dev/null)"
-                    log "COMMANDE ACCEPTED: CONFIG -> $CONF"
-                    reply 200 OK "$BODY" "text/plain; charset=utf-8"
-                else
-                    log "COMMANDE REJECTED: CONFIG introuvable"
-                    reply 404 Not Found '{"status":"error","message":"config introuvable"}'
-                fi
-                ;;
-
-            # reponse synchrone : validation de la configuration active (conf_check)
-            CONF_CHECK)
-                CHK=""
-                if [ -f /data/scripts/conf_check.sh ]; then
-                    CHK="/data/scripts/conf_check.sh"
-                elif [ -f "$USB/scripts/conf_check.sh" ]; then
-                    CHK="$USB/scripts/conf_check.sh"
-                fi
-
-                if [ -n "$CHK" ]; then
-                    OUT="$(sh "$CHK" 2>&1)"
-                    RC=$?
-                    log "COMMANDE ACCEPTED: CONF_CHECK (rc=$RC)"
-                    reply 200 OK "$OUT" "text/plain; charset=utf-8"
-                else
-                    log "COMMANDE REJECTED: CONF_CHECK introuvable"
-                    reply 404 Not Found '{"status":"error","message":"conf_check introuvable"}'
-                fi
-                ;;
-
-            # reponse synchrone : remise a l'heure de la box (t=YYYYMMDD.HHMMSS, UTC)
-            TIME_SYNC)
-                V="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([0-9]\{8\}\.[0-9]\{6\}\).*#\1#p')"
-                if ! is_root; then
-                    log "COMMANDE REJECTED: TIME_SYNC (root requis)"
-                    reply 403 Forbidden '{"status":"error","message":"root requis"}'
-                elif [ -z "$V" ]; then
-                    log "COMMANDE REJECTED: TIME_SYNC (parametre manquant)"
-                    reply 400 Bad Request '{"status":"error","message":"t=YYYYMMDD.HHMMSS attendu"}'
-                else
-                    date -u -s "$V" > /dev/null 2>&1
-                    NEW="$(date '+%Y-%m-%d %H:%M:%S')"
-                    log "TIME_SYNC -> $NEW (UTC)"
-                    reply 200 OK "{\"status\":\"ok\",\"box_time_utc\":\"$NEW\"}"
-                fi
-                ;;
-
-            HELP|SEND_LOGS|PURGE_LOG|SYNC|FIELD_OFF|FIELD_ON|HDMI_OFF|HDMI_ON|PANEL|STATE|REBOX|ROTATE_LOGS|ECO_MODE|PERF_MODE|VITALS|RECETTE|RECETTE_P1|RECETTE_P2|RECETTE_P3|RECETTE_P4|RECETTE_P5|RECETTE_P6|RECETTE_P7|RECETTE_RETOUR|RECETTE_MANIFEST)
-                touch "$INCOMING/$COMMAND"
-                log "COMMANDE ACCEPTED: $COMMAND"
-
-                reply 200 OK "{\"status\":\"ok\",\"command\":\"$COMMAND\"}"
-                ;;
-
-            *)
-                log "COMMANDE REJECTED: inconnue"
-
-                reply 404 Not Found '{"status":"error","message":"unknown command"}'
-                ;;
-        esac
-
-        rm -f /data/local/tmp/control_request
+        rm -f "$TMP_REQ"
     done
 ) >> "$LOG" 2>&1 &
 

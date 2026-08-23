@@ -35,6 +35,7 @@ LOG="$USB/log/gui_server.log"
 SHOTS_DIR="$USB/log/gui_shots"
 TMP_HTML="/data/local/tmp/gui_text.html"
 TOKEN_FILE="$USB/server/token"
+TMP_REQ="/data/local/tmp/gui_request"
 
 mkdir -p "$USB/server" "$USB/log" "$SHOTS_DIR"
 
@@ -61,8 +62,10 @@ fi
 reply()
 {
     # reply <code> <status> <body> ; CORS : panneau sur :8000, API ici :8081
+    # Content-Length en OCTETS (wc -c), pas ${#var} (tronquerait l'UTF-8)
+    LEN="$(printf '%s' "$3" | wc -c | tr -dc '0-9')"
     printf 'HTTP/1.1 %s %s\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %s\r\nConnection: close\r\n\r\n%s' \
-        "$1" "$2" "${#3}" "$3"
+        "$1" "$2" "$LEN" "$3"
 }
 
 ok()
@@ -96,142 +99,159 @@ get_ip()
     printf '%s' "$IP"
 }
 
+# traite la requete courante (variables REQUEST/ACTION/QS deja extraites) et
+# ecrit la reponse HTTP sur stdout -> pipee vers nc -> socket navigateur
+handle_request()
+{
+    log "ACTION: ${ACTION:-<inconnu>} QS: ${QS:+oui}"
+
+    RC=""
+    case "$ACTION" in
+
+        INDEX)
+            IP="$(get_ip)"
+            am start -a android.intent.action.VIEW -d "http://$IP:8000" > /dev/null 2>&1 \
+                && ok INDEX || ko "aucune activite resolve (navigateur absent ?)"
+            ;;
+
+        URL)
+            U="$(decode "$(param u)")"
+            case "$U" in
+                http:*|https:*|file:*)
+                    if am start -a android.intent.action.VIEW -d "$U" > /dev/null 2>&1; then
+                        log "URL affichee : $U"
+                        ok URL
+                    else
+                        ko "navigateur indisponible"
+                    fi ;;
+                *) ko "url non autorisee (http/https/file)" ;;
+            esac
+            ;;
+
+        TEXT)
+            T="$(decode "$(param t)" | tr -d '"`$' | cut -c1-300)"
+            if [ -z "$T" ]; then
+                ko "message vide"
+            else
+                {
+                    echo '<html><body style="background:#000;color:#4f4;font-family:sans-serif;'
+                    echo 'display:flex;align-items:center;justify-content:center;height:100%;margin:0">'
+                    echo '<div style="font-size:10vw;text-align:center;white-space:pre-wrap">'"$T"'</div>'
+                    echo '</body></html>'
+                } > "$TMP_HTML" 2>/dev/null
+                chmod 644 "$TMP_HTML" 2>/dev/null
+                if am start -a android.intent.action.VIEW -d "file://$TMP_HTML" > /dev/null 2>&1; then
+                    log "TEXTE affiche"
+                    ok TEXT
+                else
+                    ko "navigateur indisponible"
+                fi
+            fi
+            ;;
+
+        KEY)
+            K="$(param k | tr -cd 'A-Za-z0-9_' | cut -c1-40)"
+            if [ -n "$K" ]; then
+                if input keyevent "$K" > /dev/null 2>&1; then
+                    ok "KEY:$K"
+                else
+                    ko "touche refusee ($K)"
+                fi
+            else
+                ko "parametre k manquant"
+            fi
+            ;;
+
+        TAP)
+            X="$(param x | tr -cd '0-9' | cut -c1-5)"
+            Y="$(param y | tr -cd '0-9' | cut -c1-5)"
+            if [ -n "$X" ] && [ -n "$Y" ]; then
+                input tap "$X" "$Y" > /dev/null 2>&1 && ok "TAP:$X,$Y" || ko "tap echoue"
+            else
+                ko "parametres x/y manquants"
+            fi
+            ;;
+
+        SHOT)
+            if command -v screencap > /dev/null 2>&1; then
+                OUT="$SHOTS_DIR/latest.png"
+                if screencap -p "$OUT" 2>/dev/null && [ -s "$OUT" ]; then
+                    SIZE="$(wc -c < "$OUT" 2>/dev/null | tr -dc '0-9')"
+                    log "SHOT -> $OUT ($SIZE octets)"
+                    reply 200 OK "{\"status\":\"ok\",\"action\":\"SHOT\",\"file\":\"/log/gui_shots/latest.png\",\"size\":${SIZE:-0}}"
+                else
+                    ko "capture vide"
+                fi
+            else
+                ko "screencap absent"
+            fi
+            ;;
+
+        "")
+            ko "action absente"
+            ;;
+
+        *)
+            log "REJET action inconnue : $ACTION"
+            reply 404 "Not Found" '{"status":"error","message":"unknown action"}'
+            ;;
+    esac
+}
+
 (
     # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
     # tuer le service lance en arriere-plan
     trap '' HUP
 
-    # timeout dispo ? une connexion sans donnees (preconnexe navigateur,
-    # scan de port) monopoliserait sinon l'unique slot nc pour toujours
-    HAS_TIMEOUT=0
-    command -v timeout > /dev/null 2>&1 && HAS_TIMEOUT=1
+    # attente de l'arrivee de la requete : sleep fractionnaire si supporte,
+    # sinon pas de 1 s (bornes ajustees pour ~6 s d'attente max)
+    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=50; else STEP="1"; MAX=6; fi
+
+    # timeout dispo ? ceinture de securite si un client reste connecte
+    # sans lire pendant un traitement (am start, screencap)
+    RUNNC="busybox nc"
+    command -v timeout > /dev/null 2>&1 && RUNNC="timeout 90 busybox nc"
 
     while true
     do
-        if [ "$HAS_TIMEOUT" = "1" ]; then
-            timeout 30 busybox nc -l -p "$PORT" > /data/local/tmp/gui_request 2>/dev/null
-        else
-            busybox nc -l -p "$PORT" > /data/local/tmp/gui_request 2>/dev/null
-        fi
+        rm -f "$TMP_REQ"
 
-        REQUEST="$(head -n 1 /data/local/tmp/gui_request 2>/dev/null)"
+        # La reponse est PIPEE DANS nc : elle part reellement sur la socket
+        # tant que la connexion est ouverte. nc ecrit la requete recue dans
+        # TMP_REQ ; on ne genere la reponse qu'APRES son arrivee complete.
+        {
+            i=0
+            while [ ! -s "$TMP_REQ" ] && [ "$i" -lt "$MAX" ]; do
+                sleep "$STEP"
+                i=$((i + 1))
+            done
+            sleep "$STEP"
 
-        # connexion silencieuse expiree (timeout) : rien a traiter
-        if [ -z "$REQUEST" ]; then
-            rm -f /data/local/tmp/gui_request
-            continue
-        fi
+            REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
 
-        ACTION="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/\([^ ?]*\).*#\1#p')"
-        QS="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/[^ ?]*?\([^ ]*\).*#\1#p')"
+            if [ -n "$REQUEST" ]; then
 
-        if [ -f "$TOKEN_FILE" ]; then
-            TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
-            GOT="$(param token)"
-            GOT="$(printf '%s' "$GOT" | tr -cd '0-9a-zA-Z')"
-            if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
-                log "REJET token invalide (${ACTION:-<inconnu>})"
-                reply 403 Forbidden '{"status":"error","message":"forbidden"}'
-                rm -f /data/local/tmp/gui_request
-                continue
+                ACTION="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/\([^ ?]*\).*#\1#p')"
+                QS="$(printf '%s' "$REQUEST" | sed -n 's#GET /gui/[^ ?]*?\([^ ]*\).*#\1#p')"
+
+                if [ -f "$TOKEN_FILE" ]; then
+                    TOKEN="$(tr -d '[:space:]' < "$TOKEN_FILE" 2>/dev/null)"
+                    GOT="$(param token)"
+                    GOT="$(printf '%s' "$GOT" | tr -cd '0-9a-zA-Z')"
+                    if [ -z "$GOT" ] || [ "$GOT" != "$TOKEN" ]; then
+                        log "REJET token invalide (${ACTION:-<inconnu>})"
+                        reply 403 Forbidden '{"status":"error","message":"forbidden"}'
+                    else
+                        handle_request
+                    fi
+                else
+                    handle_request
+                fi
+
             fi
-        fi
+        } | $RUNNC -l -p "$PORT" > "$TMP_REQ" 2>/dev/null
 
-        log "ACTION: ${ACTION:-<inconnu>} QS: ${QS:+oui}"
-
-        RC=""
-        case "$ACTION" in
-
-            INDEX)
-                IP="$(get_ip)"
-                am start -a android.intent.action.VIEW -d "http://$IP:8000" > /dev/null 2>&1 \
-                    && ok INDEX || ko "aucune activite resolve (navigateur absent ?)"
-                ;;
-
-            URL)
-                U="$(decode "$(param u)")"
-                case "$U" in
-                    http:*|https:*|file:*)
-                        if am start -a android.intent.action.VIEW -d "$U" > /dev/null 2>&1; then
-                            log "URL affichee : $U"
-                            ok URL
-                        else
-                            ko "navigateur indisponible"
-                        fi ;;
-                    *) ko "url non autorisee (http/https/file)" ;;
-                esac
-                ;;
-
-            TEXT)
-                T="$(decode "$(param t)" | tr -d '"`$' | cut -c1-300)"
-                if [ -z "$T" ]; then
-                    ko "message vide"
-                else
-                    {
-                        echo '<html><body style="background:#000;color:#4f4;font-family:sans-serif;'
-                        echo 'display:flex;align-items:center;justify-content:center;height:100%;margin:0">'
-                        echo '<div style="font-size:10vw;text-align:center;white-space:pre-wrap">'"$T"'</div>'
-                        echo '</body></html>'
-                    } > "$TMP_HTML" 2>/dev/null
-                    chmod 644 "$TMP_HTML" 2>/dev/null
-                    if am start -a android.intent.action.VIEW -d "file://$TMP_HTML" > /dev/null 2>&1; then
-                        log "TEXTE affiche"
-                        ok TEXT
-                    else
-                        ko "navigateur indisponible"
-                    fi
-                fi
-                ;;
-
-            KEY)
-                K="$(param k | tr -cd 'A-Za-z0-9_' | cut -c1-40)"
-                if [ -n "$K" ]; then
-                    if input keyevent "$K" > /dev/null 2>&1; then
-                        ok "KEY:$K"
-                    else
-                        ko "touche refusee ($K)"
-                    fi
-                else
-                    ko "parametre k manquant"
-                fi
-                ;;
-
-            TAP)
-                X="$(param x | tr -cd '0-9' | cut -c1-5)"
-                Y="$(param y | tr -cd '0-9' | cut -c1-5)"
-                if [ -n "$X" ] && [ -n "$Y" ]; then
-                    input tap "$X" "$Y" > /dev/null 2>&1 && ok "TAP:$X,$Y" || ko "tap echoue"
-                else
-                    ko "parametres x/y manquants"
-                fi
-                ;;
-
-            SHOT)
-                if command -v screencap > /dev/null 2>&1; then
-                    OUT="$SHOTS_DIR/latest.png"
-                    if screencap -p "$OUT" 2>/dev/null && [ -s "$OUT" ]; then
-                        SIZE="$(wc -c < "$OUT" 2>/dev/null | tr -dc '0-9')"
-                        log "SHOT -> $OUT ($SIZE octets)"
-                        reply 200 OK "{\"status\":\"ok\",\"action\":\"SHOT\",\"file\":\"/log/gui_shots/latest.png\",\"size\":${SIZE:-0}}"
-                    else
-                        ko "capture vide"
-                    fi
-                else
-                    ko "screencap absent"
-                fi
-                ;;
-
-            "")
-                ko "action absente"
-                ;;
-
-            *)
-                log "REJET action inconnue : $ACTION"
-                reply 404 Not Found '{"status":"error","message":"unknown action"}'
-                ;;
-        esac
-
-        rm -f /data/local/tmp/gui_request
+        rm -f "$TMP_REQ"
     done
 ) >> "$LOG" 2>&1 &
 
