@@ -117,6 +117,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 | Outil | Role |
 |---|---|
+| help | aide complete embarquee : liste outils + usage detaille par outil |
 | nreg | non-regression executable : 10 themes, un seul lancable |
 | xrun | executeur par identifiant [Theme+numero] (registre core/actions.tsv) ; mode serie xrun N8 N7 O4 + bilan, recherche FIND <motif> |
 | macro | sequences nommees d'actions [ID] : NEW/ADD/DEL/RM/SHOW/RUN (/data/etc/macros), chaque action tracee + bilan global |
