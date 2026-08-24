@@ -23,6 +23,8 @@
 #   BOOT_EXPOSE=1         pile web demarree a chaque boot (ports 8000/8080/8081)
 #   BOOT_SD_LAST=1        carte SD examinee en TOUT DERNIER (sd_boot CHECK)
 #   BOOT_FRONT_CLOCK=1    horloge frontale custom (front_digit CLOCK)
+#   BOOT_CHROOT=1         liens proc/sys/dev des environnements chroot_env
+#   BOOT_SWAP_WATCH=1     gardien memoire resident (swap_watch START)
 
 SCRIPT_ID="$(basename "$0" .sh)"
 
@@ -177,6 +179,16 @@ do_run()
         # le reseau affine ensuite (TIME_SYNC panneau / provision --fix)
         run_tool "set_time AUTO" "$BASE/set_time.sh" AUTO
     fi
+    if flag BOOT_CHROOT; then
+        # environnements chroot : les montages ne survivent pas au reboot
+        # -> remontage silencieux ; sans env installe, l'outil ne fait rien
+        run_tool "chroot_env MOUNT" "$BASE/chroot_env.sh" MOUNT
+    fi
+    if flag BOOT_SWAP_WATCH; then
+        # defense memoire en runtime : trim-caches sous seuil, relance de
+        # la chaine swap si morte, journal d'evenements sur la cle
+        run_tool "swap_watch START" "$BASE/swap_watch.sh" START
+    fi
     if flag BOOT_EXPOSE; then
         run_tool "deploy STOP"      "$BASE/deploy.sh" STOP
         run_tool "deploy EXPOSE"    "$BASE/deploy.sh" EXPOSE
@@ -223,7 +235,7 @@ do_run()
     fi
 
     NONE=1
-    for K in BOOT_MEM_TUNE BOOT_TRIM_CACHES BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST BOOT_ROTATE_LOGS; do
+    for K in BOOT_MEM_TUNE BOOT_TRIM_CACHES BOOT_CUT_SERVICES BOOT_SET_NETWORK BOOT_TIME_SYNC BOOT_CHROOT BOOT_SWAP_WATCH BOOT_EXPOSE BOOT_FRONT_CLOCK BOOT_SD_LAST BOOT_ROTATE_LOGS; do
         flag "$K" && NONE=0 && break
     done
     [ "$NONE" -eq 1 ] && echo "[boot] aucune action active (device.conf BOOT_*)"
@@ -456,6 +468,8 @@ do_status()
     printf '    %-18s : %s\n' BOOT_EXPOSE      "$(config_get BOOT_EXPOSE 0)"
     printf '    %-18s : %s\n' BOOT_FRONT_CLOCK "$(config_get BOOT_FRONT_CLOCK 0)"
     printf '    %-18s : %s\n' BOOT_SD_LAST     "$(config_get BOOT_SD_LAST 0)"
+    printf '    %-18s : %s\n' BOOT_CHROOT     "$(config_get BOOT_CHROOT 0)"
+    printf '    %-18s : %s\n' BOOT_SWAP_WATCH "$(config_get BOOT_SWAP_WATCH 0)"
 
     LAST="$(last_run_log)"
     echo ""
@@ -482,7 +496,8 @@ usage()
     echo ""
     echo "Actions pilotees par device.conf : BOOT_MEM_TUNE, BOOT_CUT_SERVICES,"
     echo "BOOT_SET_NETWORK (route+DNS au boot), BOOT_TIME_SYNC (horloge AUTO),"
-    echo "BOOT_EXPOSE, BOOT_FRONT_CLOCK, BOOT_SD_LAST (0|1),"
+    echo "BOOT_EXPOSE, BOOT_FRONT_CLOCK, BOOT_SD_LAST (0|1), BOOT_CHROOT"
+    echo "(liens chroot_env), BOOT_SWAP_WATCH (gardien memoire),"
     echo "BOOT_WAIT_BOOT (secondes, defaut 120)."
     echo ""
     return 0

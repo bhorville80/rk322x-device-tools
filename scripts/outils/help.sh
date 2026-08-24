@@ -130,6 +130,22 @@ VERIFICATION
                       SWITCH <nom> / OFF / SAVE <nom> ; un profil
                       surcharge les cles de device.conf quand
                       PROFILE=<nom> est actif
+  chroot_env         Environnements isoles type conteneur (chroot) :
+                      PROBE sonde les capacites kernel, CREATE <nom>
+                      <archive.tar.*> installe un rootfs depuis la
+                      cle ou un chemin, LIST/STATUS etat, ENTER [nom]
+                      shell interactif, EXEC [nom] <cmd> ponctuel,
+                      MOUNT/UMOUNT liens proc/sys/dev + DNS,
+                      REMOVE <nom> [FORCE] ;
+                      BOOT_CHROOT=1 -> liens remontes a chaque boot
+  busi               Busybox devoile : INFO inventaire + indice de
+                      puissance, LIST applets (filtre), WHERE,
+                      CHECK besoins du kit, POWERS demos vivantes
+                      (serveur HTTP une ligne, gzip en streaming,
+                      calculs awk...), RUN <applet> [args],
+                      WHO qui fournit /system/bin (toolbox/toybox/
+                      busybox/mksh)
+                      BUSYBOX_BIN (device.conf) = chemin si hors PATH
   preflight          Verif des commandes critiques de la box
                      (busybox applets, tcpsvd, swap, panneau,
                      telecommande, logs) + VERDICTS par feature ;
@@ -146,6 +162,22 @@ VERIFICATION
   xrun               Lance une action par son identifiant [Theme+numero]
                       du registre core/actions.tsv (ex : xrun C1,
                       xrun S2 ; xrun LIST = catalogue complet)
+                      Mode serie : xrun N8 N7 O4 (bilan final)
+                      Recherche  : xrun FIND <motif>
+  macro              Sequences nommees d'actions [ID] du registre :
+                      NEW <nom> <ID...> / ADD / DEL / RM / SHOW /
+                      RUN <nom> (chaque action tracee + bilan) ;
+                      stockage /data/etc/macros ; ex :
+                      macro NEW check-matin N8 N7 C1 O4
+  tips               Golden one-liners embarques sur la box :
+                      categories reseau/ram/stockage/web/secours/
+                      divers, ALL tout, FIND <motif> ; version
+                      executable de docs/BEST-COMMANDES.md
+  swap_watch         Gardien memoire RESIDENT (pattern net_watch) :
+                      STATUS etat+evenements, START [sec] / STOP,
+                      RUN un cycle verbeux ; reagit en runtime :
+                      TRIM caches sous seuil, RESCUE chaine swap
+                      morte, THRASH journalise ; BOOT_SWAP_WATCH=1
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle

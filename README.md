@@ -19,6 +19,7 @@ and non-regression, all driven from a single USB key.
 | Install from scratch on a virgin box | [docs/STARTUP.md](docs/STARTUP.md) |
 | Use the web panel (pages, buttons, console) | [docs/IHM.md](docs/IHM.md) |
 | Find a tool / the full catalogue by theme | [docs/TOOLS.md](docs/TOOLS.md) |
+| Know which binary unlocks what + best internal commands | [docs/BEST-COMMANDES.md](docs/BEST-COMMANDES.md) |
 | Write/maintain code (rules & patterns) | [docs/CODING.md](docs/CODING.md) |
 | Run the functional/energy acceptance sheet | [docs/RECETTE.md](docs/RECETTE.md) |
 | Understand what V1 ships / what is next | [ROADMAP.md](ROADMAP.md) |

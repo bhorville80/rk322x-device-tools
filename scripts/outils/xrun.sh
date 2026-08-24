@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# xrun - lance une action par son identifiant [Theme+numero].
+# xrun - lance des actions par leur identifiant [Theme+numero].
 #
 # Source de verite : scripts/core/actions.tsv (ID | libelle | commande).
 # %BASE% dans la commande est remplace par le repertoire des scripts.
@@ -7,6 +7,9 @@
 # Usage:
 #   xrun                ou LIST : toutes les actions (ID, libelle, cible)
 #   xrun <ID>           execute l'action (ex : xrun C1, xrun S2)
+#   xrun <ID> <ID>...   mode serie : les actions dans l'ordre + bilan
+#                       (ex : xrun N8 N7 O4)
+#   xrun FIND <motif>   recherche insensible a la casse dans libelles+cibles
 #   xrun HELP           cette aide
 #
 # Themes : P Prepa | I Install | C Config | O Optim | R Re-check
@@ -50,21 +53,34 @@ do_list()
     echo ""
 }
 
-main()
+do_find()
 {
-    [ -r "$TABLE" ] || { echo "[ERREUR] registre introuvable : $TABLE" ; return 1 ; }
+    M="$1"
+    if [ -z "$M" ]; then
+        echo "[ERREUR] usage : xrun FIND <motif>"
+        return 1
+    fi
+    echo ""
+    echo "=== ACTIONS contenant '$M' ==="
+    awk -F'\t' -v m="$M" \
+        '!/^#/ && NF>=3 && index(tolower($0), tolower(m)) {printf "  %-5s %-45s %s\n", $1, $2, $3 ; n++ }
+         END { if (!n) print "  (aucun resultat)" }' "$TABLE"
+    echo ""
+    return 0
+}
 
-    case "$1" in
-        ""|LIST|list) do_list ; return 0 ;;
-        HELP|-h|--help)
-            echo ""
-            echo "Usage: xrun [<ID>|LIST]"
-            echo "  ex : xrun C1   xrun S2   xrun LIST"
-            echo "  registre : $TABLE"
-            echo ""
-            return 0 ;;
-    esac
+usage()
+{
+    echo ""
+    echo "Usage: xrun [<ID>|LIST|FIND <motif>|<ID> <ID>...]"
+    echo "  ex : xrun C1   xrun N8 N7 O4 (serie + bilan)   xrun FIND reseau"
+    echo "  registre : $TABLE"
+    echo ""
+    return 0
+}
 
+run_one()
+{
     resolve "$1" || {
         echo "[KO] action inconnue : $1 (voir : xrun LIST)"
         return 1
@@ -116,6 +132,36 @@ main()
     echo "       \$ $CMD"
     sh -c "$CMD"
     return $?
+}
+
+main()
+{
+    [ -r "$TABLE" ] || { echo "[ERREUR] registre introuvable : $TABLE" ; return 1 ; }
+
+    case "$1" in
+        ""|LIST|list)  do_list ; return 0 ;;
+        HELP|-h|--help) usage ; return 0 ;;
+        FIND|find)     shift ; do_find "$@" ; return $? ;;
+    esac
+
+    # un ou plusieurs IDs -> mode serie avec bilan
+    RC_ALL=0 ; OKN=0 ; KON=0 ; KOLIST=""
+    for A_ in "$@"; do
+        echo ""
+        echo "----------------------------------------"
+        if run_one "$A_"; then
+            OKN=$((OKN+1))
+        else
+            RC_ALL=1 ; KON=$((KON+1)) ; KOLIST="$KOLIST $A_"
+        fi
+    done
+    echo ""
+    if [ "$KON" -eq 0 ]; then
+        echo "=== BILAN SERIE : $OKN/$OKN OK ==="
+    else
+        echo "=== BILAN SERIE : $OKN OK, $KON KO ($KOLIST ) ==="
+    fi
+    return $RC_ALL
 }
 
 if [ "$RUNLOG_LOADED" -eq 1 ] && runlog_start "$SCRIPT_ID"; then

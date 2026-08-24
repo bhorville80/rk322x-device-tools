@@ -233,14 +233,14 @@ case "$FI" in
         BAD=""
         for TOK in $FI; do
             case "$TOK" in
-                TIME|IP|RAM|UP) ;;
+                TIME|IP|RAM|UP|SWP) ;;
                 *) BAD="$BAD $TOK" ;;
             esac
         done
         if [ -z "$BAD" ]; then
             ok "FD_ROTATE_ITEMS = $FI"
         else
-            ko "FD_ROTATE_ITEMS : items inconnus:$BAD (attendus : TIME IP RAM UP)"
+            ko "FD_ROTATE_ITEMS : items inconnus:$BAD (attendus : TIME IP RAM SWP UP)"
         fi
         ;;
 esac
@@ -253,6 +253,42 @@ case "$BS" in ""|0|1) ok "BOOT_SD_LAST = ${BS:-<vide, defaut 1>}" ;; *) ko "BOOT
 
 SR="$(gv SD_MOUNT_RO)"
 case "$SR" in ""|0|1) ok "SD_MOUNT_RO = ${SR:-<vide, defaut 0>}" ;; *) ko "SD_MOUNT_RO '$SR' (attendu : 0|1)" ;; esac
+
+BC="$(gv BOOT_CHROOT)"
+case "$BC" in ""|0|1) ok "BOOT_CHROOT = ${BC:-<vide, defaut 0>}" ;; *) ko "BOOT_CHROOT '$BC' (attendu : 0|1)" ;; esac
+
+CR="$(gv CHROOT_ROOT)"
+case "$CR" in
+    "") ok "CHROOT_ROOT vide (defaut /data/chroots)" ;;
+    *[!a-zA-Z0-9_./-]*) ko "CHROOT_ROOT '$CR' (caracteres autorises : a-z A-Z 0-9 _ . / -)" ;;
+    /*) ok "CHROOT_ROOT = $CR" ;;
+    *)  ko "CHROOT_ROOT '$CR' (attendu : chemin absolu)" ;;
+esac
+
+CN="$(gv CHROOT_NAME)"
+case "$CN" in
+    "") ok "CHROOT_NAME vide (defaut debian)" ;;
+    *[!a-zA-Z0-9_.-]*) ko "CHROOT_NAME '$CN' (caracteres autorises : a-z A-Z 0-9 _ . -)" ;;
+    *) ok "CHROOT_NAME = $CN" ;;
+esac
+
+BB="$(gv BUSYBOX_BIN)"
+case "$BB" in
+    "") ok "BUSYBOX_BIN vide (autodetection PATH + emplacements standards)" ;;
+    *[!a-zA-Z0-9_./-]*) ko "BUSYBOX_BIN '$BB' (caracteres autorises : a-z A-Z 0-9 _ . / -)" ;;
+    /*) ok "BUSYBOX_BIN = $BB" ;;
+    *)  ko "BUSYBOX_BIN '$BB' (attendu : chemin absolu ou vide)" ;;
+esac
+
+BCW="$(gv BOOT_SWAP_WATCH)"
+case "$BCW" in ""|0|1) ok "BOOT_SWAP_WATCH = ${BCW:-<vide, defaut 0>}" ;; *) ko "BOOT_SWAP_WATCH '$BCW' (attendu : 0|1)" ;; esac
+
+for SK in SWAP_WATCH_SEC SWAP_WATCH_MIN_MB; do
+    SV="$(gv "$SK")"
+    case "$SV" in ""|*[!0-9]*) ko "$SK '$SV' (attendu : nombre)" ;; *) ok "$SK = $SV" ;; esac
+done
+case "$(gv SWAP_WATCH_TRIM)" in ""|0|1) ok "SWAP_WATCH_TRIM = $(gv SWAP_WATCH_TRIM)" ;; *) ko "SWAP_WATCH_TRIM (attendu : 0|1)" ;; esac
+case "$(gv SWAP_WATCH_RESCUE)" in ""|0|1) ok "SWAP_WATCH_RESCUE = $(gv SWAP_WATCH_RESCUE)" ;; *) ko "SWAP_WATCH_RESCUE (attendu : 0|1)" ;; esac
 
 SW="$(gv SD_WAIT_SEC)"
 case "$SW" in "") ok "SD_WAIT_SEC vide (defaut 15)" ;; *[!0-9]*) ko "SD_WAIT_SEC '$SW' (attendu : secondes)" ;; *) ok "SD_WAIT_SEC = $SW" ;; esac
@@ -326,6 +362,15 @@ BOOT_SD_LAST
 SD_MOUNT_RO
 BOOT_WAIT_KEY
 SD_WAIT_SEC
+CHROOT_ROOT
+CHROOT_NAME
+BOOT_CHROOT
+BUSYBOX_BIN
+BOOT_SWAP_WATCH
+SWAP_WATCH_SEC
+SWAP_WATCH_MIN_MB
+SWAP_WATCH_TRIM
+SWAP_WATCH_RESCUE
 PANEL_PASS
 PANEL_USER
 API_MAX_CONN

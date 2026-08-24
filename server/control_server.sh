@@ -393,12 +393,14 @@ cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
             ;;
 
         # reponse synchrone : inspection processus / RAM [N10] (lecture seule)
-        PROC|DEV|PROBE|LAUNCHER)
+        PROC|DEV|PROBE|LAUNCHER|SWAP|SWWATCH)
             case "$COMMAND" in
                 PROC)     TOOL_="inspect_proc.sh"  ARGS_="" ;;
                 DEV)      TOOL_="inspect_dev.sh"   ARGS_="AUDIT" ;;
                 PROBE)    TOOL_="mem_tune.sh"      ARGS_="PROBE" ;;
                 LAUNCHER) TOOL_="launcher_toggle.sh" ARGS_="STATUS" ;;
+                SWAP)     TOOL_="mem_tune.sh"      ARGS_="STATUS" ;;
+                SWWATCH)  TOOL_="swap_watch.sh"    ARGS_="STATUS" ;;
             esac
             T_=""
             if [ -f "/data/scripts/$TOOL_" ]; then

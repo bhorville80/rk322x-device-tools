@@ -13,6 +13,7 @@
 #   diag      check_state, net_diag, sys_diag, vitals, thermal
 #   logs      SEND_LOGS, rotate_logs, run_state
 #   serveur   pile web (expose/stop), ssh_server
+#   env       environnements isoles chroot (etat/sonde/liste)
 #   cle       sync_usb, show_key
 
 SCRIPT_ID="$(basename "$0" .sh)"
@@ -110,16 +111,26 @@ st_serveur()
     printf '  %-10s %s serveur(s) actif(s)\n' "serveurs" "$ALIVE"
 }
 
+st_env()
+{
+    N=0
+    for D in /data/chroots/*/; do
+        [ -d "$D" ] && N=$((N+1))
+    done
+    printf '  %-10s %s environnement(s) chroot\n' "env" "$N"
+}
+
 menu_overview()
 {
     echo ""
     echo "=== RK322X MENU ==="
-    echo "sujets : install recette optim inspect diag logs serveur cle"
+    echo "sujets : install recette optim inspect diag logs serveur env cle"
     echo ""
     st_install
     st_recette
     st_optim
     st_serveur
+    st_env
     echo ""
     echo "detail : menu <sujet>"
     echo "lancement : menu <sujet> <action>"
@@ -202,6 +213,8 @@ optim - optimisation memoire / allegement
   launcher-on       lanceur TV visible (launcher_toggle ON)
   launcher-off      retour headless (launcher_toggle OFF)
   launcher-status   etat du lanceur
+  swatch            gardien memoire : etat (swap_watch STATUS)
+  swatch-start      demarre le gardien resident (swap_watch START)
 EOF
 }
 
@@ -220,6 +233,8 @@ do_optim()
         launcher-on)    run_tool launcher_toggle.sh ON ;;
         launcher-off)   run_tool launcher_toggle.sh OFF ;;
         launcher-status) run_tool launcher_toggle.sh STATUS ;;
+        swatch)         run_tool swap_watch.sh STATUS ;;
+        swatch-start)   run_tool swap_watch.sh START ;;
         *)              echo "action inconnue : $1 (voir menu optim)" ; return 1 ;;
     esac
 }
@@ -239,6 +254,7 @@ inspect - analyses de la box
   remote            telecommande IR (inspect_remote)
   proc              processus/RAM candidats au detournement (inspect_proc)
   dev               capacites d'execution embarquee (inspect_dev)
+  bb                busybox : inventaire + indice de puissance (busi INFO)
 EOF
 }
 
@@ -256,6 +272,7 @@ do_inspect()
         remote)     run_tool inspect_remote.sh ;;
         proc)       run_tool inspect_proc.sh ;;
         dev)        run_tool inspect_dev.sh ;;
+        bb|busybox) run_tool busi.sh INFO ;;
         *)          echo "action inconnue : $1 (voir menu inspect)" ; return 1 ;;
     esac
 }
@@ -338,6 +355,28 @@ do_serveur()
     esac
 }
 
+help_env()
+{
+    cat << 'EOF'
+env - environnements isoles type conteneur (chroot_env)
+  status            prerequis + etat detaille (chroot_env STATUS)
+  probe             sonde capacites kernel : chroot, bind mounts,
+                    /data exec, espace (PROBE, rien n'installe)
+  list              environnements presents (LIST)
+EOF
+}
+
+do_env()
+{
+    case "$1" in
+        ""|help|-h) help_env ;;
+        status)     run_tool chroot_env.sh STATUS ;;
+        probe)      run_tool chroot_env.sh PROBE ;;
+        list)       run_tool chroot_env.sh LIST ;;
+        *)          echo "action inconnue : $1 (voir menu env)" ; return 1 ;;
+    esac
+}
+
 help_cle()
 {
     cat << 'EOF'
@@ -368,6 +407,10 @@ pilotage - vues d'ensemble et configuration
                     modification par numero (config SET pour scripts)
   profile           profils nommes : SWITCH/OFF/SAVE/DIFF
                     (surcharge device.conf via PROFILE=)
+  macro             sequences nommees d'actions [ID] :
+                    NEW/ADD/DEL/SHOW/RUN/LIST (macro HELP)
+  tips              golden one-liners embarques sur la box
+                    (categories reseau/ram/stockage/web/secours/divers)
 EOF
 }
 
@@ -378,6 +421,8 @@ do_pilotage()
         profile|profils) shift ; run_tool profile.sh "$@" ;;
         nreg)       shift ; run_tool nreg.sh "$@" ;;
         config)     shift ; run_tool config.sh "$@" ;;
+        macro|macros) shift ; run_tool macro.sh "$@" ;;
+        tips|astuces) shift ; run_tool tips.sh "$@" ;;
         ""|help|-h) help_pilotage ;;
         *)          echo "action inconnue : $1 (voir menu pilotage)" ; return 1 ;;
     esac
@@ -396,15 +441,16 @@ main()
         diag|diagnostic)     shift ; do_diag "$@" ;;
         logs|log)            shift ; do_logs "$@" ;;
         serveur|server|web)  shift ; do_serveur "$@" ;;
+        env|chroot)          shift ; do_env "$@" ;;
         cle|usb|key)         shift ; do_cle "$@" ;;
-        manage|nreg|config|pilotage|profile)
+        manage|nreg|config|pilotage|profile|macro|tips)
                              shift ; do_pilotage "$@" ;;
         help|-h|--help)
-            sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
             ;;
         *)
             echo "Sujet inconnu : $1"
-            echo "sujets : install recette optim inspect diag logs serveur cle pilotage"
+            echo "sujets : install recette optim inspect diag logs serveur env cle pilotage"
             return 1
             ;;
     esac

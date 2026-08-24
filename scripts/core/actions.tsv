@@ -33,6 +33,9 @@ S2	Sante pile web	sh %BASE%/manage.sh web
 S3	Arret puis demarrage pile	sh %BASE%/deploy.sh STOP ; sh %BASE%/deploy.sh EXPOSE
 S4	Etat installation vs cle	sh %BASE%/deploy.sh STATUS
 S5	Paquets cle vs installe	sh %BASE%/show_key.sh
+S6	Environnement isole : etat	sh %BASE%/chroot_env.sh STATUS
+S7	Sonde capacites chroot	sh %BASE%/chroot_env.sh PROBE
+S8	Macros : liste	sh %BASE%/macro.sh LIST
 
 B1	Redemarrage de la box	reboot
 
@@ -63,3 +66,10 @@ O9	Sonde acceptation swapon (kernel)	sh %BASE%/mem_tune.sh PROBE
 N9	Inspection cle USB x adb	sh %BASE%/inspect_usb.sh
 N10	Inspection processus / RAM	sh %BASE%/inspect_proc.sh
 N11	Capacites execution embarquee	sh %BASE%/inspect_dev.sh
+N12	Inventaire busybox	sh %BASE%/busi.sh INFO
+N13	Applets requis par le kit	sh %BASE%/busi.sh CHECK
+N14	Puissance busybox en action	sh %BASE%/busi.sh POWERS
+N15	Qui fournit /system/bin	sh %BASE%/busi.sh WHO
+N16	Golden one-liners sur la box	sh %BASE%/tips.sh
+O11	Etat chaine memoire	sh %BASE%/mem_tune.sh STATUS
+O12	Gardien swap : etat	sh %BASE%/swap_watch.sh STATUS

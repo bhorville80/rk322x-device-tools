@@ -141,7 +141,7 @@ var TABS = [
     { id: "proc",   label: "PROCESSUS / RAM",
       acts: ["N10", "N11"] },
     { id: "swap",   label: "SWAP",
-      acts: ["O9"] },
+      acts: ["O9", "O11", "O12"] },
     { id: "launch", label: "LAUNCHER TV",
       acts: ["C4"] }
 ];
@@ -154,6 +154,8 @@ var ACTIONS = {
     N10: { api: "PROC",       label: "PROCESSUS PSS" },
     N11: { api: "DEV",        label: "CAPACITES DEV" },
     O9:  { api: "PROBE",      label: "PROBE SWAPON" },
+    O11: { api: "SWAP",       label: "ETAT MEMOIRE" },
+    O12: { api: "SWWATCH",    label: "GARDIEN SWAP" },
     C4:  { api: "LAUNCHER",   label: "LAUNCHER ETAT" }
 };
 

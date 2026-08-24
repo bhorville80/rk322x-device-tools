@@ -19,3 +19,4 @@ config/secrets.conf
 *.bak
 *.swp
 *~
+preflight.txt

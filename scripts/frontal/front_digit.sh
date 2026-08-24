@@ -219,6 +219,14 @@ item_value()
                 *) echo $((MA / 1024)) ;;
             esac
             ;;
+        SWP)
+            # % de swap utilise (afficheur 4 digits -> valeur 0-99)
+            V="$(awk 'NR>1 { t+=$3 ; f+=$4 } END { if (t>0) printf "%d\n", (t-f)*100/t }' /proc/swaps 2>/dev/null)"
+            case "$V" in
+                ''|*[!0-9]*) echo "--" ;;
+                *) [ "$V" -gt 99 ] && V=99 ; echo "$V" ;;
+            esac
+            ;;
         UP)
             UP_S="$(cut -d' ' -f1 /proc/uptime 2>/dev/null | cut -d. -f1)"
             case "$UP_S" in
@@ -429,7 +437,7 @@ usage()
     echo "  SHOW \"12.34\"      affiche un texte 7-seg (0-9 - . lettres simples)"
     echo "  RAW 3f 06 5b 4f   octets segments bruts"
     echo "  CLOCK             horloge HH.MM (maj chaque minute)"
-    echo "  ROTATE [s] [i]    rotation (defaut 5 s, items: TIME IP RAM UP)"
+    echo "  ROTATE [s] [i]    rotation (defaut 5 s, items: TIME IP RAM SWP UP)"
     echo "  STOP              arrete nos daemons + le daemon usine"
     echo ""
     echo "Config : FD_FORMAT (raw|hdr|full), FD_ROTATE_SEC, FD_ROTATE_ITEMS,"

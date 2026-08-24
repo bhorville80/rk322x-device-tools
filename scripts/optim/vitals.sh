@@ -99,6 +99,23 @@ load1()
     cut -d' ' -f1 /proc/loadavg 2>/dev/null
 }
 
+swap_used_pct()    # <- % de swap utilise (0 si aucun swap, vide si erreur)
+{
+    awk 'NR>1 { t+=$3 ; f+=$4 } END { if (t>0) printf "%d\n", (t-f)*100/t ; else print "0" }' /proc/swaps 2>/dev/null
+}
+
+pswap_delta()      # <- pages swappées depuis la derniere mesure (etat local)
+{
+    S="/data/local/tmp/vitals_pswp.state"
+    P="$(awk '$1=="pswpin"{i=$2}$1=="pswpout"{o=$2}END{printf "%d", i+o}' /proc/vmstat 2>/dev/null)"
+    case "$P" in ''|*[!0-9]*) return 1 ;; esac
+    O="$(cat "$S" 2>/dev/null | tr -dc '0-9')"
+    echo "$P" > "$S" 2>/dev/null
+    case "$O" in ''|*[!0-9]*) return 1 ;; esac
+    D=$((P - O)) ; [ "$D" -lt 0 ] && D=0
+    echo "$D"
+}
+
 uptime_min()
 {
     U="$(cut -d. -f1 /proc/uptime 2>/dev/null | tr -dc '0-9')"
@@ -118,8 +135,9 @@ snapshot_line()
     G="$(cpu_governor)" || G="?"
     L="$(load1)"
     R="$(ram_avail_pct)" && RP="${R}%" || RP="?"
-    printf '%s  Tmax=%-5s cpu=%-7s gov=%-12s load=%-5s ram=%s\n' \
-        "$(date '+%H:%M:%S')" "${TC:-?}" "$FM" "$G" "${L:-?}" "$RP"
+    SW="$(swap_used_pct)" && SP="${SW}%" || SP="-"
+    printf '%s  Tmax=%-5s cpu=%-7s gov=%-12s load=%-5s ram=%-5s swp=%s\n' \
+        "$(date '+%H:%M:%S')" "${TC:-?}" "$FM" "$G" "${L:-?}" "$RP" "$SP"
 }
 
 # --- sections STATUS ----------------------------------------------------------
@@ -175,6 +193,25 @@ sec_ram()
     echo ""
     echo "--- [3] RAM ---"
     R="$(ram_avail_pct)" && ok "RAM dispo" "${R}%" || info "RAM dispo" "illisible"
+
+    # swap : total/libre + % utilise + activite (thrashing ?)
+    awk 'NR>1 { t+=$3 ; f+=$4 ; n++ }
+         END {
+             if (n>0) printf "%d partitions/fichiers, total %d Mo, libre %d Mo (%d%% utilise)\n", n, t/1024, f/1024, (t-f)*100/t
+             else print "aucun swap actif"
+         }' /proc/swaps 2>/dev/null | while IFS= read -r L_; do
+        info "swap" "$L_"
+    done
+    D="$(pswap_delta 2>/dev/null)"
+    case "$D" in
+        "") info "activite swap" "premiere mesure (delta au prochain appel)" ;;
+        0)   ok "activite swap" "nulle depuis la derniere mesure" ;;
+        *)   if [ "$D" -gt 2048 ]; then
+                 warn "activite swap" "$D pages/ecart -> THRASHING possible (RAM insuffisante)"
+             else
+                 ok "activite swap" "$D pages/ecart"
+             fi ;;
+    esac
 }
 
 sec_storage()
@@ -313,12 +350,15 @@ do_csv()
     L="$(load1)"
     R="$(ram_avail_pct)"
     U="$(uptime_min)"
+    SW="$(swap_used_pct)"
+    PD="$(pswap_delta 2>/dev/null)"
     E="$(date +%s 2>/dev/null | tr -dc '0-9')"
-    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
+    printf '%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' \
         "${E:-0}" \
         "$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null)" \
         "$([ -n "$TMAX" ] && echo $((TMAX / 1000)))" \
-        "$ZONE" "$FM" "$G" "$L" "$R" "$U"
+        "$ZONE" "$FM" "$G" "$L" "$R" "$U" \
+        "${SW:-}" "${PD:-}"
 }
 
 case "$1" in

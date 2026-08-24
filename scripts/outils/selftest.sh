@@ -104,6 +104,17 @@ main()
     check_rc "vitals STATUS"       "0" sh "$BASE/vitals.sh" STATUS
     check_rc "mem_tune STATUS"     "0" sh "$BASE/mem_tune.sh" STATUS
     check_rc "cut_services STATUS" "0" sh "$BASE/cut_services.sh" STATUS
+    check_rc "swap_watch HELP"     "0" sh "$BASE/swap_watch.sh" HELP
+    check_rc "swap_watch STATUS"   "0 1" sh "$BASE/swap_watch.sh" STATUS
+    check_rc "chroot_env HELP"     "0" sh "$BASE/chroot_env.sh" HELP
+    check_rc "chroot_env LIST"     "0" sh "$BASE/chroot_env.sh" LIST
+    check_rc "busi HELP"           "0" sh "$BASE/busi.sh" HELP
+    check_rc "busi INFO"           "0" sh "$BASE/busi.sh" INFO
+    check_rc "busi WHO"            "0 1" sh "$BASE/busi.sh" WHO
+    check_rc "macro HELP"          "0" sh "$BASE/macro.sh" HELP
+    check_rc "macro LIST"          "0" sh "$BASE/macro.sh" LIST
+    check_rc "tips HELP"           "0" sh "$BASE/tips.sh" HELP
+    check_rc "tips reseau"         "0" sh "$BASE/tips.sh" reseau
     check_rc "system_rw STATUS"    "0" sh "$BASE/system_rw.sh" STATUS
     check_rc "motd STATUS"         "0" sh "$BASE/motd.sh" STATUS
     check_rc "net_diag"            "0 1" sh "$BASE/net_diag.sh"

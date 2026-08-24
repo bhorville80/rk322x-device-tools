@@ -134,6 +134,8 @@ d'un repertoire log/ vide et regenerera des traces fraiches.
 | O5 | Residus 'box'/'test' + JAMAIS obsoletes sur le device | CORRIGE (link_bin purge les liens morts au INSTALL) - A REVALIDER sur device |
 | O6 | Chaine swap cle -> repli /data + sonde PROBE acceptation swapon (+ build direct syscall si agent absent) | CODE LIVRE (mem_tune OPTIMIZE/STATUS/PROBE [O9], core/swap.sh) - A VALIDER sur device |
 | O7 | Leviers RAM additionnels : BACKGROUND_PROC_LIMIT/ALWAYS_FINISH_ACTIVITIES, BOOT_TRIM_CACHES, KSM+scheduler (inspect_dev 4b), launcher_toggle [C4] | CODE LIVRE - A VALIDER sur device |
+| O8 | Nouveaux outils : chroot_env [S6-S7] (PROBE bind mounts/chroot kernel, CREATE/ENTER sur rootfs armhf) + busi [N12-N15] (WHO : classification des liens toolbox/toybox/busybox de /system/bin - non testable sous Windows) | CODE LIVRE - A VALIDER sur device |
+| O9 | Commandes : xrun mode serie + FIND [S8/N16 voisins] ; macro NEW/RUN sur /data/etc/macros ; tips embarque - non testables sous Windows (runlog/exec) | CODE LIVRE - A VALIDER sur device |
 
 Tous les points sont traites cote depot ; la derniere passe device
 (dpk >= 26.08.2317.4931) valide leur fermeture avec traces fraiches.

@@ -102,7 +102,7 @@ La page est organisee en **onglets thematiques** :
 |---|---|
 | DIAGNOSTIC | [N5] VITALS, [N6] CHECK STATE, [C1] CONF CHECK, [N8] SYS DIAG |
 | PROCESSUS / RAM | [N10] PROCESSUS PSS, [N11] CAPACITES DEV (AUDIT) |
-| SWAP | [O9] PROBE SWAPON |
+| SWAP | [O9] PROBE SWAPON, [O11] ETAT MEMOIRE, [O12] GARDIEN SWAP |
 | LAUNCHER TV | [C4] LAUNCHER ETAT |
 
 Regle d'or : **un bouton = sa zone noire de rapport dediee** (sortie
@@ -113,7 +113,8 @@ cases cochees (tous onglets confondus) via un pool borne par le selecteur
 **max parallele** (1-4), departs decalés 300 ms.
 
 Endpoints API 8080 ajoutes pour ces actions : PROC / DEV / PROBE /
-LAUNCHER (reponse synchrone text/plain, meme pattern que CONF_CHECK).
+LAUNCHER / SWAP (mem_tune STATUS) / SWWATCH (swap_watch STATUS)
+(reponse synchrone text/plain, meme pattern que CONF_CHECK).
 
 Selecteur **listeners box** (1-7, defaut 3) : nombre de connexions
 simultanees acceptees par l'API 8080 quand le firmware busybox fournit
