@@ -348,7 +348,7 @@ install_from()
     echo "  Procedure complete sur la cle : docs/STARTUP.md"
     echo ""
     echo "=== TERMINE ==="
-    echo "Commandes disponibles : deploy INSTALL | RESTORE | PKG | EXPOSE | STOP | SEND_LOGS | VERSION | STATUS | CLEAN | HELP"
+    echo "Commandes disponibles : deploy INSTALL | PKG | NEWKEY | RESTORE | EXPOSE | STOP | SEND_LOGS | VERSION | STATUS | CLEAN | HELP"
 }
 
 do_install()
@@ -806,6 +806,278 @@ do_deploy_status()
     return 0
 }
 
+# ---------------------------------------------------------------
+# NEWKEY - usine a cles : transforme une cle USB BRANCHEE sur la
+# box en cle "exposition" prete a installer sur une box vierge.
+#
+#   deploy NEWKEY              analyse + selection interactive
+#   deploy NEWKEY <chemin>     destination imposee (mode scripte)
+#   NK_FORCE=1 deploy NEWKEY   passer outre le refus cle ACTIVE
+#
+# Depose : deploy.sh, INSTALLER.sh, panneau web (*.html), AMORCE,
+# README/TROUBLESHOOTING/ROADMAP, docs/, dernier .dpk (+ .sha256).
+# La cle ACTIVE (serveurs web et/ou swap en cours) est refusee :
+# ecrire dessus couperait l'exposition en cours.
+# ---------------------------------------------------------------
+
+nk_keys()
+{
+    for d in /mnt/media_rw/*; do
+        [ -d "$d" ] && printf '%s\n' "$d"
+    done
+}
+
+nk_active_key()
+{
+    # cle ACTIVE = serveurs vivants (pidfiles), sinon swap monte dessus
+    for F in /mnt/media_rw/*/server/*.pid; do
+        [ -f "$F" ] || continue
+        P_="$(cat "$F" 2>/dev/null)"
+        if [ -n "$P_" ] && kill -0 "$P_" 2>/dev/null; then
+            dirname "$(dirname "$F")"
+            return 0
+        fi
+    done
+    S_="$(grep '^/mnt/media_rw/' /proc/swaps 2>/dev/null | awk '{print $1}' | head -n 1)"
+    [ -n "$S_" ] && { dirname "$S_"; return 0; }
+    return 1
+}
+
+nk_latest_dpk()
+{
+    ls -1 "$1"/*.dpk 2>/dev/null | sort -t_ -k3 | tail -n 1
+}
+
+do_newkey()
+{
+    echo ""
+    echo "=== RK322X NEWKEY - PREPARATION D'UNE CLE EXPOSITION ==="
+
+    ALL_="$(nk_keys)"
+    if [ -z "$ALL_" ]; then
+        echo "[ERREUR] aucune cle USB branchee (/mnt/media_rw vide)"
+        return 1
+    fi
+
+    ACT_="$(nk_active_key)"
+
+    # ---- [1] analyse des candidates -------------------------------------
+    echo ""
+    echo "[1] Analyse des cles branchees :"
+    N_=0
+    for K in $ALL_; do
+        N_=$((N_+1))
+        FS_="$(grep " $K " /proc/mounts 2>/dev/null | head -n 1 | cut -d' ' -f3)"
+        AV_="$(df -m "$K" 2>/dev/null | awk 'NR==2{print $4}')"
+        DSC_=""
+        [ -f "$K/deploy.sh" ]  && DSC_="${DSC_}deploy.sh "
+        [ -f "$K/index.html" ] && DSC_="${DSC_}panneau "
+        [ -d "$K/docs" ]       && DSC_="${DSC_}docs "
+        [ -f "$K/swap.bin" ]   && DSC_="${DSC_}swap.bin "
+        DP_="$(nk_latest_dpk "$K")"
+        [ -n "$DP_" ] && DSC_="${DSC_}dpk:$(basename "$DP_" | cut -d_ -f3 | sed 's/\.dpk$//') "
+        TAG_=""
+        [ "$K" = "$ACT_" ] && TAG_="  *** ACTIVE (serveurs/swap) ***"
+        printf '  [%d] %-26s %-8s libre %s Mo\n      contenu : %s%s\n' \
+            "$N_" "$K" "${FS_:-?}" "${AV_:-?}" "${DSC_:-vide}" "$TAG_"
+    done
+
+    # ---- [2] selection + gardes -----------------------------------------
+    DEST_="$1"
+    INT_=0
+    if [ -z "$DEST_" ]; then
+        INT_=1
+        if [ -r /dev/tty ]; then
+            printf '\n[2] Cle destination [1-%d] (ENTREE = annuler) : ' "$N_"
+            IFS= read -r SEL_ < /dev/tty || SEL_=""
+        else
+            echo ""
+            echo "[ERREUR] pas de terminal interactif : preciser le chemin :"
+            echo "         deploy NEWKEY /mnt/media_rw/<ID>"
+            return 1
+        fi
+        case "$SEL_" in
+            "") echo "annule (rien modifie)"; return 0 ;;
+            *[!0-9]*) echo "[ERREUR] choix invalide : $SEL_"; return 1 ;;
+        esac
+        [ "$SEL_" -ge 1 ] && [ "$SEL_" -le "$N_" ] \
+            || { echo "[ERREUR] choix hors plage : $SEL_"; return 1; }
+        DEST_="$(printf '%s\n' "$ALL_" | sed -n "${SEL_}p")"
+    fi
+
+    OK_=0
+    for K in $ALL_; do [ "$K" = "$DEST_" ] && OK_=1; done
+    if [ "$OK_" != "1" ]; then
+        echo "[ERREUR] '$DEST_' n'est pas une cle USB montee (/mnt/media_rw/*)"
+        return 1
+    fi
+
+    if [ -n "$ACT_" ] && [ "$DEST_" = "$ACT_" ] && [ "$NK_FORCE" != "1" ]; then
+        echo ""
+        echo "[REFUS] $DEST_ est la cle ACTIVE (pile web et/ou swap en cours) :"
+        echo "        ecrire dessus couperait l'exposition et le swap."
+        echo "        Passer outre (deconseille) : NK_FORCE=1 deploy NEWKEY $DEST_"
+        return 1
+    fi
+    [ -n "$ACT_" ] && [ "$DEST_" = "$ACT_" ] && \
+        echo "[WARN] destination = cle ACTIVE (NK_FORCE) : interruption probable"
+
+    # ---- [3] source : la cle portant le dpk le plus recent ---------------
+    CAND_=""
+    for K in $ALL_; do
+        [ "$K" = "$DEST_" ] && continue
+        for D_ in "$K"/*.dpk; do
+            [ -f "$D_" ] || continue
+            CAND_="${CAND_}${D_}
+"
+        done
+    done
+    PKG_="$(printf '%s' "$CAND_" | sort -t_ -k3 | tail -n 1)"
+    SRC_="$(dirname "$PKG_")"
+    if [ ! -f "$PKG_" ]; then
+        DP_="$(nk_latest_dpk "$DEST_")"
+        if [ -n "$DP_" ]; then
+            SRC_="$DEST_"
+            PKG_="$DP_"
+            echo "[..] pas d'autre source : rafraichi depuis le dpk deja present"
+        else
+            echo ""
+            echo "[ERREUR] aucun .dpk source disponible (autres cles et destination) :"
+            echo "         une cle exposition exige le paquet ; brancher une cle existante"
+            echo "         ou deposer le .dpk a la racine avant de relancer."
+            return 1
+        fi
+    fi
+    echo ""
+    echo "[3] Source : $SRC_"
+    echo "    Paquet : $(basename "$PKG_")"
+
+    if [ "$INT_" = "1" ] && [ -r /dev/tty ]; then
+        printf 'Deployer sur %s ? [o/N] : ' "$DEST_"
+        IFS= read -r ANS_ < /dev/tty || ANS_=""
+        case "$ANS_" in
+            o|O|y|Y|oui|OUI) ;;
+            *) echo "annule (rien modifie)"; return 0 ;;
+        esac
+    fi
+
+    # ---- [4] deploiement --------------------------------------------------
+    mkdir -p "$DEST_/docs" 2>/dev/null \
+        || { echo "[ERREUR] ecriture impossible sur $DEST_ (cle en lecture seule ?)"; return 1; }
+
+    COPIED_=0
+    cp_one()
+    {
+        [ -f "$1" ] || return 0
+        if cp -f "$1" "$2" 2>/dev/null; then
+            COPIED_=$((COPIED_+1))
+            return 0
+        fi
+        echo "    [ ERREUR ] copie : $3"
+        return 1
+    }
+
+    echo ""
+    echo "[4] Deploiement -> $DEST_ ..."
+    DEPLOY_SRC="$SRC_/deploy.sh"
+    [ -f "$DEPLOY_SRC" ] || DEPLOY_SRC="$SCRIPTS_DIR/deploy.sh"
+    cp_one "$DEPLOY_SRC"          "$DEST_/deploy.sh"                 "deploy.sh"
+    chmod 755 "$DEST_/deploy.sh" 2>/dev/null
+    cp_one "$SRC_/INSTALLER.sh"   "$DEST_/INSTALLER.sh"              "INSTALLER.sh"
+    chmod 755 "$DEST_/INSTALLER.sh" 2>/dev/null
+    for H in "$SRC_"/*.html; do
+        [ -f "$H" ] || continue
+        cp_one "$H" "$DEST_/$(basename "$H")" "panneau ($(basename "$H"))"
+    done
+    for F in AMORCE README.md TROUBLESHOOTING.md ROADMAP.md BUILD-INFO.txt; do
+        cp_one "$SRC_/$F" "$DEST_/$F" "$F"
+    done
+    for M in "$SRC_"/docs/*.md; do
+        [ -f "$M" ] || continue
+        cp_one "$M" "$DEST_/docs/$(basename "$M")" "docs/$(basename "$M")"
+    done
+    SHA_=""
+    [ -f "${PKG_}.sha256" ] && SHA_="${PKG_}.sha256"
+    cp_one "$PKG_" "$DEST_/$(basename "$PKG_")" "paquet $(basename "$PKG_")"
+    [ -n "$SHA_" ] && cp_one "$SHA_" "$DEST_/$(basename "$SHA_")" "sha256"
+    echo "    [ OK ] $COPIED_ fichier(s) copies"
+
+    # production propre : UN SEUL dpk par cle exposition
+    PURGED_=0
+    for D_ in "$DEST_"/*.dpk "$DEST_"/*.dpk.sha256; do
+        [ -f "$D_" ] || continue
+        [ "$D_" = "$DEST_/$(basename "$PKG_")" ] && continue
+        [ -n "$SHA_" ] && [ "$D_" = "$DEST_/$(basename "$SHA_")" ] && continue
+        rm -f "$D_" && PURGED_=$((PURGED_+1))
+    done
+    [ "$PURGED_" -gt 0 ] && echo "    [ OK ] $PURGED_ ancien(s) paquet(s) purge(s) (un seul dpk garde)"
+
+    # ---- [5] verification -------------------------------------------------
+    echo ""
+    echo "[5] Verification :"
+    RC_=0
+    sh -n "$DEST_/deploy.sh" 2>/dev/null \
+        && echo "    [ OK ] deploy.sh (syntaxe)" \
+        || { echo "    [ KO ] deploy.sh (syntaxe)"; RC_=1; }
+
+    TARC_="tar"
+    tar -tzf "$DEST_/$(basename "$PKG_")" > /dev/null 2>&1 || TARC_="busybox tar"
+    $TARC_ -tzf "$DEST_/$(basename "$PKG_")" > /dev/null 2>&1 \
+        && echo "    [ OK ] paquet lisible ($TARC_)" \
+        || { echo "    [ KO ] paquet illisible"; RC_=1; }
+
+    if [ -n "$SHA_" ]; then
+        WANT_="$(cut -d' ' -f1 "$DEST_/$(basename "$SHA_")" 2>/dev/null | tr 'A-Z' 'a-z')"
+        GOT_="$(sha256sum "$DEST_/$(basename "$PKG_")" 2>/dev/null \
+               || busybox sha256sum "$DEST_/$(basename "$PKG_")" 2>/dev/null)"
+        GOT_="$(printf '%s' "$GOT_" | cut -d' ' -f1 | tr 'A-Z' 'a-z')"
+        if [ -n "$WANT_" ] && [ "$WANT_" = "$GOT_" ]; then
+            echo "    [ OK ] sha256 conforme"
+        else
+            echo "    [ KO ] sha256 divergent"; RC_=1
+        fi
+    fi
+
+    MISS_=0
+    for F in deploy.sh INSTALLER.sh index.html AMORCE; do
+        [ -f "$DEST_/$F" ] && continue
+        echo "    [ KO ] manquant : $F"
+        MISS_=$((MISS_+1))
+    done
+    [ "$MISS_" -eq 0 ] && echo "    [ OK ] fichiers essentiels presents"
+    FREE_="$(df -m "$DEST_" 2>/dev/null | awk 'NR==2{print $4}')"
+    echo "    espace restant : ${FREE_:-?} Mo"
+
+    # ---- [6] exposition ----------------------------------------------------
+    echo ""
+    echo "[6] Exposition :"
+    UP_=0
+    netstat -tln 2>/dev/null | grep -q ":8000 " && UP_=1
+    grep -qi ":1F40 .* 0A " /proc/net/tcp 2>/dev/null && UP_=1
+    if [ "$UP_" = "1" ]; then
+        echo "    [ -- ] pile web deja active (8000 sert la cle courante)"
+    else
+        if do_expose > /dev/null 2>&1; then
+            echo "    [ OK ] pile web demarree (deploy EXPOSE)"
+        else
+            echo "    [WARN] expose en echec (relancer : deploy EXPOSE)"
+        fi
+    fi
+
+    IP_HINT="$(sed -n 's/^IP=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+    echo ""
+    if [ "$RC_" = "0" ]; then
+        echo "=== CLE PRETE : $DEST_ ==="
+    else
+        echo "=== CLE INCOMPLETE (voir KO ci-dessus) : $DEST_ ==="
+    fi
+    echo "  IHM box             : http://${IP_HINT:-<ip-box>}:8000/"
+    echo "  Sur une box vierge  : brancher la cle puis sh /mnt/media_rw/<ID>/INSTALLER.sh"
+    echo "  swap.bin (512 Mo)   : cree automatiquement au premier mem_tune OPTIMIZE"
+    echo ""
+    return "$RC_"
+}
+
 case "$1" in
 
     INSTALL)
@@ -814,6 +1086,13 @@ case "$1" in
 
     PKG)
         do_pkg "$2"
+        ;;
+
+    NEWKEY|newkey)
+        # le verdict de preparation doit rester consultable en scripte :
+        # rc=1 si la cle n'est pas prete (refus ACTIVE, dpk absent, KO verif)
+        do_newkey "$2"
+        exit $?
         ;;
 
     RESTORE)
@@ -976,6 +1255,8 @@ case "$1" in
         echo "Commandes:"
         echo "  INSTALL      Installer les scripts de la cle (avec sauvegarde auto)"
         echo "  PKG [f]      Installer depuis un paquet .dpk (racine cle ou chemin)"
+        echo "  NEWKEY [c]   Usine a cles : prepare une cle branchee pour exposition"
+        echo "               (analyse -> validation -> deploiement -> expose)"
         echo "  RESTORE      Restaurer la derniere installation sauvegardee"
         echo "  EXPOSE       Exposer la cle (HTTP port 8000)"
         echo "  STOP         Arreter les serveurs"

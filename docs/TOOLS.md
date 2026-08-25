@@ -35,12 +35,20 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 | Outil | Role |
 |---|---|
-| deploy | INSTALL/PKG/RESTORE/EXPOSE/STOP/SEND_LOGS/STATUS/CLEAN/TOKEN/MAXCONN |
+| deploy | INSTALL/PKG/NEWKEY/RESTORE/EXPOSE/STOP/SEND_LOGS/STATUS/CLEAN/TOKEN/MAXCONN |
 | INSTALLER.sh | installation complete interactive en une commande (racine cle) |
 | boot | hook init persistant (INSTALL/REMOVE/STATUS/TEST) |
 | amorce | bilan demarrage + raccourcis |
 | sd_boot | carte SD examinee en dernier au boot |
 | preflight | verif commandes critiques box + verdicts features (autonome) |
+
+`deploy NEWKEY [chemin]` : usine a cles depuis la box. Branche une cle neuve,
+l'outil ANALYSE les cles montees (fs, espace, contenu, cle ACTIVE), demande
+la destination, DEPLOYE le kit exposition complet (deploy.sh, INSTALLER.sh,
+panneau web, AMORCE, docs, dernier .dpk + sha256 - un seul dpk garde),
+VERIFIE (syntaxe, archive, sha256, fichiers essentiels) puis EXPOSE.
+La cle ACTIVE (serveurs/swap) est refusee sans NK_FORCE=1. rc=1 si la cle
+n'est pas prete (scriptable).
 
 ## Configuration
 

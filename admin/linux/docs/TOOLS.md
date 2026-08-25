@@ -35,12 +35,20 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 | Outil | Role |
 |---|---|
-| deploy | INSTALL/PKG/RESTORE/EXPOSE/STOP/SEND_LOGS/STATUS/CLEAN/TOKEN/MAXCONN |
+| deploy | INSTALL/PKG/NEWKEY/RESTORE/EXPOSE/STOP/SEND_LOGS/STATUS/CLEAN/TOKEN/MAXCONN |
 | INSTALLER.sh | installation complete interactive en une commande (racine cle) |
 | boot | hook init persistant (INSTALL/REMOVE/STATUS/TEST) |
 | amorce | bilan demarrage + raccourcis |
 | sd_boot | carte SD examinee en dernier au boot |
 | preflight | verif commandes critiques box + verdicts features (autonome) |
+
+`deploy NEWKEY [chemin]` : usine a cles depuis la box. Branche une cle neuve,
+l'outil ANALYSE les cles montees (fs, espace, contenu, cle ACTIVE), demande
+la destination, DEPLOYE le kit exposition complet (deploy.sh, INSTALLER.sh,
+panneau web, AMORCE, docs, dernier .dpk + sha256 - un seul dpk garde),
+VERIFIE (syntaxe, archive, sha256, fichiers essentiels) puis EXPOSE.
+La cle ACTIVE (serveurs/swap) est refusee sans NK_FORCE=1. rc=1 si la cle
+n'est pas prete (scriptable).
 
 ## Configuration
 
@@ -57,10 +65,17 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | Outil | Role |
 |---|---|
 | mem_tune | zram/swap chaine cle->repli /data/swappiness/LMK/logd (OPTIMIZE/STATUS/RESTORE/PROBE) ; PROBE = sonde acceptation swapon + fabrication directe d un mini-binaire syscall si agent absent ; STATUS affiche chaque maillon |
+| swap_watch | gardien memoire RESIDENT (pattern net_watch) : STATUS/START [sec]/STOP/RUN ; reagit en runtime : TRIM caches sous seuil MemAvailable, RESCUE chaine swap morte, THRASH journalise sur cle ; BOOT_SWAP_WATCH=1 |
 | cut_services | allegement services+paquets (CUT/APPS/RESTORE/STATUS) |
 | thermal | profils ECO/PERF + temperatures |
 | stress_ram | pression RAM controlee + rapport |
-| vitals | releves instantanes/WATCH/CSV |
+| vitals | releves instantanes/WATCH/CSV (+ colonnes swap : % utilise, delta pswp) |
+
+## Environnement isole (chroot)
+
+| Outil | Role |
+|---|---|
+| chroot_env | mini-conteneurs chroot (rootfs armhf sous /data/chroots) : PROBE capacites kernel, CREATE depuis cle/chemin (tar.gz/xz/bz2/tar), LIST/STATUS, ENTER shell interactif, EXEC commande ponctuelle, MOUNT/UMOUNT liens proc/sys/dev+DNS (auto au boot via BOOT_CHROOT=1), REMOVE [FORCE] |
 
 ## Reseau
 
@@ -100,6 +115,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | inspect_usb | cle USB x adb : montage/droits uid2000/adbd 5555 |
 | inspect_proc | processus par PSS : critiques/kit/deja coupees/candidats detournables + traitement suggere (reduction RAM) |
 | inspect_dev | capacites d'execution embarquee : runtimes/ABI/montages exec/primitives de service/cout mesure d'un mini-daemon |
+| busi | busybox devoile : INFO inventaire+indice puissance, LIST/WHERE applets, CHECK besoins du kit + puissances endormies, POWERS demos vivantes (httpd/gzip/awk), RUN applet directe, WHO fournisseurs de /system/bin |
 | launcher_toggle | lanceur TV : STATUS / ON (apps visibles, voie A/B inspect_dev) / OFF (retour headless via cut_services) |
 | hw_report | rapport materiel COMPLET recherche web (SAVE = fichier cle) |
 | investigate | collecte contextuelle ALL/scenario |
@@ -109,8 +125,10 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 
 | Outil | Role |
 |---|---|
+| help | aide complete embarquee : liste outils + usage detaille par outil |
 | nreg | non-regression executable : 10 themes, un seul lancable |
-| xrun | executeur par identifiant [Theme+numero] (registre core/actions.tsv) |
+| xrun | executeur par identifiant [Theme+numero] (registre core/actions.tsv) ; mode serie xrun N8 N7 O4 + bilan, recherche FIND <motif> |
+| macro | sequences nommees d'actions [ID] : NEW/ADD/DEL/RM/SHOW/RUN (/data/etc/macros), chaque action tracee + bilan global |
 | selftest | tous les outils repondent (~50 checks) |
 | recette | bout-en-bout P1..P7 + sections CONFIG/DIAG + manifest |
 | ramstep | deploiement instrumente (mesure RAM par etape) |
@@ -128,6 +146,7 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | sync_usb | /data/scripts -> cle avec verification octet/octet |
 | show_key | paquets dpk de la cle vs installe |
 | reboot | redemarrage trace |
+| tips | golden one-liners embarques sur la box (categories reseau/ram/stockage/web/secours/divers, ALL, FIND) - version executable de docs/BEST-COMMANDES.md |
 | system_rw | bascule /system RW/RO (+DEBUG formes remount) |
 
 ## Serveurs (server/)
