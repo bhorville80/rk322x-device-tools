@@ -82,6 +82,21 @@ function tokQ() {
 }
 function put(id, t) { document.getElementById(id).textContent = t; }
 
+// box mono-slot (sans tcpsvd) : SYS_INFO et CONFIG partent en meme temps au
+// chargement -> re-essais espaces pour ne pas perdre une des deux requetes
+function apiFetch(url, n) {
+    n = n || 0;
+    return fetch(url, {cache:"no-store"}).catch(function (e) {
+        if (n < 2) {
+            return new Promise(function (res) {
+                setTimeout(function () { res(apiFetch(url, n + 1)); },
+                           600 + Math.floor(Math.random() * 900));
+            });
+        }
+        throw e;
+    });
+}
+
 function loadText(url, id, absent) {
     fetch(url, {cache:"no-store"})
         .then(r => { if (!r.ok) throw 0; return r.text(); })
@@ -90,7 +105,7 @@ function loadText(url, id, absent) {
 }
 
 /* identite + noyau + uptime + memoire + cpu + stockage */
-fetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""), {cache:"no-store"})
+apiFetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""))
     .then(r => { if (!r.ok) throw 0; return r.text(); })
     .then(t => put("sysinfo", t))
     .catch(() => {
@@ -99,7 +114,7 @@ fetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""), {cache:"no-store
     });
 
 /* version installee via l'API CONFIG existante (1re ligne) */
-fetch(API + "CONFIG" + (tokQ() ? "?" + tokQ().slice(1) : ""), {cache:"no-store"})
+apiFetch(API + "CONFIG" + (tokQ() ? "?" + tokQ().slice(1) : ""))
     .then(r => r.text())
     .then(t => {
         var m = (t.split("\n")[0] || "").match(/version installee\s*:\s*(.*)/);

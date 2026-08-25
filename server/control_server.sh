@@ -592,10 +592,14 @@ max_conn()
     echo "$N"
 }
 
-tcpsvd_detect()
+# port en ecoute ? netstat d'abord, sinon /proc/net/tcp (port hexa, etat 0A)
+listen_up()
 {
-    command -v tcpsvd > /dev/null 2>&1 && return 0
-    busybox tcpsvd 2>&1 | grep -q "tcpsvd" && return 0
+    if netstat -tln 2>/dev/null | grep -q ":$PORT "; then
+        return 0
+    fi
+    H_="$(printf '%04X' "$PORT" 2>/dev/null)"
+    [ -n "$H_" ] && grep -qi ":$H_ .* 0A " /proc/net/tcp 2>/dev/null && return 0
     return 1
 }
 
@@ -653,10 +657,18 @@ run_tcpsvd_forever()
 
 fifo_loop()
 {
-    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=25; else STEP="1"; MAX=3; fi
+    if sleep 0.1 2>/dev/null; then STEP="0.1"; MAX=15; else STEP="1"; MAX=3; fi
     RUNNC="busybox nc"
     command -v timeout > /dev/null 2>&1 && RUNNC="timeout 180 busybox nc"
     FIFO="/data/local/tmp/control_resp"
+
+    # verdict d'ecoute affiche des le premier bind (sinon diagnostic immediat)
+    sleep 1
+    if listen_up; then
+        log "FIFO : port $PORT en ecoute (mono-slot : une requete a la fois)"
+    else
+        log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?)"
+    fi
 
     while true
     do
@@ -664,7 +676,7 @@ fifo_loop()
         mkfifo "$FIFO" 2>/dev/null || { sleep 1; continue; }
 
         # handler detache -> FIFO ; nc sert de pont FIFO -> socket.
-        # connexion oisive ~2 s puis liberation du slot.
+        # connexion oisive ~1.5 s puis liberation du slot.
         {
             i=0
             while [ ! -s "$TMP_REQ" ] && [ "$i" -lt "$MAX" ]; do
@@ -682,15 +694,13 @@ fifo_loop()
 
         $RUNNC -l -p "$PORT" < "$FIFO" > "$TMP_REQ" 2>/dev/null
 
-        k=0
-        while kill -0 "$HP" 2>/dev/null && [ "$k" -lt 30 ]; do
-            sleep 0.1
-            k=$((k + 1))
-        done
+        # au retour de nc la reponse est deja relatee (EOF FIFO = fin
+        # d'ecriture handler) : on relibe le port IMMEDIATEMENT, sans les
+        # ~3 s de grace d'avant. Chaque milliseconde hors ecoute est une
+        # connexion navigateur REFUSEE (rafales IHM -> badge "injoignable").
+        rm -f "$FIFO"
         kill "$HP" 2>/dev/null
         wait "$HP" 2>/dev/null
-
-        rm -f "$FIFO"
     done
 }
 
@@ -703,8 +713,8 @@ SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 
     TCPSVD_BIN=""
     command -v tcpsvd > /dev/null 2>&1 && TCPSVD_BIN="tcpsvd"
-    if [ -z "$TCPSVD_BIN" ]; then
-        busybox tcpsvd 2>&1 | grep -q "tcpsvd" && TCPSVD_BIN="busybox tcpsvd"
+    if [ -z "$TCPSVD_BIN" ] && busybox --list 2>/dev/null | grep -qx "tcpsvd"; then
+        TCPSVD_BIN="busybox tcpsvd"
     fi
 
     if [ -n "$TCPSVD_BIN" ]; then
@@ -726,6 +736,19 @@ if kill -0 "$PID" 2>/dev/null; then
     echo "CONTROL SERVER STARTED"
     echo "PID: $PID"
     echo "PORT: $PORT"
+
+    # le pid vivant ne prouve pas le bind : verdict sur l'ecoute reelle
+    # (le mode FIFO peut mettre ~1 s a ouvrir le port)
+    UP_=""
+    for W_ in 1 2 3 4 5; do
+        if listen_up; then UP_="oui"; break; fi
+        sleep 1
+    done
+    case "$UP_" in
+        oui) echo "ECOUTE: verifiee sur le port $PORT" ;;
+        *)   echo "WARN : port $PORT non ouvert apres 5 s (voir $LOG)" ;;
+    esac
+
     if [ -f "$TOKEN_FILE" ]; then
         echo "SECURITE: token requis (?token=...)"
     fi

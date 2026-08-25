@@ -173,9 +173,9 @@ write_manifest()
     return 0
 }
 
-# post-install : pose le hook de demarrage automatiquement.
-# Non bloquant : si /system refuse l'ecriture, simple avertissement
-# (boot INSTALL restera possible manuellement).
+# post-install : pose le hook de demarrage ET les aliases automatiquement.
+# Non bloquant : si /system refuse l'ecriture, simples avertissements
+# (boot INSTALL / aliases INSTALL resteront possibles manuellement).
 post_install_boot()
 {
     BOOT_SH="$SCRIPTS_DIR/boot.sh"
@@ -192,6 +192,22 @@ post_install_boot()
         grep -E 'ERREUR|WARN' "$TMPB" | tail -n 3 | sed 's/^/      /'
     fi
     rm -f "$TMPB" 2>/dev/null
+
+    # raccourcis adb shell (/system/bin) : la cle d'une installation
+    # complete sans manip supplementaire ; echec non bloquant
+    ALIAS_SH="$SCRIPTS_DIR/aliases.sh"
+    if [ -f "$ALIAS_SH" ]; then
+        echo "[6] Raccourcis adb shell (aliases INSTALL)..."
+        TMPA="/data/local/tmp/deploy_alias_$$"
+        if sh "$ALIAS_SH" INSTALL > "$TMPA" 2>&1; then
+            grep -E 'poses/mis a jour|collisions' "$TMPA" | sed 's/^/    /'
+            echo "    [ OK ] help/manage/nreg/... disponibles depuis adb shell"
+        else
+            echo "    [WARN] aliases non poses (non bloquant) -> aliases INSTALL plus tard"
+            grep -E 'ERREUR|WARN' "$TMPA" | tail -n 2 | sed 's/^/      /'
+        fi
+        rm -f "$TMPA" 2>/dev/null
+    fi
     return 0
 }
 
@@ -310,6 +326,10 @@ install_from()
         echo "[ ERREUR ] installation incomplete : verifier ci-dessus (deploy STATUS)"
         return 1
     fi
+
+    # hook init + aliases poses d'office : INSTALL complete sans manip RW
+    # manuelle (echecs non bloquants, voir [5]/[6] ci-dessus)
+    post_install_boot
 
     IP_HINT="$(sed -n 's/^IP=//p' "$SCRIPTS_DIR/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
     EXPOSE_FLAG="$(sed -n 's/^BOOT_EXPOSE=//p' "$SCRIPTS_DIR/config/device.conf" | head -n 1)"

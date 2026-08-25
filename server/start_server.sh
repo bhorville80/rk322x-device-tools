@@ -70,6 +70,18 @@ box_ip()
     echo "$IP"
 }
 
+# port en ecoute ? netstat, sinon /proc/net/tcp (port hexa, etat 0A=LISTEN)
+port_up()
+{
+    P_="$1"
+    if netstat -tln 2>/dev/null | grep -q ":$P_ "; then
+        return 0
+    fi
+    H_="$(printf '%04X' "$P_" 2>/dev/null)"
+    [ -n "$H_" ] && grep -qi ":$H_ .* 0A " /proc/net/tcp 2>/dev/null && return 0
+    return 1
+}
+
 ensure_index()
 {
     [ -f "$USB/index.html" ] && return 0
@@ -184,6 +196,12 @@ if kill -0 "$PID" 2>/dev/null; then
                 echo "GUI SERVER: echec ($GUI_OUT)"
                 ;;
         esac
+        sleep 1
+        if port_up 8081; then
+            echo "GUI PORT: 8081 en ecoute (verifie)"
+        else
+            echo "GUI PORT: WARN 8081 absent (voir gui_server.log)"
+        fi
     fi
 
     if [ -f "$SRV/control_server.sh" ]; then
@@ -196,6 +214,12 @@ if kill -0 "$PID" 2>/dev/null; then
             *"STARTED"*)
                 echo "CONTROL SERVER: 8080"
                 echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
+                # verdict d'ecoute repris du rapport du serveur lui-meme :
+                # un pid vivant ne prouve pas le bind du port
+                case "$CTRL_OUT" in
+                    *"ECOUTE: verifiee"*) echo "CONTROL PORT: 8080 en ecoute (verifie)" ;;
+                    *WARN*)               echo "CONTROL PORT: WARN 8080 absent (voir control_server.log)" ;;
+                esac
                 ;;
             *)
                 echo "CONTROL SERVER: echec ($CTRL_OUT)"

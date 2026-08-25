@@ -3,18 +3,40 @@
 # points de validation a chaque etape (vous restez maitre de ce qui part).
 #
 # Depuis adb shell :
-#   su
 #   sh /mnt/media_rw/*/INSTALLER.sh          interactif (recommande)
 #   sh /mnt/media_rw/*/INSTALLER.sh AUTO     sans questions (scripte)
+# (uid non root : relance automatique via su, comme deploy.sh)
 #
 # Etapes :
 #   1/3 deploy PKG      installe le .dpk le plus recent (+ panneau + liens)
-#   2/3 boot INSTALL    point de lancement persistant (init rc/init.d/recovery)
+#                       et pose d'office hook init + aliases (/system rw)
+#   2/3 boot INSTALL    verifie le point de lancement persistant
 #   3/3 boot TEST       applique immediatement memoire/reseau/horloge/web
-#   (+ option aliases : raccourcis adb shell)
+#   (+ option aliases : verification des raccourcis adb shell)
 
 H_="$(dirname "$0")"
 AUTO="$1"
+
+# auto-elevation : les etapes 2/3 (hook init -> /system rw) et aliases
+# (/system/bin) exigent root ; deploy.sh PKG se re-lance seul via su mais
+# pas la suite -> sans ceci l'installation finit incomplete si l'installateur
+# n'a pas ete lance depuis un shell su.
+is_root()
+{
+    case "$(id -u 2>/dev/null)" in
+        0) return 0 ;;
+    esac
+    case "$(id 2>/dev/null)" in
+        "uid=0("*) return 0 ;;
+    esac
+    return 1
+}
+
+if ! is_root && command -v su > /dev/null 2>&1; then
+    echo "[*] uid non root : relance automatique via su (installation complete)"
+    SELF_="$(cd "$H_" && pwd)/$(basename "$0")"
+    exec su -c "sh $SELF_ $*"
+fi
 
 ask()
 {
@@ -93,11 +115,11 @@ fi
 
 # ---- [2/3] hook de lancement persistant -------------------------------------
 echo ""
-if ask "Rendre le demarrage AUTOMATIQUE au prochain reboot (hook init) ?" O; then
+if ask "Verifier le demarrage AUTOMATIQUE au reboot (hook init, deja pose par l installation) ?" O; then
     echo "=== 2/3 POINT DE LANCEMENT PERSISTANT (boot INSTALL) ==="
     sh /data/scripts/boot.sh INSTALL
 else
-    echo "[ -- ] etape sautee : il faudra lancer EXPOSE a la main apres chaque reboot"
+    echo "[ -- ] etape sautee : pour retirer le hook plus tard : boot REMOVE"
 fi
 
 # ---- [3/3] application immediate --------------------------------------------
@@ -111,7 +133,7 @@ fi
 
 # ---- bonus raccourcis ---------------------------------------------------------
 echo ""
-if ask "Installer les raccourcis adb shell (aliases : help, manage, nreg...) ?" O; then
+if ask "Verifier les raccourcis adb shell (aliases, deja poses par l installation) ?" O; then
     sh /data/scripts/aliases.sh INSTALL
 fi
 
