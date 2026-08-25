@@ -66,6 +66,13 @@ Results are displayed in the black output block under the buttons.
 - **Keys**: dpad + OK, BACK/HOME/MENU, VOL +/- , POWER.
 - **Send**: TEXT = full-screen message on the TV;
   OPEN URL = page in the TV browser.
+- **Front display (blink points)**: direct test of the IHM -> API ->
+  FD655 chain. Quick SHOW buttons (8888 / 12.34 / HELP / STOP) and
+  named blink presets (`front_digit BLINK`): p1..p4 = decimal point
+  per digit, chase, all - built-in defaults. "Definir" creates a new
+  preset: name + digit points checkboxes + optional extra 7-seg frames
+  + period; sequence always ends off. Endpoints: FD_SHOW, FD_BLINKS,
+  FD_BLINK, FD_BLINK_NEW, FD_BLINK_DEL, FD_STOP.
 - **Remote console** (adb-shell equivalent): one line -> raw output.
   Requirements: `WEB_RUN=1` in device.conf AND active token
   (`deploy TOKEN ON`) - refused otherwise by design. Bounded to

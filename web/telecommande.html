@@ -88,6 +88,33 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
 </div>
 
 <div class="card">
+  <h2>Afficheur frontal - points de clignotement</h2>
+  <span class="dim">test de la chaine IHM -> API -> afficheur FD655 ;
+    '*' = point decimal seul, frame vide = eteint, frames separees par ','</span><br><br>
+  <button onclick="fdShow('8888')">8888</button>
+  <button onclick="fdShow('12.34')">12.34</button>
+  <button onclick="fdShow('HELP')">HELP</button>
+  <button onclick="fdStop()">STOP AFFICHEUR</button>
+  <br><br>
+  <b style="font-size:14px">Clignotements definis</b>
+  <span class="dim">(▶ = jouer x3 sur la box)</span>
+  <div id="fdblist"><span class="dim">chargement...</span></div>
+  <br>
+  <b style="font-size:14px">Definir un clignotement</b><br>
+  nom <input type="text" id="fdname" placeholder="mon_test" style="width:110px">
+  &nbsp;points&nbsp;
+  <label class="dim"><input type="checkbox" id="fdp1">digit1</label>
+  <label class="dim"><input type="checkbox" id="fdp2">digit2</label>
+  <label class="dim"><input type="checkbox" id="fdp3">digit3</label>
+  <label class="dim"><input type="checkbox" id="fdp4">digit4</label><br>
+  periode (s) <input type="text" id="fdper" value="0.4" style="width:60px">
+  frames supp. <input type="text" id="fdframes" placeholder="ex : **,8.8.8.8,-..-" style="width:180px">
+  <button onclick="fdCreate()">CREER</button><br>
+  <span class="dim">cocher les digits dont le POINT doit clignoter ; frames
+  supplementaires optionnelles (rendu 7-seg) ; la sequence finit toujours eteinte.</span>
+</div>
+
+<div class="card">
   <h2>Console distante (equivalent adb shell)</h2>
   <span class="dim">une ligne de commande, sortie brute. Requiert WEB_RUN=1 dans
   device.conf + token actif conseille ; borne 15 s / 8 Ko, toute ligne est loggee.</span><br><br>
@@ -201,6 +228,103 @@ async function runCmd() {
 document.getElementById("runcmd").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") runCmd();
 });
+
+/* ---- afficheur frontal : SHOW + points de clignotement ---- */
+function fdApi(cmd) {
+    return fetch(API + cmd + tokQ(), {cache:"no-store"})
+        .then(function (r) { return r.text(); });
+}
+function fdShow(t) {
+    showOut("FD_SHOW " + t + " ...");
+    fdApi("FD_SHOW?t=" + encodeURIComponent(t))
+        .then(function (out) { showOut("FD_SHOW " + t + "\n" + out); })
+        .catch(function (e) { showOut("[KO] " + e); });
+}
+function fdStop() {
+    showOut("FD_STOP ...");
+    fdApi("FD_STOP")
+        .then(function (out) { showOut("FD_STOP\n" + out); })
+        .catch(function (e) { showOut("[KO] " + e); });
+}
+function fdPlay(n) {
+    showOut("FD_BLINK " + n + " x3 ...");
+    fdApi("FD_BLINK?n=" + n + "&c=3")
+        .then(function (out) { showOut("FD_BLINK " + n + "\n" + out); })
+        .catch(function (e) { showOut("[KO] " + e); });
+}
+function fdDel(n) {
+    if (!confirm("Supprimer le clignotement '" + n + "' ?")) return;
+    fdApi("FD_BLINK_DEL?n=" + n)
+        .then(function () { return fdList(); })
+        .catch(function (e) { showOut("[KO] " + e); });
+}
+function fdList() {
+    fetch(API + "FD_BLINKS" + tokQ(), {cache:"no-store"})
+        .then(function (r) { return r.text(); })
+        .then(function (t) {
+            var box = document.getElementById("fdblist");
+            box.innerHTML = "";
+            var n = 0;
+            t.trim().split("\n").forEach(function (l) {
+                var m = l.match(/^(\S+)\s+(\S+)\s+(.*)$/);
+                if (!m) return;
+                n++;
+                var row = document.createElement("div");
+                var b = document.createElement("button");
+                b.textContent = "\u25B6 " + m[1];
+                b.onclick = function () { fdPlay(m[1]); };
+                var s = document.createElement("span");
+                s.className = "dim";
+                s.textContent = " periode " + m[2] + "s : " + m[3];
+                var d = document.createElement("button");
+                d.textContent = "x";
+                d.onclick = function () { fdDel(m[1]); };
+                row.appendChild(b);
+                row.appendChild(s);
+                row.appendChild(d);
+                box.appendChild(row);
+            });
+            if (!n) {
+                box.innerHTML = "<span class='dim'>aucun clignotement " +
+                    "(API 8080 injoignable ? voir console ci-dessous)</span>";
+            }
+        })
+        .catch(function () {
+            document.getElementById("fdblist").innerHTML =
+                "<span class='dim'>API 8080 injoignable</span>";
+        });
+}
+function fdCreate() {
+    var name = document.getElementById("fdname").value.trim().toLowerCase()
+                 .replace(/[^a-z0-9_]/g, "").slice(0, 16);
+    if (!name) { showOut("nom invalide : a-z 0-9 _ requis"); return; }
+    var pts = "";
+    for (var i = 1; i <= 4; i++) {
+        if (document.getElementById("fdp" + i).checked) pts += "*";
+    }
+    var extra = document.getElementById("fdframes").value
+                    .replace(/[^0-9a-zA-Z_*.,-]/g, "").slice(0, 48);
+    var frames = [];
+    if (pts) frames.push(pts);
+    if (extra) {
+        extra.split(",").forEach(function (f) { if (f !== "") frames.push(f); });
+    }
+    if (!frames.length) {
+        showOut("cocher au moins un point, ou saisir des frames supplementaires");
+        return;
+    }
+    var per = document.getElementById("fdper").value.trim()
+                  .replace(/[^0-9.]/g, "") || "0.4";
+    var d = frames.join(",") + ",";   // fin toujours eteinte
+    showOut("FD_BLINK_NEW " + name + " ...");
+    fdApi("FD_BLINK_NEW?n=" + name + "&d=" + d + "&p=" + per)
+        .then(function (out) {
+            showOut("FD_BLINK_NEW\n" + out);
+            fdList();
+        })
+        .catch(function (e) { showOut("[KO] " + e); });
+}
+fdList();
 
 schedule();
 

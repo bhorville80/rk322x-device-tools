@@ -17,6 +17,7 @@
 #   front_digit RAW 3f 06 5b 4f     ecrit les octets segments bruts
 #   front_digit CLOCK               horloge HH.MM (rafraichie chaque minute)
 #   front_digit ROTATE [s] [items]  rotation toutes les s secondes (defaut 5)
+#   front_digit BLINK ...           points de clignotement (LIST/<nom>/NEW/DEL)
 #                                   items : TIME IP RAM UP (defaut TIME IP)
 #   front_digit STOP                arrete nos daemons (+ FD655_Demo si actif)
 #
@@ -48,6 +49,7 @@ command -v is_root >/dev/null 2>&1 || is_root() { case "$(id -u 2>/dev/null)" in
 DEV="/dev/fd655_dev"
 PIDFILE="/data/local/tmp/front_digit.pid"
 CONF="/data/scripts/config/device.conf"
+BLINKS_DIR="/data/etc/fd_blinks"
 
 # ---- police 7 segments (bits gfedcba ; +0x80 = point decimal) ----
 
@@ -377,6 +379,158 @@ do_raw()
     return 0
 }
 
+# ---- points de clignotement (BLINK) ----------------------------------------
+# Un clignotement = sequence de frames SHOW separees par ',', jouee en boucle.
+# '*' = point decimal SEUL allume (segment eteint + bit DP) ; frame vide =
+# tout eteint. Stockage : /data/etc/fd_blinks/<nom>, contenu :
+#   <periode_s>:frame1,frame2,...
+# Exemple : p1 -> "0.4:*,"  alterne point digit1 / extinction.
+
+blink_valid_name()
+{
+    case "$1" in
+        ""|*[!a-z0-9_]*) return 1 ;;
+    esac
+    L="${#1}" 2>/dev/null || L="$(printf '%s' "$1" | wc -c | tr -dc '0-9')"
+    [ "$L" -le 16 ]
+}
+
+blink_defaults()
+{
+    [ -d "$BLINKS_DIR" ] && [ -n "$(ls -A "$BLINKS_DIR" 2>/dev/null)" ] && return 0
+    mkdir -p "$BLINKS_DIR" 2>/dev/null || { echo "[ERREUR] mkdir $BLINKS_DIR"; return 1; }
+    printf '0.4:*,\n'             > "$BLINKS_DIR/p1"
+    printf '0.4:**,\n'            > "$BLINKS_DIR/p2"
+    printf '0.4:***,\n'           > "$BLINKS_DIR/p3"
+    printf '0.4:****,\n'          > "$BLINKS_DIR/p4"
+    printf '0.3:*,**,***,****,\n' > "$BLINKS_DIR/chase"
+    printf '0.5:****,\n'          > "$BLINKS_DIR/all"
+    return 0
+}
+
+blink_frame_write()
+{
+    # $1 texte ("", frame vide = extinction)
+    if [ -z "$1" ]; then
+        write_frame "$(fmt_of)" 00 00 00 00
+        return 0
+    fi
+    SEGLINE="$(render_text "$1" 2>/dev/null)"
+    if [ -z "$SEGLINE" ]; then
+        write_frame "$(fmt_of)" 00 00 00 00
+        return 0
+    fi
+    set -- $SEGLINE
+    write_frame "$(fmt_of)" "${1:-00}" "${2:-00}" "${3:-00}" "${4:-00}" 2>/dev/null
+}
+
+blink_sleep()
+{
+    # decimales si le sleep les supporte, sinon pas arrondi a 1 s
+    sleep "$1" 2>/dev/null || sleep 1
+}
+
+blink_list()
+{
+    blink_defaults || return 1
+    for F in "$BLINKS_DIR"/*; do
+        [ -f "$F" ] || continue
+        L_="$(tr -d '\r\n' < "$F")"
+        printf '%s %s %s\n' "$(basename "$F")" "${L_%%:*}" "${L_#*:}"
+    done
+    return 0
+}
+
+blink_new()
+{
+    NOM="${1:?usage: BLINK NEW <nom> \"f1,f2,...\" [periode_s]}"
+    DEF="${2:?definition attendue : \"f1,f2,...\"}"
+    PER="${3:-0.4}"
+
+    blink_valid_name "$NOM" \
+        || { echo "[ERREUR] nom invalide (a-z 0-9 _, max 16) : '$NOM'"; return 1; }
+    case "$PER" in ''|*[!0-9.]*) PER="0.4" ;; esac
+    CLEAN_="$(printf '%s' "$DEF" | tr -cd '0-9a-zA-Z_*.,-' | cut -c1-64)"
+    [ -n "$CLEAN_" ] || { echo "[ERREUR] definition vide"; return 1; }
+
+    mkdir -p "$BLINKS_DIR" 2>/dev/null \
+        || { echo "[ERREUR] mkdir $BLINKS_DIR impossible"; return 1; }
+    printf '%s:%s\n' "$PER" "$CLEAN_" > "$BLINKS_DIR/$NOM" \
+        && echo "[ OK ] clignotement '$NOM' : $CLEAN_ (periode ${PER}s)" \
+        || { echo "[ERREUR] ecriture impossible"; return 1; }
+}
+
+blink_del()
+{
+    NOM="${1:?nom attendu}"
+    blink_valid_name "$NOM" || { echo "[ERREUR] nom invalide"; return 1; }
+    if [ -f "$BLINKS_DIR/$NOM" ]; then
+        rm -f "$BLINKS_DIR/$NOM" && echo "[ OK ] '$NOM' supprime"
+    else
+        echo "[ -- ] '$NOM' absent"
+    fi
+    return 0
+}
+
+blink_play()
+{
+    NOM="${1:?nom du clignotement attendu}"
+    CYC="${2:-3}"
+    case "$CYC" in ''|*[!0-9]*) CYC=3 ;; esac
+    [ "$CYC" -ge 1 ]  || CYC=1
+    [ "$CYC" -le 30 ] || CYC=30
+
+    require_dev ACTION=BLINK || return 1
+    blink_defaults || return 1
+
+    F_="$BLINKS_DIR/$NOM"
+    [ -f "$F_" ] \
+        || { echo "[ERREUR] clignotement inconnu : $NOM (voir : front_digit BLINK LIST)"; return 1; }
+
+    LINE_="$(tr -d '\r\n' < "$F_")"
+    PERIOD="${LINE_%%:*}"
+    SEQ="${LINE_#*:}"
+    case "$PERIOD" in ''|*[!0-9.]*) PERIOD="0.4" ;; esac
+
+    stop_demo
+    our_daemons_conflict
+
+    I_=0
+    while [ "$I_" -lt "$CYC" ]; do
+        TMP_="$SEQ"
+        while [ -n "$TMP_" ]; do
+            FR_="${TMP_%%,*}"
+            case "$TMP_" in
+                *,*) TMP_="${TMP_#*,}" ;;
+                *)   TMP_="" ;;
+            esac
+            blink_frame_write "$FR_"
+            blink_sleep "$PERIOD"
+        done
+        I_=$((I_+1))
+    done
+    blink_frame_write ""
+    echo "[ OK ] clignotement '$NOM' x$CYC (periode ${PERIOD}s)"
+    return 0
+}
+
+do_blink()
+{
+    A_="${1:-LIST}"
+    case "$A_" in
+        LIST|list|HELP|help)
+            blink_list ;;
+        NEW|new)
+            shift ; blink_new "$@" ;;
+        DEL|del|RM|rm)
+            shift ; blink_del "$@" ;;
+        STOP|stop)
+            do_stop ;;
+        *)
+            blink_play "$@" ;;
+    esac
+}
+
 daemon_loop()
 {
     # $1 intervalle, $2... items
@@ -431,14 +585,22 @@ do_rotate()
 usage()
 {
     echo ""
-    echo "Usage: front_digit <STATUS|PROBE|SHOW \"txt\"|RAW h h h h|CLOCK|ROTATE [s] [items]|STOP>"
+    echo "Usage: front_digit <STATUS|PROBE|SHOW \"txt\"|RAW h h h h|CLOCK|ROTATE [s] [items]|BLINK ...|STOP>"
     echo ""
     echo "  PROBE             identifie le format de trame qui marche (une fois)"
     echo "  SHOW \"12.34\"      affiche un texte 7-seg (0-9 - . lettres simples)"
     echo "  RAW 3f 06 5b 4f   octets segments bruts"
     echo "  CLOCK             horloge HH.MM (maj chaque minute)"
     echo "  ROTATE [s] [i]    rotation (defaut 5 s, items: TIME IP RAM SWP UP)"
+    echo "  BLINK LIST        clignotements definis (nom periode frames)"
+    echo "  BLINK <nom> [n]   joue 'nom' n cycles (defaut 3, max 30)"
+    echo "  BLINK NEW n d [s] definit 'nom' : d=\"f1,f2,...\" periode s secondes"
+    echo "                    '*' = point decimal seul ; frame vide = eteint"
+    echo "  BLINK DEL n       supprime 'nom'"
     echo "  STOP              arrete nos daemons + le daemon usine"
+    echo ""
+    echo "Points de clignotement : stockes dans $BLINKS_DIR ;"
+    echo "defauts : p1 p2 p3 p4 (point par digit), chase, all."
     echo ""
     echo "Config : FD_FORMAT (raw|hdr|full), FD_ROTATE_SEC, FD_ROTATE_ITEMS,"
     echo "BOOT_FRONT_CLOCK=1 pour l'horloge auto au reboot (via boot INSTALL)."
@@ -450,6 +612,7 @@ case "$1" in
     ""|STATUS|status)     do_status ;;
     PROBE|probe)          do_probe ;;
     SHOW|show)            shift; do_show "$1" ;;
+    BLINK|blink)          shift; do_blink "$@" ;;
     RAW|raw)              shift; do_raw "$@" ;;
     CLOCK|clock)          do_clock ;;
     ROTATE|rotate)        shift; do_rotate "$@" ;;

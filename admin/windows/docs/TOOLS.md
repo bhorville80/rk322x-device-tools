@@ -91,7 +91,7 @@ n'est pas prete (scriptable).
 |---|---|
 | hdmi | OFF/ON/STATUS |
 | field_mode | OFF/ON/STATUS services affichage |
-| front_digit | horloge frontale (PROBE/CLOCK/ROTATE/SHOW) |
+| front_digit | horloge frontale (PROBE/CLOCK/ROTATE/SHOW) + points de clignotement (BLINK LIST/NEW/DEL/<nom>) |
 | front_led | LED frontale STATUS/ON/OFF |
 | remote_map | remap telecommande IR (.kl) STATUS/APPLY/RESTORE |
 | motd | banniere adb ON/SET/DEFAULT/OFF/STATUS |
@@ -156,6 +156,7 @@ n'est pas prete (scriptable).
 | start_server.sh | 8000 | busybox httpd (panneau + cle) + auth PANEL_USER/PASS + lance les suivants |
 | control_server.sh | 8080 | API commandes ; tcpsvd multi-listeners ou FIFO mono-slot ; UPLOAD/APPLY_DPK/RUN/MAXCONN |
 | gui_server.sh | 8081 | telecommande TV KEY/TAP/TEXT/URL/SHOT |
+| control_server.sh | 8080 | API commandes + afficheur FD_SHOW/FD_BLINKS/FD_BLINK/FD_BLINK_NEW/FD_BLINK_DEL/FD_STOP |
 | watch_usb.sh | - | consomme incoming/ (commandes filees par l'API) |
 | ssh_server.sh | 2222 | dropbear optionnel (START/STOP/STATUS) |
 

@@ -246,6 +246,22 @@ apply_dpk()
     fi
 }
 
+# resolution du tool afficheur frontal (installe d'abord, cle en secours)
+front_digit_sh()
+{
+    for C in /data/scripts/front_digit.sh "$USB/scripts/front_digit.sh"; do
+        [ -f "$C" ] && { printf '%s' "$C"; return 0; }
+    done
+    return 1
+}
+
+fd_run()
+{
+    # $1... args passes a front_digit.sh ; sortie sur stdout
+    FD_="$(front_digit_sh)" || { echo "[ERREUR] front_digit.sh introuvable"; return 1; }
+    sh "$FD_" "$@"
+}
+
 # traite la requete GET courante (variables REQUEST/COMMAND deja extraites)
 # et ecrit la reponse HTTP sur stdout -> pipee vers nc -> socket navigateur
 handle_request()
@@ -340,6 +356,75 @@ handle_request()
                 else
                     reply 200 OK "$OUT" "text/plain; charset=utf-8"
                 fi
+            fi
+            ;;
+
+        # ---- afficheur frontal : SHOW / points de clignotement ----------
+        # test direct de la chaine IHM -> API -> FD655 (telecommande)
+        FD_SHOW)
+            T_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]t=\([^&]*\).*#\1#p' | tr -cd '0-9A-Za-z.*-' | cut -c1-6)"
+            if [ -z "$T_" ]; then
+                log "COMMANDE REJECTED: FD_SHOW (texte absent/invalide)"
+                reply 400 Bad Request '{"status":"error","message":"t=<0-9A-Za-z.*-> attendu"}'
+            else
+                OUT_="$(fd_run SHOW "$T_" 2>&1)"
+                log "COMMANDE ACCEPTED: FD_SHOW '$T_'"
+                reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            fi
+            ;;
+
+        FD_STOP)
+            OUT_="$(fd_run STOP 2>&1)"
+            log "COMMANDE ACCEPTED: FD_STOP"
+            reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            ;;
+
+        FD_BLINKS)
+            OUT_="$(fd_run BLINK LIST 2>&1)"
+            log "COMMANDE ACCEPTED: FD_BLINKS"
+            reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            ;;
+
+        FD_BLINK)
+            N_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]n=\([^&]*\).*#\1#p' | tr -cd 'a-z0-9_' | cut -c1-16)"
+            C_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]c=\([0-9]\{1,2\}\).*#\1#p')"
+            case "$C_" in ''|*[!0-9]*) C_=3 ;; esac
+            [ "$C_" -ge 1 ] 2>/dev/null || C_=3
+            [ "$C_" -le 30 ] || C_=30
+            if [ -z "$N_" ]; then
+                log "COMMANDE REJECTED: FD_BLINK (nom absent)"
+                reply 400 Bad Request '{"status":"error","message":"n=<nom> attendu"}'
+            else
+                OUT_="$(fd_run BLINK "$N_" "$C_" 2>&1)"
+                log "COMMANDE ACCEPTED: FD_BLINK $N_ x$C_"
+                reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            fi
+            ;;
+
+        FD_BLINK_NEW)
+            N_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]n=\([^&]*\).*#\1#p' | tr -cd 'a-z0-9_' | cut -c1-16)"
+            D_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]d=\([^&]*\).*#\1#p' | tr -cd '0-9A-Za-z_*.,-' | cut -c1-64)"
+            P_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]p=\([0-9.]\{1,5\}\).*#\1#p')"
+            case "$P_" in ''|*[!0-9.]*) P_=0.4 ;; esac
+            if [ -z "$N_" ] || [ -z "$D_" ]; then
+                log "COMMANDE REJECTED: FD_BLINK_NEW (n/d absents)"
+                reply 400 Bad Request '{"status":"error","message":"n=<nom> et d=f1,f2,... attendus"}'
+            else
+                OUT_="$(fd_run BLINK NEW "$N_" "$D_" "$P_" 2>&1)"
+                log "COMMANDE ACCEPTED: FD_BLINK_NEW $N_ ($D_, ${P_}s)"
+                reply 200 OK "$OUT_" "text/plain; charset=utf-8"
+            fi
+            ;;
+
+        FD_BLINK_DEL)
+            N_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]n=\([^&]*\).*#\1#p' | tr -cd 'a-z0-9_' | cut -c1-16)"
+            if [ -z "$N_" ]; then
+                log "COMMANDE REJECTED: FD_BLINK_DEL (nom absent)"
+                reply 400 Bad Request '{"status":"error","message":"n=<nom> attendu"}'
+            else
+                OUT_="$(fd_run BLINK DEL "$N_" 2>&1)"
+                log "COMMANDE ACCEPTED: FD_BLINK_DEL $N_"
+                reply 200 OK "$OUT_" "text/plain; charset=utf-8"
             fi
             ;;
 

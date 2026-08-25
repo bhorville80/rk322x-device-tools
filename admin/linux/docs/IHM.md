@@ -66,6 +66,13 @@ Results are displayed in the black output block under the buttons.
 - **Keys**: dpad + OK, BACK/HOME/MENU, VOL +/- , POWER.
 - **Send**: TEXT = full-screen message on the TV;
   OPEN URL = page in the TV browser.
+- **Front display (blink points)**: direct test of the IHM -> API ->
+  FD655 chain. Quick SHOW buttons (8888 / 12.34 / HELP / STOP) and
+  named blink presets (`front_digit BLINK`): p1..p4 = decimal point
+  per digit, chase, all - built-in defaults. "Definir" creates a new
+  preset: name + digit points checkboxes + optional extra 7-seg frames
+  + period; sequence always ends off. Endpoints: FD_SHOW, FD_BLINKS,
+  FD_BLINK, FD_BLINK_NEW, FD_BLINK_DEL, FD_STOP.
 - **Remote console** (adb-shell equivalent): one line -> raw output.
   Requirements: `WEB_RUN=1` in device.conf AND active token
   (`deploy TOKEN ON`) - refused otherwise by design. Bounded to
@@ -102,7 +109,7 @@ La page est organisee en **onglets thematiques** :
 |---|---|
 | DIAGNOSTIC | [N5] VITALS, [N6] CHECK STATE, [C1] CONF CHECK, [N8] SYS DIAG |
 | PROCESSUS / RAM | [N10] PROCESSUS PSS, [N11] CAPACITES DEV (AUDIT) |
-| SWAP | [O9] PROBE SWAPON |
+| SWAP | [O9] PROBE SWAPON, [O11] ETAT MEMOIRE, [O12] GARDIEN SWAP |
 | LAUNCHER TV | [C4] LAUNCHER ETAT |
 
 Regle d'or : **un bouton = sa zone noire de rapport dediee** (sortie
@@ -113,7 +120,8 @@ cases cochees (tous onglets confondus) via un pool borne par le selecteur
 **max parallele** (1-4), departs decalés 300 ms.
 
 Endpoints API 8080 ajoutes pour ces actions : PROC / DEV / PROBE /
-LAUNCHER (reponse synchrone text/plain, meme pattern que CONF_CHECK).
+LAUNCHER / SWAP (mem_tune STATUS) / SWWATCH (swap_watch STATUS)
+(reponse synchrone text/plain, meme pattern que CONF_CHECK).
 
 Selecteur **listeners box** (1-7, defaut 3) : nombre de connexions
 simultanees acceptees par l'API 8080 quand le firmware busybox fournit
