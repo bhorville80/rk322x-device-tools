@@ -158,22 +158,60 @@ port_label()
     esac
 }
 
+proc_listen_ports()
+{
+    # /proc/net/tcp{,6} lu CHAMP PAR CHAMP (espaces ou tabs selon noyau) :
+    # champ 3 = adresse locale hex (port apres le dernier ':'),
+    # champ 5 = etat, 0A = LISTEN. Seule source fiable quand netstat est
+    # absent/muet sur vieux firmware (cf TROUBLESHOOTING, recette v13).
+    for F_ in /proc/net/tcp /proc/net/tcp6; do
+        [ -f "$F_" ] || continue
+        # champs : sl | adresse locale | adresse distante | etat | ...
+        while read -r SL_ LA_ RA_ ST_ _; do
+            [ "$ST_" = "0A" ] || continue
+            H_="${LA_##*:}"
+            case "$H_" in
+                ''|*[!0-9A-Fa-f]*) continue ;;
+            esac
+            printf '%d\n' "$((16#$H_))" 2>/dev/null
+        done < "$F_"
+    done
+}
+
+# ne garder que des ports credibles (1..65535) : un netstat exotique
+# (vieux toolbox) peut sortir n'importe quoi (recette v18 : unique entree
+# "12884901988 service inconnu" qui masquait le fallback /proc)
+ports_valid()
+{
+    while IFS= read -r P_; do
+        case "$P_" in ''|*[!0-9]*) continue ;; esac
+        [ "$P_" -ge 1 ] && [ "$P_" -le 65535 ] && echo "$P_"
+    done
+}
+
 do_ports()
 {
     echo ""
     echo "=== PORTS EN ECOUTE ==="
-    netstat -tln 2>/dev/null | tr -d '\r' | while read -r _ _ LOCAL _REST; do
-        case "$LOCAL" in
-            0.0.0.0:*|:::*) ;;
-            *) continue ;;
-        esac
-        P="${LOCAL##*:}"
-        case "$P" in ''|*[!0-9]*) continue ;; esac
-        L="$(port_label ":$P")"
-        printf '  %-8s %s\n' "$P" "${L:-service inconnu}"
-    done
-    echo ""
-    echo "Arret global : deploy STOP (pidfiles server/*.pid)"
+
+    NET_=""
+    if command -v netstat > /dev/null 2>&1; then
+        NET_="$(netstat -tln 2>/dev/null | tr -d '\r' \
+                | sed -n 's/^.*[[:space:]]\(0\.0\.0\.0\|::\):\([0-9][0-9]*\)[[:space:]].*/\2/p')"
+    fi
+    # fusion des deux sources puis filtre : ni l'une ni l'autre n'est seule
+    # fiable selon le firmware ; la validation 1..65535 evacue les delires
+    LISTEN="$(printf '%s\n%s\n' "$NET_" "$(proc_listen_ports)" | ports_valid | sort -un)"
+
+    if [ -n "$LISTEN" ]; then
+        for P in $LISTEN; do
+            L="$(port_label ":$P")"
+            printf '  %-8s %s\n' "$P" "${L:-service inconnu}"
+        done
+    else
+        echo "  (rien detecte : netstat muet ET /proc/net/tcp illisible)"
+        echo "  sonde directe : busybox wget -qO- http://127.0.0.1:8080/api/HELP"
+    fi
     return 0
 }
 

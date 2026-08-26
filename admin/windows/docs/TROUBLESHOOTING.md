@@ -551,7 +551,13 @@ loops: a silent connection (browser preconnect, port scan) used to
 monopolize the only slot, and a server started from an adb session died
 with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
 (`timeout`), loops ignore SIGHUP, `deploy STOP` also sweeps orphaned
-instances through `/proc/*/cmdline`.
+instances through `/proc/*/cmdline`. next version: at startup each server
+also kills its own leftover port holder (orphan `nc` keeps the bind while
+serving nothing - seen in the v18 field logs: 8081 "up" to TCP probes but
+every SHOT silent, TV mirror never displayed), and fails loudly if a
+foreign process still holds the port. `net_diag PORTS` now merges netstat
+and `/proc/net/tcp` readings and drops entries outside 1-65535 (a bogus
+toolbox value used to mask the /proc fallback).
 
 Diagnosis on the box:
 

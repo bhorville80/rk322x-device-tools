@@ -20,7 +20,9 @@ for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
     fi
 done
 
-for B in "$(dirname "$0")" "$(dirname "$0")/core" "$(dirname "$0")/../core" /data/scripts /data/scripts/core; do
+# boucle standard du depot (cf boot.sh) : <dir>/core/config.sh couvre le
+# layout installe (/data/scripts) ET le depot thematise via ../
+for B in "$(dirname "$0")" "$(dirname "$0")/.." /data/scripts; do
     if [ -f "$B/core/config.sh" ]; then
         . "$B/core/config.sh"
         break
@@ -32,6 +34,24 @@ MOTD_DIR="${RK_MOTD_DIR:-/data/etc}"
 MOTD="$MOTD_DIR/motd"
 MARK_B="# >>> rk322x-motd >>>"
 MARK_E="# <<< rk322x-motd <<<"
+
+# gardes si core/config.sh n'a pas pu etre source (layout depot)
+command -v is_root >/dev/null 2>&1 || is_root() \
+    { case "$(id -u 2>/dev/null)" in 0) return 0 ;; esac; case "$(id 2>/dev/null)" in "uid=0("*) return 0 ;; esac; return 1; }
+command -v require_root >/dev/null 2>&1 || require_root() \
+    { if is_root; then return 0; fi; echo "[ERREUR] privileges root requis : su -c \"sh $0 $*\""; return 1; }
+
+# SET/FILE/DEFAULT ecrivent /data/etc ; ON/OFF ecrivent /system : tous
+# requierent root -> elevation auto depuis adb shell (uid 2000), sinon
+# mkdir/echo echouaient et aucune banniere n'etait deposee
+case "$1" in
+    SET|set|FILE|file|DEFAULT|default|ON|on|OFF|off)
+        if ! is_root && command -v su > /dev/null 2>&1; then
+            echo "[*] uid non root : relance automatique via su..."
+            exec su -c "sh $(cd "$(dirname "$0")" && pwd)/$(basename "$0") $*"
+        fi
+        ;;
+esac
 
 hook_present()
 {
@@ -50,6 +70,7 @@ do_status()
     echo ""
     echo "=== MOTD (message adb shell) ==="
 
+    RC_=1
     H="--"
     hook_present && H="oui"
     echo "  Crochet mkshrc : $H ($MKSHRC)"
@@ -61,8 +82,18 @@ do_status()
         echo "  Message        : vide/absent ($MOTD)"
     fi
 
+    # verdict honnete : actif = crochet pose ET message depose.
+    # (rc toujours 0 avant -> manage affichait "[OK] motd actif" meme
+    #  sans banniere, masquant exactement ce defaut)
+    if [ "$H" = "oui" ] && [ -s "$MOTD" ]; then
+        echo "  Etat           : ACTIF"
+        RC_=0
+    else
+        echo "  Etat           : inactif (motd ON pour activer, DEFAULT pour generer)"
+    fi
+
     echo ""
-    return 0
+    return "$RC_"
 }
 
 do_show()

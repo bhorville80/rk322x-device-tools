@@ -48,7 +48,7 @@ SCRIPTS_DIR="/data/scripts"
 BIN_DIR="/data/bin"
 BACKUP_DIR="/data/backup"
 
-INSTALL_LIST="amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture sync_usb disable_wireless inspect_usb inspect_proc inspect_dev media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage hw_report aliases profile ramstep xrun preflight show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch menu"
+INSTALL_LIST="amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture sync_usb disable_wireless inspect_usb inspect_proc inspect_dev media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report aliases profile ramstep xrun preflight show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch menu"
 
 # adb shell arrive en uid 2000 (shell) : elevation auto via su pour les
 # actions qui touchent au systeme ou a la cle. L'aide reste accessible sans root.
@@ -500,6 +500,20 @@ do_expose()
     sh "$STARTER"
 }
 
+# port encore en ecoute ? netstat, sinon /proc/net/tcp (hexa, etat 0A=LISTEN)
+port_still_up()
+{
+    P_="$1"
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q ":$P_ " && return 0
+    fi
+    PH_="$(printf '%04X' "$P_" 2>/dev/null)"
+    [ -n "$PH_" ] || return 1
+    grep -qi ":$PH_ .* 0A " /proc/net/tcp  2>/dev/null && return 0
+    grep -qi ":$PH_ .* 0A " /proc/net/tcp6 2>/dev/null && return 0
+    return 1
+}
+
 do_stop()
 {
     echo ""
@@ -523,7 +537,12 @@ do_stop()
     done
 
     # filet : instances orphelines sans pidfile (cle debranchee entre deux,
-    # pidfile perdu) -> scan des cmdlines dans /proc
+    # pidfile perdu) -> scan des cmdlines dans /proc.
+    # Les DETENTEURS DE PORT sont vises aussi : en mono-slot le listener
+    # effectif est un processus "busybox nc -l -p 80xx" enfant du shell
+    # serveur ; tuer le shell seul laisse le nc orphelin sur le bind et le
+    # EXPOSE suivant echoue alors silencieusement (8080/8081 injoignables
+    # persistants ; temoin manage : 8081 en ecoute sans aucun pidfile).
     for D in /proc/[0-9]*; do
         [ -r "$D/cmdline" ] || continue
         C="$(tr '\0' ' ' < "$D/cmdline" 2>/dev/null)"
@@ -531,6 +550,8 @@ do_stop()
             *control_server.sh*) N="control_server" ;;
             *gui_server.sh*)     N="gui_server" ;;
             *watch_usb.sh*)      N="watch_usb" ;;
+            *"busybox nc"*)      N="nc (listener)" ;;
+            *"httpd -f"*)        N="httpd (panneau)" ;;
             *)                   continue ;;
         esac
         PID="${D#/proc/}"
@@ -540,7 +561,20 @@ do_stop()
         fi
     done
 
-    if [ "$FOUND" -eq 0 ]; then
+    # verdict de liberation : un port encore en ecoute apres balayage =
+    # detenteur non gere, a signaler plutot qu'a masquer
+    sleep 1
+    HELD=""
+    for PORT_ in 8000 8080 8081; do
+        if port_still_up "$PORT_"; then HELD="$HELD $PORT_" ; fi
+    done
+    if [ -n "$HELD" ]; then
+        echo "[ WARN ] port(s)$HELD encore en ecoute apres arret"
+        echo "         detenteur non identifie : rebooter la box avant EXPOSE"
+        echo "         (sinon le bind echouera silencieusement)"
+    fi
+
+    if [ "$FOUND" -eq 0 ] && [ -z "$HELD" ]; then
         echo "[ -- ] aucun serveur actif"
     fi
 }
@@ -1205,7 +1239,7 @@ case "$1" in
         }
 
         N=0
-        TOTAL=8
+        TOTAL=10
         collect logcat   logcat -d
         collect dmesg    dmesg
         collect getprop  getprop
@@ -1238,6 +1272,35 @@ case "$1" in
           done
         } > "$OUT/mmc_dev.txt" 2>&1
         grep -q . "$OUT/mmc_dev.txt" && echo "[OK]" || echo "[ERREUR]"
+
+        # [9] logs des serveurs de la cle : seuls traces portant les
+        # verdicts de bind 8080/8081 (FIFO en ecoute / NON ouvert) et les
+        # requetes recues — indispensables au diagnostic "port injoignable"
+        N=$((N+1))
+        printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "srv_logs"
+        SRV_N=0
+        for SL in http_server.log control_server.log gui_server.log watch.log; do
+            [ -f "$USB_DIR/log/$SL" ] || continue
+            cp -f "$USB_DIR/log/$SL" "$OUT/srv_$SL" 2>/dev/null && SRV_N=$((SRV_N+1))
+        done
+        if [ "$SRV_N" -gt 0 ]; then
+            echo "[OK] ($SRV_N fichier(s))"
+        else
+            echo "[ -- ] aucun log serveur sur la cle"
+        fi
+
+        # [10] ports en ecoute au moment de la collecte (net_diag PORTS)
+        ND=""
+        for CAND in /data/scripts/net_diag.sh "$USB_DIR/scripts/inspect/net_diag.sh"; do
+            [ -f "$CAND" ] && { ND="$CAND"; break; }
+        done
+        if [ -n "$ND" ]; then
+            collect ports sh "$ND" PORTS
+        else
+            N=$((N+1))
+            printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "ports"
+            echo "[ ERREUR ] net_diag introuvable"
+        fi
 
         echo ""
         echo "=== TERMINE ==="

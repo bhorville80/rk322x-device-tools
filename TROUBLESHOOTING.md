@@ -551,7 +551,13 @@ loops: a silent connection (browser preconnect, port scan) used to
 monopolize the only slot, and a server started from an adb session died
 with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
 (`timeout`), loops ignore SIGHUP, `deploy STOP` also sweeps orphaned
-instances through `/proc/*/cmdline`.
+instances through `/proc/*/cmdline`. next version: at startup each server
+also kills its own leftover port holder (orphan `nc` keeps the bind while
+serving nothing - seen in the v18 field logs: 8081 "up" to TCP probes but
+every SHOT silent, TV mirror never displayed), and fails loudly if a
+foreign process still holds the port. `net_diag PORTS` now merges netstat
+and `/proc/net/tcp` readings and drops entries outside 1-65535 (a bogus
+toolbox value used to mask the /proc fallback).
 
 Diagnosis on the box:
 
@@ -659,6 +665,10 @@ Solution:  v13 : INSTALL bascule automatiquement sur le .dpk quand la cle n'a
 Status:    Corrige en v13. Re-deployer : dezipper rk322x-cle_v13_*.zip a la
            racine de la cle puis su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
            et relancer la recette. zram reste impossible sur ce firmware.
+           v18 : net_diag PORTS applique le meme repli (netstat ->
+           /proc/net/tcp hexa, etat 0A) ; sur firmware muet il listait
+           "rien" et le pied de page "Arret global" induisait en erreur
+           alors que les serveurs repondaient.
 ```
 
 ### 2026-08-23 - Recette bloquee en P7 + boot bloque sur front_digit

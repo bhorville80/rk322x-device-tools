@@ -31,6 +31,8 @@ N4	Rapport materiel complet (SAVE)	sh %BASE%/hw_report.sh SAVE
 S1	Vue globale services/web/ports	sh %BASE%/manage.sh
 S2	Sante pile web	sh %BASE%/manage.sh web
 S3	Arret puis demarrage pile	sh %BASE%/deploy.sh STOP ; sh %BASE%/deploy.sh EXPOSE
+S9	Tout demarrer d'un coup (web+swap+ssh)	sh %BASE%/services.sh UP
+S10	Tout arreter (orphelins balayes)	sh %BASE%/services.sh STOP
 S4	Etat installation vs cle	sh %BASE%/deploy.sh STATUS
 S5	Paquets cle vs installe	sh %BASE%/show_key.sh
 S6	Environnement isole : etat	sh %BASE%/chroot_env.sh STATUS

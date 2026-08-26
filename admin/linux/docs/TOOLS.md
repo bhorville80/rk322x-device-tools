@@ -81,7 +81,7 @@ n'est pas prete (scriptable).
 
 | Outil | Role |
 |---|---|
-| net_diag | PING/PORTS/THROUGHPUT + verdicts |
+| net_diag | PING/PORTS/THROUGHPUT + verdicts ; PORTS fusionne netstat + /proc/net/tcp (filtre 1-65535) |
 | net_watch | daemon suivi connexions + BAN/UNBAN iptables |
 | disable_wireless | coupe Wi-Fi/BT (OFF) / restaure (ON) / STATUS |
 
@@ -134,6 +134,7 @@ n'est pas prete (scriptable).
 | ramstep | deploiement instrumente (mesure RAM par etape) |
 | rampre | empreinte RAM box vierge (avant installation) |
 | manage | dispatcher etat/gestion services-web-ports |
+| services | tout demarrer/arreter d un coup sans reboot : mem_tune OPTIMIZE, swap_watch START, deploy EXPOSE (8000/8080/8081+watcher), ssh 2222, front_digit CLOCK ; STOP avec balayage orphelins ; STATUS synthetique |
 | menu | dispatcher par sujet (install/recette/pilotage/...) |
 | run_state | lancements outils + echecs depuis log/exec |
 
@@ -155,7 +156,7 @@ n'est pas prete (scriptable).
 |---|---|---|
 | start_server.sh | 8000 | busybox httpd (panneau + cle) + auth PANEL_USER/PASS + lance les suivants |
 | control_server.sh | 8080 | API commandes ; tcpsvd multi-listeners ou FIFO mono-slot ; UPLOAD/APPLY_DPK/RUN/MAXCONN |
-| gui_server.sh | 8081 | telecommande TV KEY/TAP/TEXT/URL/SHOT |
+| gui_server.sh | 8081 | telecommande TV KEY/TAP/TEXT/URL/SHOT ; reprise orphelin au demarrage (port tenu sans boucle vivante), echec clair si processus etranger |
 | control_server.sh | 8080 | API commandes + afficheur FD_SHOW/FD_BLINKS/FD_BLINK/FD_BLINK_NEW/FD_BLINK_DEL/FD_STOP |
 | watch_usb.sh | - | consomme incoming/ (commandes filees par l'API) |
 | ssh_server.sh | 2222 | dropbear optionnel (START/STOP/STATUS) |

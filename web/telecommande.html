@@ -28,6 +28,12 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
           padding:10px; min-height:40px; max-height:300px; overflow:auto;
           border-radius:6px; color:#cf9; margin-top:8px; }
 .row { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+.apistatus { margin:-10px 0 18px; font-size:12px; color:#888; }
+.apistatus b { display:inline-block; padding:2px 8px; margin-right:6px;
+               border-radius:4px; border:1px solid #444; font-weight:normal; color:#888; }
+.apistatus b.up   { color:#7c7; border-color:#3a5a3a; }
+.apistatus b.warn { color:#fc6; border-color:#a86; }
+.apistatus b.down { color:#e66; border-color:#a55; }
 </style>
 </head>
 
@@ -43,16 +49,23 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html" class="here">Telecommande</a>
+  <a href="infos.html">Infos</a>
 </nav>
+
+<div class="apistatus" id="apistatus">ports :
+  <b id="as8000">8000 test...</b>
+  <b id="as8080">8080 api...</b>
+  <b id="as8081">8081 gui...</b>
+</div>
 
 <div class="card">
   <h2>Ecran TV (miroir par captures)</h2>
   <span class="dim">rafraichissement :
     <select id="rate">
       <option value="0">pause</option>
-      <option value="2000" selected>2 s</option>
+      <option value="2000">2 s</option>
       <option value="4000">4 s</option>
-      <option value="8000">8 s</option>
+      <option value="8000" selected>8 s</option>
     </select>
     &nbsp;-&nbsp;clic sur l'image = TAP sur la TV ; derniere capture : <span id="lastshot">-</span>
   </span>
@@ -147,15 +160,22 @@ function refreshShot() {
     };
     img.onerror = function () {
         document.getElementById("lastshot").textContent =
-            "capture indisponible";
+            "capture indisponible (voir badges ports ci-dessus)";
     };
     // 1) demander une capture fraiche (gui 8081 -> screencap)
+    // 2) ne recharger l'image qu'APRES la reponse SHOT : screencap peut
+    //    durer plus d'une seconde, un delai fixe montrait une image absente
     fetch(GUI + "SHOT?" + Math.random() + tokQ(), {cache:"no-store"})
-        .catch(function () {});
-    // 2) recharger l'image servie par httpd 8000 (cache buste)
-    setTimeout(function () {
-        img.src = "/log/gui_shots/latest.png?ts=" + Date.now();
-    }, 900);
+        .catch(function () {
+            var el = document.getElementById("lastshot");
+            el.textContent = "8081 injoignable (SHOT impossible)";
+            return null;
+        })
+        .then(function () {
+            setTimeout(function () {
+                img.src = "/log/gui_shots/latest.png?ts=" + Date.now();
+            }, 300);
+        });
 }
 
 function schedule() {
@@ -325,6 +345,42 @@ function fdCreate() {
         .catch(function (e) { showOut("[KO] " + e); });
 }
 fdList();
+
+/* ---- badges ports (mono-slot : sondes avec re-essais espaces) ---- */
+var AS_TOK = "";
+try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
+function asUrl(b) {
+    if (!AS_TOK) return b;
+    return b + (b.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(AS_TOK);
+}
+function asSet(id, cls, t) {
+    var e = document.getElementById(id);
+    if (e) { e.className = cls; e.textContent = t; }
+}
+asSet("as8000", "up", "8000 HTTP OK");
+function probe(url, ok, ko, n) {
+    n = n || 0;
+    fetch(asUrl(url), {cache:"no-store"}).then(ok).catch(function () {
+        if (n < 2) {
+            setTimeout(function () { probe(url, ok, ko, n + 1); },
+                       600 + Math.floor(Math.random() * 900));
+            return;
+        }
+        ko();
+    });
+}
+probe("http://" + location.hostname + ":8080/api/HELP", function (r) {
+    asSet("as8080", r.status === 403 ? "warn" : "up",
+          r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+}, function () {
+    asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+});
+probe("http://" + location.hostname + ":8081/", function (r) {
+    asSet("as8081", r.status === 403 ? "warn" : "up",
+          r.status === 403 ? "8081 GUI UP - token requis" : "8081 GUI OK");
+}, function () {
+    asSet("as8081", "down", "8081 GUI INJOIGNABLE (arrete ou bloque)");
+});
 
 schedule();
 

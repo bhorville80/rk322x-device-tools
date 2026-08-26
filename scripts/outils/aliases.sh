@@ -15,7 +15,7 @@
 #   aliases INSTALL    depose/met a jour les wrappers (remount rw auto)
 #   aliases REMOVE     retire tous les wrappers portes
 #   aliases STATUS     installes / manquants / collisions
-#   aliases LIST       mapping nom -> cible
+#   aliases LIST       mapping alias -> role (description courte)
 #   aliases HELP       cette aide
 #
 # Note : installation unique, persistant aux reboots (ecrit dans /system).
@@ -62,13 +62,82 @@ system_rw_sh()
 
 tool_list()
 {
-    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch menu aliases"
+    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch menu aliases"
 }
 
 is_ported()
 {
     # $1 chemin : wrapper porte par cet outil ?
     [ -f "$1" ] && grep -q "^$MARKER\$" "$1" 2>/dev/null
+}
+
+# role court (6-10 mots) par outil, wording aligne sur docs/TOOLS.md ;
+# sert a aliases LIST pour rendre le catalogue lisible d'un seul coup d'oeil
+tool_desc()
+{
+    case "$1" in
+        deploy)           echo "cycle de vie du kit : INSTALL, EXPOSE, logs" ;;
+        amorce)           echo "bilan de demarrage et raccourcis post-boot" ;;
+        boot)             echo "optimisations rejouees automatiquement a chaque demarrage" ;;
+        reboot)           echo "redemarrage controle : immediat, programme, recovery, bootloader" ;;
+        remote_map)       echo "remap telecommande IR via fichiers .kl" ;;
+        front_digit)      echo "horloge afficheur frontal 4 digits et clignotements" ;;
+        launcher_toggle)  echo "active ou coupe le lanceur TV Android" ;;
+        investigate)      echo "collecte contextuelle complete pour diagnostic approfondi" ;;
+        stress_ram)       echo "pression RAM controlee avec rapport memoire" ;;
+        net_watch)        echo "daemon surveillance connexions avec ban iptables" ;;
+        capture)          echo "captures ecran et logcat sauvegardees sur la cle" ;;
+        inspect_usb)      echo "audit cle USB via adb : montage, droits" ;;
+        inspect_proc)     echo "processus par PSS, candidats detournables pour RAM" ;;
+        inspect_dev)      echo "capacites d'execution embarquee : runtimes, ABI, daemons" ;;
+        sync_usb)         echo "synchronise le depot de la box vers cle" ;;
+        disable_wireless) echo "coupe ou restaure Wi-Fi et Bluetooth" ;;
+        media)            echo "inventaire des medias montes : USB, SD" ;;
+        inspect_user)     echo "methodes de gestion utilisateurs Android, lecture seule" ;;
+        inspect_system)   echo "RAM, CPU, processus, kernel en instantane" ;;
+        inspect_services) echo "services init actifs compares a l'allegement prevu" ;;
+        inspect_display)  echo "exploration de l'afficheur frontal 4 digits" ;;
+        inspect_gui)      echo "capacites UI/HDMI, capture et URL plein ecran" ;;
+        inspect_remote)   echo "exploration recepteur IR, input et tables .kl" ;;
+        inspect_all)      echo "toutes les inspections core et exploration d'un coup" ;;
+        device_info)      echo "inventaire materiel complet de la box par fonctionnalite" ;;
+        hdmi)             echo "coupe ou retablit la sortie HDMI" ;;
+        check_state)      echo "verdict rapide boitier, reseau, wireless, HDMI" ;;
+        conf_check)       echo "valide la configuration et applique les optimisations" ;;
+        help)             echo "aide complete embarquee de tous les outils" ;;
+        run_state)        echo "historique des executions d'outils avec verdicts" ;;
+        recette)          echo "recette fonctionnelle P1-P7 de la boite" ;;
+        selftest)         echo "verifie que tous les outils repondent correctement" ;;
+        nreg)             echo "non-regression executable multi-themes en un seul lancer" ;;
+        config)           echo "editeur numerote de device.conf, GET/SET scriptables" ;;
+        manage)           echo "services, pile web et ports en un coup" ;;
+        services)         echo "demarre d'un coup web, swap, ssh, horloge" ;;
+        hw_report)        echo "rapport materiel complet avec recherche constructeur web" ;;
+        show_key)         echo "controle de la cle : dpk, temoins, traces" ;;
+        field_mode)       echo "mode maintenance : coupe affichage et services TV" ;;
+        rotate_logs)      echo "rotation et purge des traces sur la cle" ;;
+        thermal)          echo "profils thermiques ECO/PERF et temperatures CPU" ;;
+        vitals)           echo "releves RAM/CPU/swap instantanes, modes WATCH et CSV" ;;
+        mem_tune)         echo "gere la chaine zram/swap, swappiness, LMK, logd" ;;
+        cut_services)     echo "allegement des services et paquets non essentiels" ;;
+        system_rw)        echo "passe /system en lecture-ecriture puis remet lecture-seule" ;;
+        front_led)        echo "allume ou eteint la LED frontale" ;;
+        motd)             echo "banniere personnalisee a l'ouverture de session adb" ;;
+        net_diag)         echo "diagnostic reseau : ping, ports en ecoute, debit" ;;
+        sys_diag)         echo "sante rapide : charge CPU, memoire, stockage" ;;
+        sd_inspect)       echo "sante carte SD : montage, erreurs, espace" ;;
+        sd_boot)          echo "examen de la carte SD en fin de boot" ;;
+        set_network)      echo "applique IP, route et DNS sans coupure" ;;
+        set_time)         echo "synchronise l'horloge depuis source AUTO ou manuelle" ;;
+        chroot_env)       echo "mini-conteneurs chroot ARM isoles sous /data/chroots" ;;
+        busi)             echo "busybox devoile : applets, puissances cachees, demos" ;;
+        macro)            echo "sequences nommees d'actions rejouables en un coup" ;;
+        tips)             echo "one-liners embarques, version executable de BEST-COMMANDES" ;;
+        swap_watch)       echo "gardien resident swap/memoire : TRIM, RESCUE, THRASH" ;;
+        menu)             echo "menu interactif numerote pour lancer les outils" ;;
+        aliases)          echo "wrappers /system/bin : outils appelables sans su" ;;
+        *)                echo "" ;;
+    esac
 }
 
 wrapper_body()
@@ -161,15 +230,17 @@ do_status()
 
 do_list()
 {
-    printf '%-18s %s\n' "ALIAS" "CIBLE"
+    printf '%-18s %s\n' "ALIAS" "ROLE"
     for NAME in $(tool_list); do
         DEST="$BIN_DIR/$NAME"
         if is_ported "$DEST"; then
-            printf '%-18s %s\n' "$NAME" "$SCRIPTS/$NAME.sh"
+            printf '%-18s %s\n' "$NAME" "$(tool_desc "$NAME")"
         elif [ -e "$DEST" ]; then
             printf '%-18s %s\n' "$NAME" "(collision systeme, ignore)"
         fi
     done
+    echo ""
+    echo "cible commune des wrappers : $SCRIPTS/<alias>.sh (via su)"
 }
 
 case "$1" in
@@ -181,7 +252,7 @@ case "$1" in
         echo "            (depuis adb shell uid 2000 : help, manage, nreg, recette...)"
         echo "  REMOVE    retire tous les wrappers portes"
         echo "  STATUS    installes / collisions / manquants"
-        echo "  LIST      mapping alias -> cible"
+        echo "  LIST      mapping alias -> role (description courte)"
         echo ""
         echo "Un binaire systeme existant (ex : reboot) n'est jamais ecrase."
         echo ""

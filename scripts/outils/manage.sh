@@ -122,18 +122,24 @@ web_page()
                  || ok_ko KO "port 8081 absent"
 
     if command -v busybox > /dev/null 2>&1; then
-        IDX_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8000/index.html 2>/dev/null | grep -c RK322X)"
-        case "${IDX_:-0}" in
-            ''|0) ok_ko KO "panneau : index.html sans marque RK322X" ;;
-            *)    ok_ko OK "panneau : index.html servi" ;;
+        # reponse capturee une fois : "pas de reponse" (port muet) et
+        # "contenu inattendu" ne doivent pas produire le meme KO
+        PG_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8000/index.html 2>/dev/null)"
+        case "$PG_" in
+            "")       ok_ko KO "panneau : aucune reponse (port 8000)" ;;
+            *RK322X*) ok_ko OK "panneau : index.html servi" ;;
+            *)        ok_ko KO "panneau : index.html sans marque RK322X" ;;
         esac
-        API_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8080/api/HELP 2>/dev/null | head -c 60)"
+        # cut et non head -c : le head busybox de certains firmwares refuse
+        # l'option -c ("head: not integer: c") et vidait la reponse -> faux
+        # KO "aucune reponse HELP" meme API vivante
+        API_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8080/api/HELP 2>/dev/null | cut -c1-60)"
         case "$API_" in
             *status*)  ok_ko OK "api : HELP repond" ;;
             "")        if [ -f "${KEY:-/x}/server/token" ]; then
                              ok_ko OK "api : protégée par token (403 attendu sans token)"
                        else
-                             ok_ko KO "api : aucune reponse HELP"
+                             ok_ko KO "api : aucune reponse HELP (port 8080 muet ou filtre)"
                        fi ;;
             *)         ok_ko OK "api : reponse recue" ;;
         esac
@@ -153,7 +159,6 @@ service_page()
 
     if [ -n "$WL_SH" ]; then
         OUT_="$(sh "$WL_SH" STATUS 2>/dev/null)"
-        WIFI_="$(printf '%s\n' "$OUT_" | sed -n 's/[Ww]i-[Ff]i[^:]*: */p')"
         case "$OUT_" in
             *"desactive"*|*"desactiv"*) ok_ko OK "wifi/bt : desactives (disable_wireless STATUS)" ;;
             *)                          ok_ko -- "wifi/bt : verifier (manage service ssh-status equiv.)" ;;

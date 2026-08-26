@@ -791,6 +791,36 @@ fifo_loop()
 
 SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 
+# --- reprise d'orphelin (cf gui_server.sh, recette v18) ---------------------
+# Un detenteur kit du port sans superviseur vivant (boucle sh morte, pidfile
+# perdu) garde le bind sans servir aucune requete. Vise boucle + listener de
+# CE serveur ; echec CLAIR si le port reste tenu par un processus etranger.
+if listen_up; then
+    K_=0
+    for D in /proc/[0-9]*; do
+        P_="${D#/proc/}"
+        [ "$P_" = "$$" ] && continue
+        [ -r "$D/cmdline" ] || continue
+        C="$(tr '\0' ' ' < "$D/cmdline" 2>/dev/null)"
+        case "$C" in
+            *control_server.sh*|*"nc -l -p $PORT"*|*"nc -lp $PORT"*) ;;
+            *) continue ;;
+        esac
+        if kill "$P_" 2>/dev/null; then
+            K_=$((K_+1))
+            log "ORPHELIN arrete (PID $P_) avant demarrage"
+        fi
+    done
+    [ "$K_" -gt 0 ] && sleep 1
+    if listen_up; then
+        log "DEMARRAGE IMPOSSIBLE : port $PORT encore tenu par un processus etranger"
+        echo "CONTROL SERVER FAILED"
+        echo "PORT: $PORT occupe par un processus non kit (deploy STOP puis retry, sinon reboot)"
+        exit 1
+    fi
+    [ "$K_" -gt 0 ] && log "REPRISE ORPHELIN : port $PORT libere ($K_ processus arretes)"
+fi
+
 (
     # immunise contre SIGHUP : la fermeture de la session adb ne doit pas
     # tuer le service lance en arriere-plan

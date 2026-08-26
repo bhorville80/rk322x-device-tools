@@ -44,6 +44,20 @@ log()
     echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"
 }
 
+# port en ecoute ? netstat, sinon /proc/net/tcp (hexa, etat 0A=LISTEN)
+port_up()
+{
+    P_="$1"
+    if command -v netstat > /dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q ":$P_ " && return 0
+    fi
+    PH="$(printf '%04X' "$P_" 2>/dev/null)"
+    [ -n "$PH" ] || return 1
+    grep -qi ":$PH .* 0A " /proc/net/tcp  2>/dev/null && return 0
+    grep -qi ":$PH .* 0A " /proc/net/tcp6 2>/dev/null && return 0
+    return 1
+}
+
 case "$1" in
     start) ;;
     *)     echo "Usage: sh $0 start" ; exit 1 ;;
@@ -57,6 +71,39 @@ if [ -f "$PIDFILE" ]; then
         exit 0
     fi
     rm -f "$PIDFILE"
+fi
+
+# --- reprise d'orphelin -----------------------------------------------------
+# Un nc en ecoute sur $PORT sans boucle serveur vivante (cle debranchee entre
+# deux, pidfile perdu) garde le bind SANS traiter la moindre requete
+# (temoin recette v18 : 8081 "up" aux sondes TCP mais SHOT muet -> ecran TV
+# jamais affiche sur la telecommande). Avant d'ouvrir notre boucle on vise
+# les restes de CE serveur (boucle sh + listener nc) ; si le port reste tenu
+# apres ca, c'est un processus etranger -> echec CLAIR plutot que bind mort.
+if port_up "$PORT"; then
+    K_=0
+    for D in /proc/[0-9]*; do
+        P_="${D#/proc/}"
+        [ "$P_" = "$$" ] && continue
+        [ -r "$D/cmdline" ] || continue
+        C="$(tr '\0' ' ' < "$D/cmdline" 2>/dev/null)"
+        case "$C" in
+            *gui_server.sh*|*"nc -l -p $PORT"*|*"nc -lp $PORT"*) ;;
+            *) continue ;;
+        esac
+        if kill "$P_" 2>/dev/null; then
+            K_=$((K_+1))
+            log "ORPHELIN arrete (PID $P_) avant demarrage"
+        fi
+    done
+    [ "$K_" -gt 0 ] && sleep 1
+    if port_up "$PORT"; then
+        log "DEMARRAGE IMPOSSIBLE : port $PORT encore tenu par un processus etranger"
+        echo "GUI SERVER FAILED"
+        echo "PORT: $PORT occupe par un processus non kit (deploy STOP puis retry, sinon reboot)"
+        exit 1
+    fi
+    [ "$K_" -gt 0 ] && log "REPRISE ORPHELIN : port $PORT libere ($K_ processus arretes)"
 fi
 
 reply()
@@ -180,9 +227,14 @@ handle_request()
                     log "SHOT -> $OUT ($SIZE octets)"
                     reply 200 OK "{\"status\":\"ok\",\"action\":\"SHOT\",\"file\":\"/log/gui_shots/latest.png\",\"size\":${SIZE:-0}}"
                 else
+                    # trace indispensable : sans elle un echec screencap est
+                    # invisible cote box (panneau : seule l'image manque)
+                    SZ_="$(wc -c < "$OUT" 2>/dev/null | tr -dc '0-9')"
+                    log "SHOT ECHOUE : screencap en echec ou fichier vide ($SZ_:0 octets) -> $OUT"
                     ko "capture vide"
                 fi
             else
+                log "SHOT ECHOUE : binaire screencap absent du firmware"
                 ko "screencap absent"
             fi
             ;;
@@ -258,12 +310,38 @@ handle_request()
 PID="$!"
 echo "$PID" > "$PIDFILE"
 
+# un port deja en ecoute SANS pidfile vivant = orphelin suspect : le bind
+# ci-dessous echouera silencieusement, d'ou ce constat ante (cf manage :
+# 8081 en ecoute alors que la pile etait arretee)
+WAS_UP=0
+if port_up "$PORT"; then
+    WAS_UP=1
+    log "GUI : port $PORT DEJA en ecoute avant demarrage (orphelin ? deploy STOP)"
+fi
+
 sleep 1
 
 if kill -0 "$PID" 2>/dev/null; then
     echo "GUI SERVER STARTED"
     echo "PID: $PID"
     echo "PORT: $PORT"
+
+    # le pid vivant ne prouve pas le bind : verdict sur l'ecoute reelle,
+    # trace dans gui_server.log (un echec n'apparait plus nulle part sinon)
+    UP_=""
+    for W_ in 1 2 3; do
+        if port_up "$PORT"; then UP_="oui"; break; fi
+        sleep 1
+    done
+    case "$UP_" in
+        "")  log "GUI : ATTENTION port $PORT NON ouvert (bind refuse)" ;;
+        oui) if [ "$WAS_UP" -eq 1 ]; then
+                 log "GUI : port $PORT en ecoute MAIS l'etait deja avant (bind incertain, orphelin possible)"
+             else
+                 log "GUI : port $PORT en ecoute (verifie)"
+             fi ;;
+    esac
+
     [ -f "$TOKEN_FILE" ] && echo "SECURITE: token requis (?token=...)"
 else
     echo "GUI SERVER FAILED"

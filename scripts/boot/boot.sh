@@ -237,8 +237,13 @@ do_run()
         run_tool "sd_boot CHECK" "$BASE/sd_boot.sh" CHECK
     fi
 
-    # banniere d'accueil rafraichie avec l'etat du jour
-    [ -f "$BASE/motd.sh" ] && sh "$BASE/motd.sh" DEFAULT > /dev/null 2>&1
+    # banniere d'accueil rafraichie avec l'etat du jour, puis crochet pose
+    # si besoin (ON idempotent : sans lui le fichier etait depose mais
+    # jamais affiche faute de hook dans mkshrc)
+    if [ -f "$BASE/motd.sh" ]; then
+        sh "$BASE/motd.sh" DEFAULT > /dev/null 2>&1
+        sh "$BASE/motd.sh" ON     > /dev/null 2>&1
+    fi
 
     # rotation/purge automatique des logs et rapports anciens
     if flag BOOT_ROTATE_LOGS; then

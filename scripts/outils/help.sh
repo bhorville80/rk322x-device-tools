@@ -118,6 +118,12 @@ VERIFICATION
                       manage service [wifi-off|ssh-...],
                       manage web [expose|stop|restart|
                       token-status], manage ports
+  services           Tout activer/arreter d'un coup sans reboot :
+                      services UP = memoire/swap (mem_tune),
+                      gardien swap_watch, pile web 8000/8080/8081
+                      + watcher USB, ssh 2222, horloge frontale ;
+                      STOP arrete tout (orphelins balayes) ;
+                      STATUS etat synthetique par service
   aliases            Raccourcis utilisateur 2000 (adb shell) :
                       aliases INSTALL depose un wrapper
                       /system/bin/<outil> par outil du depot ->

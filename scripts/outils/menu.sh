@@ -401,6 +401,8 @@ help_pilotage()
     cat << 'EOF'
 pilotage - vues d'ensemble et configuration
   manage            etat services/web/ports + actions (manage HELP)
+  services          tout demarrer/arreter d'un coup : web, swap,
+                    gardien, ssh, horloge (services HELP)
   nreg              non-regression : 10 themes, un seul possible
                     (nreg 4 | nreg mem ; liste : nreg HELP)
   config            config interactive : page complete puis
@@ -418,6 +420,7 @@ do_pilotage()
 {
     case "$1" in
         manage)     shift ; run_tool manage.sh "$@" ;;
+        services)   shift ; run_tool services.sh "$@" ;;
         profile|profils) shift ; run_tool profile.sh "$@" ;;
         nreg)       shift ; run_tool nreg.sh "$@" ;;
         config)     shift ; run_tool config.sh "$@" ;;

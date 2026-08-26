@@ -61,8 +61,11 @@ Results are displayed in the black output block under the buttons.
 ## TELECOMMANDE
 
 - **TV screen (mirror)**: screenshot refreshed on an interval
-  (pause / 2 s / 4 s / 8 s). **Clicking the image = TAP at the same
-  coordinates on the TV.**
+  (pause / 2 s / 4 s / **8 s by default**). The reload only happens once
+  the SHOT request has completed (a fixed delay could miss a slow
+  screencap); failures are shown inline ("8081 unreachable", "capture
+  unavailable") next to the port badges. **Clicking the image = TAP at
+  the same coordinates on the TV.**
 - **Keys**: dpad + OK, BACK/HOME/MENU, VOL +/- , POWER.
 - **Send**: TEXT = full-screen message on the TV;
   OPEN URL = page in the TV browser.
