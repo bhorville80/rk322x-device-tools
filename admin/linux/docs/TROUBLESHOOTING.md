@@ -601,13 +601,18 @@ port (inode socket -> /proc/*/fd -> pid/uid/cmdline), and the control
 server logs the holder in both failure paths (`DEMARRAGE IMPOSSIBLE`,
 `FIFO ATTENTION`).
 
-Fix when an app holds 8080:
+Fix when an app holds 8080 (Kodi case, one command):
 
 ```bash
-am force-stop org.xbmc.kodi                      # liberer immédiatement
-# permanent : Kodi > Settings > Services > Control >
-#             "Allow remote control via HTTP" = OFF
+su -c 'sh /data/scripts/kodi_web.sh OFF'   # ou bouton KODI WEB OFF du panneau
+deploy STOP && deploy EXPOSE               # l'API reprend le port
 ```
+
+`kodi_web STATUS` shows the setting, the Kodi process and who owns 8080;
+`OFF` force-stops Kodi then removes its `services.webserver` override
+(backup in `guisettings.xml.kitbak`) so it stays off across relaunches.
+Manual alternative: Kodi > Settings > Services > Control >
+"Allow remote control via HTTP" = OFF.
 
 Alternative if the app cannot be tamed: move our API port (CONTROL_PORT
 config plumbing - ask; not needed once Kodi webserver is off).

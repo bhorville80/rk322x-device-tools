@@ -107,6 +107,7 @@ main()
     check_rc "cut_services STATUS" "0" sh "$BASE/cut_services.sh" STATUS
     check_rc "swap_watch HELP"     "0" sh "$BASE/swap_watch.sh" HELP
     check_rc "swap_watch STATUS"   "0 1" sh "$BASE/swap_watch.sh" STATUS
+    check_rc "kodi_web HELP"       "0" sh "$BASE/kodi_web.sh" HELP
     check_rc "chroot_env HELP"     "0" sh "$BASE/chroot_env.sh" HELP
     check_rc "chroot_env LIST"     "0" sh "$BASE/chroot_env.sh" LIST
     check_rc "busi HELP"           "0" sh "$BASE/busi.sh" HELP

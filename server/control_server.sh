@@ -482,7 +482,7 @@ cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
             ;;
 
         # reponse synchrone : inspection processus / RAM [N10] (lecture seule)
-        PROC|DEV|PROBE|LAUNCHER|SWAP|SWWATCH)
+        PROC|DEV|PROBE|LAUNCHER|SWAP|SWWATCH|KODIWEB)
             case "$COMMAND" in
                 PROC)     TOOL_="inspect_proc.sh"  ARGS_="" ;;
                 DEV)      TOOL_="inspect_dev.sh"   ARGS_="AUDIT" ;;
@@ -490,6 +490,10 @@ cpu    : $GV_${GF_:+ @ $((GF_ / 1000)) MHz}"
                 LAUNCHER) TOOL_="launcher_toggle.sh" ARGS_="STATUS" ;;
                 SWAP)     TOOL_="mem_tune.sh"      ARGS_="STATUS" ;;
                 SWWATCH)  TOOL_="swap_watch.sh"    ARGS_="STATUS" ;;
+                # v=STATUS|OFF|ON (valeur blanchie : le tool revalide)
+                KODIWEB)  TOOL_="kodi_web.sh"
+                          A_="$(printf '%s' "$REQUEST" | sed -n 's#.*[?&]v=\([A-Za-z]*\).*#\1#p')"
+                          case "$A_" in OFF|ON) ARGS_="$A_" ;; *) ARGS_="STATUS" ;; esac ;;
             esac
             T_=""
             if [ -f "/data/scripts/$TOOL_" ]; then

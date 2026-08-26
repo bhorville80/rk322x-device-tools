@@ -71,6 +71,7 @@ n'est pas prete (scriptable).
 |---|---|
 | mem_tune | zram/swap chaine cle->repli /data/swappiness/LMK/logd (OPTIMIZE/STATUS/RESTORE/PROBE) ; PROBE = sonde acceptation swapon + fabrication directe d un mini-binaire syscall si agent absent ; STATUS affiche chaque maillon |
 | swap_watch | gardien memoire RESIDENT (pattern net_watch) : STATUS/START [sec]/STOP/RUN ; reagit en runtime : TRIM caches sous seuil MemAvailable, RESCUE chaine swap morte, THRASH journalise sur cle ; BOOT_SWAP_WATCH=1 |
+| kodi_web | telecommande web de Kodi vs API 8080 : STATUS (setting+processus+port), OFF (force-stop + override retire -> defaut Kodi = desactive, libere 8080), ON ; remediation du conflit v23 |
 | cut_services | allegement services+paquets (CUT/APPS/RESTORE/STATUS) |
 | thermal | profils ECO/PERF + temperatures |
 | stress_ram | pression RAM controlee + rapport |

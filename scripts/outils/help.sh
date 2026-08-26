@@ -184,6 +184,10 @@ VERIFICATION
                       RUN un cycle verbeux ; reagit en runtime :
                       TRIM caches sous seuil, RESCUE chaine swap
                       morte, THRASH journalise ; BOOT_SWAP_WATCH=1
+  kodi_web           Telecommande web de Kodi (port 8080 par defaut,
+                      en conflit avec l'API) : STATUS etat + qui tient
+                      le port, OFF coupe (force-stop + setting defaut),
+                      ON reactive ; remediation "8080 injoignable"
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle

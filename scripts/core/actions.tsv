@@ -33,6 +33,8 @@ S2	Sante pile web	sh %BASE%/manage.sh web
 S3	Arret puis demarrage pile	sh %BASE%/deploy.sh STOP ; sh %BASE%/deploy.sh EXPOSE
 S9	Tout demarrer d'un coup (web+swap+ssh)	sh %BASE%/services.sh UP
 S10	Tout arreter (orphelins balayes)	sh %BASE%/services.sh STOP
+S11	Conflit Kodi/8080 : etat	sh %BASE%/kodi_web.sh STATUS
+S12	Kodi web OFF (libere l'API 8080)	sh %BASE%/kodi_web.sh OFF
 S4	Etat installation vs cle	sh %BASE%/deploy.sh STATUS
 S5	Paquets cle vs installe	sh %BASE%/show_key.sh
 S6	Environnement isole : etat	sh %BASE%/chroot_env.sh STATUS

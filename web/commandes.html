@@ -148,6 +148,14 @@ details.sec summary:hover   { color:#bdf; }
   <span class="dim">profil CPU maximal (tests et charges transitoires)</span>
 </div>
 <div class="cmd">
+  <button onclick="api('KODIWEB?v=STATUS').then(t => show('KODI WEB STATUS\n' + t)).catch(e => show('Erreur : ' + e))">CONFLIT KODI/8080</button>
+  <span class="dim">etat du serveur HTTP integre de Kodi (vole le port de l'API)</span>
+</div>
+<div class="cmd">
+  <button class="warn" onclick="api('KODIWEB?v=OFF').then(t => show('KODI WEB OFF\n' + t + '\n\nrelancer ensuite : deploy STOP puis deploy EXPOSE')).catch(e => show('Erreur : ' + e))">KODI WEB OFF</button>
+  <span class="dim">coupe la telecommande web de Kodi et libere le port 8080 pour l'API</span>
+</div>
+<div class="cmd">
   <button class="danger" onclick="if(confirm('Rebooter la box ?'))cmd('REBOX')">REBOOT</button>
   <span class="dim">redemarrage propre ; au retour le hook init relance tout seul</span>
 </div>

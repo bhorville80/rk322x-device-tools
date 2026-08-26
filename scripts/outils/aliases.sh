@@ -62,7 +62,7 @@ system_rw_sh()
 
 tool_list()
 {
-    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch menu aliases"
+    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch kodi_web menu aliases"
 }
 
 is_ported()
@@ -133,6 +133,7 @@ tool_desc()
         busi)             echo "busybox devoile : applets, puissances cachees, demos" ;;
         macro)            echo "sequences nommees d'actions rejouables en un coup" ;;
         tips)             echo "one-liners embarques, version executable de BEST-COMMANDES" ;;
+        kodi_web)         echo "telecommande web de Kodi OFF/ON/STATUS (libere le port 8080 API)" ;;
         swap_watch)       echo "gardien resident swap/memoire : TRIM, RESCUE, THRASH" ;;
         menu)             echo "menu interactif numerote pour lancer les outils" ;;
         aliases)          echo "wrappers /system/bin : outils appelables sans su" ;;
