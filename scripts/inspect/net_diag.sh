@@ -185,11 +185,8 @@ port_inode()
     [ -n "$H_" ] || return 1
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        L_="$(grep -i ":$H_ .* 0A " "$F_" 2>/dev/null | head -n 1)"
-        [ -n "$L_" ] || continue
-        # champs : sl la ra st tx-rx tr tm-when retrnsmt UID TIMEOUT INODE
-        printf '%s\n' "$L_" | awk '{print $11}'
-        return 0
+        IN_="$(awk -v p=":${H_}$" '$2 ~ p && $4 == "0A" {printf "%d", $11; exit}' "$F_" 2>/dev/null)"
+        [ -n "$IN_" ] && { echo "$IN_"; return 0; }
     done
     return 1
 }
