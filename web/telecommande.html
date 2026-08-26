@@ -56,7 +56,7 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
 
 <div class="apistatus" id="apistatus">ports :
   <b id="as8000">8000 test...</b>
-  <b id="as8080">8080 api...</b>
+  <b id="as8180">8180 api...</b>
   <b id="as8081">8081 gui...</b>
 </div>
 
@@ -146,7 +146,7 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
 <script>
 
 var GUI = "http://" + location.hostname + ":8081/gui/";
-var API = "http://" + location.hostname + ":8080/api/";
+var API = "http://" + location.hostname + ":8180/api/";
 
 function tokQ() {
     var t = "";
@@ -246,7 +246,7 @@ async function runCmd() {
         var r = await fetch(API + "RUN?" + qs, {cache:"no-store"});
         showOut("[HTTP " + r.status + "]\n" + await r.text());
     } catch (e) {
-        showOut("[KO] " + e + "\nverifier badge 8080 / WEB_RUN=1 dans device.conf");
+        showOut("[KO] " + e + "\nverifier badge 8180 / WEB_RUN=1 dans device.conf");
     }
     b.disabled = false;
 }
@@ -311,12 +311,12 @@ function fdList() {
             });
             if (!n) {
                 box.innerHTML = "<span class='dim'>aucun clignotement " +
-                    "(API 8080 injoignable ? voir console ci-dessous)</span>";
+                    "(API 8180 injoignable ? voir console ci-dessous)</span>";
             }
         })
         .catch(function () {
             document.getElementById("fdblist").innerHTML =
-                "<span class='dim'>API 8080 injoignable</span>";
+                "<span class='dim'>API 8180 injoignable</span>";
         });
 }
 function fdCreate() {
@@ -374,11 +374,11 @@ function probe(url, ok, ko, n) {
         ko();
     });
 }
-probe("http://" + location.hostname + ":8080/api/HELP", function (r) {
-    asSet("as8080", r.status === 403 ? "warn" : "up",
-          r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+probe("http://" + location.hostname + ":8180/api/HELP", function (r) {
+    asSet("as8180", r.status === 403 ? "warn" : "up",
+          r.status === 403 ? "8180 API UP - token requis" : "8180 API OK");
 }, function () {
-    asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+    asSet("as8180", "down", "8180 API INJOIGNABLE (arrete ou bloque)");
 });
 probe("http://" + location.hostname + ":8081/", function (r) {
     asSet("as8081", r.status === 403 ? "warn" : "up",

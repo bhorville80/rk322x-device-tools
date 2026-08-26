@@ -51,7 +51,7 @@ main()
         bb_has "$A" && row OK "bb:$A" "" || { has "$A" && row OK "$A" "(hors busybox)" || row ABSENT "bb:$A" ""; }
     done
 
-    sec "Multi-listeners API 8080"
+    sec "Multi-listeners API 8180"
     HAS_T=""
     has tcpsvd && { row OK tcpsvd "factory listeners activee" ; HAS_T=tcpsvd ; }
     if [ -z "$HAS_T" ] && busybox tcpsvd 2>&1 | grep -q tcpsvd; then

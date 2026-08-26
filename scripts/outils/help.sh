@@ -120,7 +120,7 @@ VERIFICATION
                       token-status], manage ports
   services           Tout activer/arreter d'un coup sans reboot :
                       services UP = memoire/swap (mem_tune),
-                      gardien swap_watch, pile web 8000/8080/8081
+                      gardien swap_watch, pile web 8000/8180/8081
                       + watcher USB, ssh 2222, horloge frontale ;
                       STOP arrete tout (orphelins balayes) ;
                       STATUS etat synthetique par service
@@ -184,10 +184,10 @@ VERIFICATION
                       RUN un cycle verbeux ; reagit en runtime :
                       TRIM caches sous seuil, RESCUE chaine swap
                       morte, THRASH journalise ; BOOT_SWAP_WATCH=1
-  kodi_web           Telecommande web de Kodi (port 8080 par defaut,
+  kodi_web           Telecommande web de Kodi (port 8180 par defaut,
                       en conflit avec l'API) : STATUS etat + qui tient
                       le port, OFF coupe (force-stop + setting defaut),
-                      ON reactive ; remediation "8080 injoignable"
+                      ON reactive ; remediation "8180 injoignable"
   selftest           Verifie que tous les outils repondent
   menu               Dispatcher par sujet : install recette optim
                        inspect diag logs serveur cle
@@ -319,7 +319,7 @@ RESEAU / DIAGNOSTIC
   net_diag           Diagnostic complet : lien (vitesse/duplex),
                      adresses auto-detectees, routes, DNS,
                      ping passerelle + internet, resume ok/ko/warn
-  net_diag PORTS     Services en ecoute (8000 cle, 8080 API,
+  net_diag PORTS     Services en ecoute (8000 cle, 8180 API,
                      8081 GUI, 5555 adb, 2222 ssh...)
   net_diag PING <h>  Latence detaillee vers un hote
   net_diag THROUGHPUT <ip>   Debit sortant dd->nc (receveur requis)
@@ -358,7 +358,7 @@ RESEAU / HEURE   (commande apres INSTALL)
 
 SERVEURS   (dossier server/ de la cle)
   start_server.sh    HTTP port 8000 servant la cle
-  control_server.sh  API port 8080 (HELP/SEND_LOGS/PURGE_LOG/SYNC)
+  control_server.sh  API port 8180 (HELP/SEND_LOGS/PURGE_LOG/SYNC)
                       + watch_usb.sh execute les fichiers temoins
                       poses dans incoming/
   ssh_server.sh      SSH via dropbear port 2222 (binaire a deposer,

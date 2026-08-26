@@ -133,7 +133,7 @@ tool_desc()
         busi)             echo "busybox devoile : applets, puissances cachees, demos" ;;
         macro)            echo "sequences nommees d'actions rejouables en un coup" ;;
         tips)             echo "one-liners embarques, version executable de BEST-COMMANDES" ;;
-        kodi_web)         echo "telecommande web de Kodi OFF/ON/STATUS (libere le port 8080 API)" ;;
+        kodi_web)         echo "telecommande web de Kodi OFF/ON/STATUS (libere le port 8180 API)" ;;
         swap_watch)       echo "gardien resident swap/memoire : TRIM, RESCUE, THRASH" ;;
         menu)             echo "menu interactif numerote pour lancer les outils" ;;
         aliases)          echo "wrappers /system/bin : outils appelables sans su" ;;

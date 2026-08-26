@@ -225,10 +225,10 @@ do_default()
 
     if motd_port_listen 8000; then
         PANEL="http://${IP:-<ip>}:8000"
-        PORTS="web $(motd_port_tag 8000)   api $(motd_port_tag 8080)$(motd_token_note)   gui $(motd_port_tag 8081)"
+        PORTS="web $(motd_port_tag 8000)   api $(motd_port_tag 8180)$(motd_token_note)   gui $(motd_port_tag 8081)"
     else
         PANEL="arrete -> amorce EXPOSE"
-        PORTS="8000 [--]   8080 [--]   8081 [--]"
+        PORTS="8000 [--]   8180 [--]   8081 [--]"
     fi
 
     {

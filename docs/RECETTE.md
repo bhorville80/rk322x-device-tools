@@ -32,7 +32,7 @@ Deliverable installation:
 | B07| run_state                   | runs/count/rc + installed-never-run             |       |
 | B08| device_info                 | chips by function + grouped services            |       |
 | B09| inspect_all                 | all sections, rc synthesis at end               |       |
-| B10| STOP then EXPOSE            | servers restarted: 8000/8080/8081 + watcher     |       |
+| B10| STOP then EXPOSE            | servers restarted: 8000/8180/8081 + watcher     |       |
 | B11| boot INSTALL then STATUS    | init hook active, last pass traced              |       |
 | B12| front_digit PROBE           | frame format memorized, SHOW "12.34" visible    |       |
 | B13| remote_map STATUS           | target device + layout, 0 modification         |       |

@@ -328,7 +328,7 @@ do_logs()
 help_serveur()
 {
     cat << 'EOF'
-serveur - pile web de la cle (8000 panneau / 8080 api / 8081 gui)
+serveur - pile web de la cle (8000 panneau / 8180 api / 8081 gui)
   expose            demarre toute la pile (httpd + gui + control + watcher)
   stop              arrete les serveurs
   ssh-status        dropbear (ssh_server STATUS)

@@ -69,7 +69,7 @@ select { background:#222; color:#eee; border:1px solid #444; border-radius:4px; 
 
 <div class="apistatus" id="apistatus">ports :
   <b id="as8000">8000 test...</b>
-  <b id="as8080">8080 api...</b>
+  <b id="as8180">8180 api...</b>
   <b id="as8081">8081 gui...</b>
 </div>
 
@@ -98,7 +98,7 @@ select { background:#222; color:#eee; border:1px solid #444; border-radius:4px; 
 
 <script>
 
-var API = "http://" + location.hostname + ":8080/api/";
+var API = "http://" + location.hostname + ":8180/api/";
 
 function tokUrl(base) {
     var t = "";
@@ -107,7 +107,7 @@ function tokUrl(base) {
     return base + (base.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(t);
 }
 
-// box sans tcpsvd : API mono-slot (une seule requete 8080 a la fois) ->
+// box sans tcpsvd : API mono-slot (une seule requete 8180 a la fois) ->
 // appels SERIALIZES via une file d'attente + re-essais espaces aleatoires ;
 // une rafale au chargement ne doit plus finir en "injoignable"
 var apiChain = Promise.resolve();
@@ -142,7 +142,7 @@ function apiOnce(path, attempt) {
         }
         var cause = (e && e.message) ? e.message : "" + e;
         if (e && e.name === "AbortError") cause = "delai de 20 s depasse";
-        throw new Error("API 8080 injoignable (" + cause + ") - lancer deploy EXPOSE sur la box");
+        throw new Error("API 8180 injoignable (" + cause + ") - lancer deploy EXPOSE sur la box");
     });
 }
 
@@ -350,7 +350,7 @@ function asSet(id, cls, t) {
     if (e) { e.className = cls; e.textContent = t; }
 }
 asSet("as8000", "up", "8000 HTTP OK");
-// box mono-slot (sans tcpsvd) : une connexion a la fois sur 8080/8081 ->
+// box mono-slot (sans tcpsvd) : une connexion a la fois sur 8180/8081 ->
 // sondes avec re-essais espaces ; un refus transitoire ne s'affiche plus
 // immédiatement comme INJOIGNABLE
 function probe(url, ok, ko, n) {
@@ -364,11 +364,11 @@ function probe(url, ok, ko, n) {
         ko();
     });
 }
-probe("http://" + location.hostname + ":8080/api/HELP", function (r) {
-    asSet("as8080", r.status === 403 ? "warn" : "up",
-          r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+probe("http://" + location.hostname + ":8180/api/HELP", function (r) {
+    asSet("as8180", r.status === 403 ? "warn" : "up",
+          r.status === 403 ? "8180 API UP - token requis" : "8180 API OK");
 }, function () {
-    asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+    asSet("as8180", "down", "8180 API INJOIGNABLE (arrete ou bloque)");
 });
 probe("http://" + location.hostname + ":8081/", function (r) {
     asSet("as8081", r.status === 403 ? "warn" : "up",

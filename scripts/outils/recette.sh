@@ -110,7 +110,7 @@ help_recette()
     echo "  P4        mem_tune      profil optimise"
     echo "  P5        inspect_all   analyses completes"
     echo "  P6        run_state     lancements outils"
-    echo "  P7        expose        ports 8000/8080/8081 + panneau + api"
+    echo "  P7        expose        ports 8000/8180/8081 + panneau + api"
     echo "  RETOUR    collecte logs + cle prete pour analyse PC"
     echo "  MANIFEST  certification (+ snapshot) apres P1..P7 a 7/7 OK"
     echo ""
@@ -247,7 +247,7 @@ p_expose()
 
     PORTS=0
     port_up 8000 /index.html && PORTS=$((PORTS+1))
-    port_up 8080 /api/HELP   && PORTS=$((PORTS+1))
+    port_up 8180 /api/HELP   && PORTS=$((PORTS+1))
     port_up 8081             && PORTS=$((PORTS+1))
     IDX="$(wget_bounded http://127.0.0.1:8000/index.html | grep -c RK322X)"
     API_NOTE="api CONFIG : non verifiee"
@@ -255,7 +255,7 @@ p_expose()
     if [ -n "$KEY" ] && [ -f "$KEY/server/token" ]; then
         API_NOTE="token actif (controle API saute)"
     else
-        API_N="$(wget_bounded http://127.0.0.1:8080/api/CONFIG | grep -c DEPLOY_VERSION)"
+        API_N="$(wget_bounded http://127.0.0.1:8180/api/CONFIG | grep -c DEPLOY_VERSION)"
         if [ "${API_N:-0}" -gt 0 ]; then
             API_NOTE="api CONFIG repond"
             API_OK=1
@@ -264,7 +264,7 @@ p_expose()
             API_OK=0
         fi
     fi
-    echo "    ports 8000/8080/8081 : $PORTS/3, panneau:$([ "$IDX" -gt 0 ] && echo ok || echo ko), $API_NOTE"
+    echo "    ports 8000/8180/8081 : $PORTS/3, panneau:$([ "$IDX" -gt 0 ] && echo ok || echo ko), $API_NOTE"
 
     if [ "$RC_EXPOSE" -ne 0 ] || [ "$PORTS" -lt 3 ] || [ "${IDX:-0}" -eq 0 ]; then
         echo "    sortie deploy EXPOSE :"

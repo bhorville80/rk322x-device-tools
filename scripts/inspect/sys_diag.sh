@@ -176,7 +176,7 @@ do_security()
     if find_key && [ -f "$KEY/server/token" ]; then
         ok "API control" "token actif"
     else
-        warn "API control 8080" "sans token (server/token sur la cle)"
+        warn "API control 8180" "sans token (server/token sur la cle)"
     fi
 
     SSH_L="$(netstat -tln 2>/dev/null | grep -c ':2222 ')"

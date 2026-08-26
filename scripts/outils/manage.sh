@@ -86,7 +86,7 @@ ports_table()
         "5555|adb|adbd (USB/reseau developpeur)" \
         "2222|ssh|dropbear (server/ssh_server)" \
         "8000|panneau|busybox httpd (cle servie)" \
-        "8080|api|control_server.sh" \
+        "8180|api|control_server.sh" \
         "8081|gui|gui_server.sh (telecommande TV)" ; do
         P_="$(printf '%s' "$ENTRY" | cut -d'|' -f1)"
         S_="$(printf '%s' "$ENTRY" | cut -d'|' -f2)"
@@ -116,8 +116,8 @@ web_page()
 
     port_up 8000 && ok_ko OK "port 8000 (panneau) en ecoute" \
                  || ok_ko KO "port 8000 absent"
-    port_up 8080 && ok_ko OK "port 8080 (api) en ecoute" \
-                 || ok_ko KO "port 8080 absent"
+    port_up 8180 && ok_ko OK "port 8180 (api) en ecoute" \
+                 || ok_ko KO "port 8180 absent"
     port_up 8081 && ok_ko OK "port 8081 (gui) en ecoute" \
                  || ok_ko KO "port 8081 absent"
 
@@ -133,20 +133,20 @@ web_page()
         # cut et non head -c : le head busybox de certains firmwares refuse
         # l'option -c ("head: not integer: c") et vidait la reponse -> faux
         # KO "aucune reponse HELP" meme API vivante
-        API_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8080/api/HELP 2>/dev/null | cut -c1-60)"
+        API_="$(timeout 8 busybox wget -qO- http://127.0.0.1:8180/api/HELP 2>/dev/null | cut -c1-60)"
         case "$API_" in
             *status*)  ok_ko OK "api : HELP repond" ;;
             "")        if [ -f "${KEY:-/x}/server/token" ]; then
                              ok_ko OK "api : protégée par token (403 attendu sans token)"
                        else
-                             ok_ko KO "api : aucune reponse HELP (port 8080 muet ou filtre)"
+                             ok_ko KO "api : aucune reponse HELP (port 8180 muet ou filtre)"
                        fi ;;
             *)         ok_ko OK "api : reponse recue" ;;
         esac
     fi
 
     if [ -f "${KEY:-/x}/server/token" ]; then
-        ok_ko "--" "token actif sur 8080/8081 (deploy TOKEN STATUS pour details)"
+        ok_ko "--" "token actif sur 8180/8081 (deploy TOKEN STATUS pour details)"
     else
         ok_ko "--" "token absent (API ouverte sur le reseau local)"
     fi

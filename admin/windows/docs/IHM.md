@@ -92,7 +92,7 @@ Results are displayed in the black output block under the buttons.
 
 ## Security
 
-- Without token: API 8080 and GUI 8081 are open to the LAN
+- Without token: API 8180 and GUI 8081 are open to the LAN
   (panel :8000 is static content).
 - `deploy TOKEN ON` protects API/GUI; the panel asks for the value once
   per browser (localStorage).
@@ -100,7 +100,7 @@ Results are displayed in the black output block under the buttons.
 
 ## Troubleshooting
 
-- Badge 8080 red -> run `deploy EXPOSE` on the box (or adb).
+- Badge 8180 red -> run `deploy EXPOSE` on the box (or adb).
 - Persistent "Failed to fetch" -> see TROUBLESHOOTING, WEB PANEL section.
 - After any script update: `deploy STOP && deploy EXPOSE`.
 
@@ -122,12 +122,12 @@ Chaque carte porte sa case a cocher et sa puce d'etat : ⏳ EN COURS
 cases cochees (tous onglets confondus) via un pool borne par le selecteur
 **max parallele** (1-4), departs decalés 300 ms.
 
-Endpoints API 8080 ajoutes pour ces actions : PROC / DEV / PROBE /
+Endpoints API 8180 ajoutes pour ces actions : PROC / DEV / PROBE /
 LAUNCHER / SWAP (mem_tune STATUS) / SWWATCH (swap_watch STATUS)
 (reponse synchrone text/plain, meme pattern que CONF_CHECK).
 
 Selecteur **listeners box** (1-7, defaut 3) : nombre de connexions
-simultanees acceptees par l'API 8080 quand le firmware busybox fournit
+simultanees acceptees par l'API 8180 quand le firmware busybox fournit
 tcpsvd ; sans tcpsvd, la box reste en mode mono-slot et la valeur sera
 appliquee des qu'un busybox complet est disponible. Effectif apres
 `deploy STOP ; deploy EXPOSE`.

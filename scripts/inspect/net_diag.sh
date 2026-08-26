@@ -150,7 +150,7 @@ port_label()
 {
     case "$1" in
         *:8000) echo "HTTP cle (start_server)" ;;
-        *:8080) echo "API control" ;;
+        *:8180) echo "API control" ;;
         *:8081) echo "GUI remote" ;;
         *:5555) echo "adb tcp" ;;
         *:2222) echo "ssh dropbear (si lance)" ;;
@@ -195,7 +195,7 @@ port_owner()
 {
     # qui tient ce port ? resolution inode socket -> /proc/*/fd -> pid/cmdline.
     # Rend le squatter NOMME au lieu d'un mystere (cas v23 : serveur HTTP
-    # integre de Kodi sur 8080, rebondissant a chaque reprise d'ecran).
+    # integre de Kodi sur 8180, rebondissant a chaque reprise d'ecran).
     IN_="$(port_inode "$1")" || return 1
     [ -n "$IN_" ] || return 1
     for D_ in /proc/[0-9]*; do
@@ -256,7 +256,7 @@ do_ports()
         done
     else
         echo "  (rien detecte : netstat muet ET /proc/net/tcp illisible)"
-        echo "  sonde directe : busybox wget -qO- http://127.0.0.1:8080/api/HELP"
+        echo "  sonde directe : busybox wget -qO- http://127.0.0.1:8180/api/HELP"
     fi
     return 0
 }

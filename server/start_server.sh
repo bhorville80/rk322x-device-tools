@@ -121,7 +121,7 @@ ensure_index()
         done
 
         echo '<h2>API locales</h2><ul>'
-        echo '<li>control : http://&lt;ip-box&gt;:8080/api/HELP (token eventuel)</li>'
+        echo '<li>control : http://&lt;ip-box&gt;:8180/api/HELP (token eventuel)</li>'
         echo '<li>gui     : http://&lt;ip-box&gt;:8081/gui/HELP</li>'
         echo '</ul>'
         echo '</body></html>'
@@ -221,20 +221,20 @@ if kill -0 "$PID" 2>/dev/null; then
         case "$CTRL_OUT" in
             *"ALREADY RUNNING"*)
                 echo "CONTROL SERVER: deja actif"
-                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER deja actif (port 8080 verifie par control_server)" >> "$LOG"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER deja actif (port 8180 verifie par control_server)" >> "$LOG"
                 ;;
             *"STARTED"*)
-                echo "CONTROL SERVER: 8080"
-                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8080)" >> "$LOG"
+                echo "CONTROL SERVER: 8180"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER STARTED (PORT 8180)" >> "$LOG"
                 # verdict d'ecoute repris du rapport du serveur lui-meme :
                 # un pid vivant ne prouve pas le bind du port
                 case "$CTRL_OUT" in
                     *"ECOUTE: verifiee"*)
-                        echo "CONTROL PORT: 8080 en ecoute (verifie)"
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT 8080 en ecoute (verifie)" >> "$LOG" ;;
+                        echo "CONTROL PORT: 8180 en ecoute (verifie)"
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT 8180 en ecoute (verifie)" >> "$LOG" ;;
                     *WARN*)
-                        echo "CONTROL PORT: WARN 8080 absent (voir control_server.log)"
-                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT WARN 8080 NON ouvert" >> "$LOG" ;;
+                        echo "CONTROL PORT: WARN 8180 absent (voir control_server.log)"
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT WARN 8180 NON ouvert" >> "$LOG" ;;
                 esac
                 ;;
             *)

@@ -79,7 +79,7 @@ a { color:#9cf; }
 
 <script>
 
-var API = "http://" + location.hostname + ":8080/api/";
+var API = "http://" + location.hostname + ":8180/api/";
 function tokQ() {
     var t = "";
     try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
@@ -115,7 +115,7 @@ apiFetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""))
     .then(t => put("sysinfo", t))
     .catch(() => {
         /* repli sans API : minimum statique servi par la cle */
-        loadText("/BUILD-INFO.txt", "sysinfo", "API 8080 injoignable (deploy EXPOSE)");
+        loadText("/BUILD-INFO.txt", "sysinfo", "API 8180 injoignable (deploy EXPOSE)");
     });
 
 /* version installee via l'API CONFIG existante (1re ligne) */
@@ -158,7 +158,7 @@ async function genHw() {
         var t = await r.text();
         put("hw", t.replace(/--- rapport sauvegarde[\s\S]*$/, "").trim());
     } catch (e) {
-        put("hw", "[KO] " + e + "\nverifier le badge 8080");
+        put("hw", "[KO] " + e + "\nverifier le badge 8180");
     }
     b.disabled = false;
 }

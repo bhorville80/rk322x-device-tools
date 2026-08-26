@@ -175,7 +175,7 @@ case "$1" in
         echo "Usage: capture <STATUS|START [s] [filtre_bpf]|LIST|CLEAN>"
         echo ""
         echo "  START 60                capture 60 s tout le trafic"
-        echo "  START 120 \"port 8080\"   avec filtre bpf"
+        echo "  START 120 \"port 8180\"   avec filtre bpf"
         echo "  Binaire tcpdump statique arm32 a deposer (pas fourni), cf. STATUS"
         echo ""
         ;;

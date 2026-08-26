@@ -541,7 +541,7 @@ do_stop()
     # Les DETENTEURS DE PORT sont vises aussi : en mono-slot le listener
     # effectif est un processus "busybox nc -l -p 80xx" enfant du shell
     # serveur ; tuer le shell seul laisse le nc orphelin sur le bind et le
-    # EXPOSE suivant echoue alors silencieusement (8080/8081 injoignables
+    # EXPOSE suivant echoue alors silencieusement (8180/8081 injoignables
     # persistants ; temoin manage : 8081 en ecoute sans aucun pidfile).
     for D in /proc/[0-9]*; do
         [ -r "$D/cmdline" ] || continue
@@ -554,12 +554,12 @@ do_stop()
             *"httpd -f"*)        N="httpd (panneau)" ;;
             # superviseur multi-listeners du control : tuer la boucle sh
             # parente ne le touche PAS (temoin v20 : apres STOP le tcpsvd de
-            # la session precedente tenait encore 8080 -> tous les binds du
+            # la session precedente tenait encore 8180 -> tous les binds du
             # control relance echouaient, verdict d'ecoute faux-positif car
             # il sondait le detenteur etranger)
             *tcpsvd*)
                 case "$C" in
-                    *" 8080 "*|*" 8080") N="tcpsvd (superviseur 8080)" ;;
+                    *" 8180 "*|*" 8180") N="tcpsvd (superviseur 8180)" ;;
                     *)                   continue ;;
                 esac
                 ;;
@@ -576,7 +576,7 @@ do_stop()
     # detenteur non gere, a signaler plutot qu'a masquer
     sleep 1
     HELD=""
-    for PORT_ in 8000 8080 8081; do
+    for PORT_ in 8000 8180 8081; do
         if port_still_up "$PORT_"; then HELD="$HELD $PORT_" ; fi
     done
     if [ -n "$HELD" ]; then
@@ -1165,7 +1165,7 @@ case "$1" in
         ;;
 
     TOKEN)
-        # protection optionnelle de l'API 8080 / GUI 8081 par secret partage :
+        # protection optionnelle de l'API 8180 / GUI 8081 par secret partage :
         # tant que server/token n'existe pas, ces ports sont ouverts au LAN.
         echo ""
         echo "=== RK322X TOKEN API ==="
@@ -1178,7 +1178,7 @@ case "$1" in
                     echo "protection : ACTIVEE (server/token present)"
                     echo "valeur     : masquee ($(wc -c < "$TOKFILE" | tr -dc '0-9') octets)"
                 else
-                    echo "protection : DESACTIVEE (API 8080 / GUI 8081 ouvertes au LAN)"
+                    echo "protection : DESACTIVEE (API 8180 / GUI 8081 ouvertes au LAN)"
                 fi
                 echo ""
                 echo "usage : deploy TOKEN ON | OFF | <valeur>"
@@ -1296,7 +1296,7 @@ case "$1" in
         grep -q . "$OUT/mmc_dev.txt" && echo "[OK]" || echo "[ERREUR]"
 
         # [9] logs des serveurs : traces portant les verdicts de bind
-        # 8080/8081 (FIFO en ecoute / NON ouvert) et les requetes recues.
+        # 8180/8081 (FIFO en ecoute / NON ouvert) et les requetes recues.
         # Pile installee : les serveurs lances depuis /data/scripts/server ont
         # pu ecrire dans /data/scripts/log (layout ancien) -> pour chaque
         # fichier on prend la copie LA PLUS RECENTE des deux sources, sinon
@@ -1402,7 +1402,7 @@ case "$1" in
         echo "  VERSION      Versions installee / cle (diagnostic mise a jour)"
         echo "  STATUS       Etat du deploiement : outils, liens, backups, cle"
         echo "  CLEAN [DRY]  Assainissement : backups/manifests/shots/staging"
-        echo "  TOKEN        Protection API 8080/GUI 8081 (ON/OFF/<valeur>/STATUS)"
+        echo "  TOKEN        Protection API 8180/GUI 8081 (ON/OFF/<valeur>/STATUS)"
         echo ""
         if [ -f "/data/scripts/help.sh" ]; then
             echo "Aide complete des outils : help"

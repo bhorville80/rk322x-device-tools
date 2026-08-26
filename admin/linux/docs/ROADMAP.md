@@ -21,7 +21,7 @@ One-page summary of what V1 delivers on a stock RK322X TV box
       Metriques en onglets (DIAGNOSTIC / PROCESSUS-RAM / SWAP / LAUNCHER TV,
       un bouton = un rapport dedie), Telecommande (TV screen mirror,
       click-to-TAP, keys, TEXT/URL, remote console RUN), Infos (static data).
-- [x] **Servers** - busybox httpd :8000 (static key), control API :8080
+- [x] **Servers** - busybox httpd :8000 (static key), control API :8180
       (FIFO detached handlers, POST upload, APPLY_DPK, RUN console gated by
       WEB_RUN+token, diagnostics PROC/DEV/PROBE/LAUNCHER), GUI TV :8081
       (KEY/TAP/TEXT/URL/SHOT), optional dropbear.
@@ -82,7 +82,7 @@ One-page summary of what V1 delivers on a stock RK322X TV box
 - [ ] tag v1.0-beta
 
 ### Hors phase 1 (backlog, non planifie)
-- [ ] GUI 8081 multi-listeners (tcpsvd) comme l'API 8080
+- [ ] GUI 8081 multi-listeners (tcpsvd) comme l'API 8180
 - [ ] OTA delta via UPLOAD/APPLY_DPK programme
 - [ ] provisioning multi-box depuis admin/
 - [ ] page IHM viewer de logs

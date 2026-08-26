@@ -20,7 +20,7 @@
 #   BOOT_CUT_SERVICES=1   cut_services CUT a chaque boot
 #   BOOT_SET_NETWORK=1    set_network a chaque boot (route+DNS non persistants)
 #   BOOT_TIME_SYNC=1      set_time AUTO a chaque boot (sortie de l'etat 1970)
-#   BOOT_EXPOSE=1         pile web demarree a chaque boot (ports 8000/8080/8081)
+#   BOOT_EXPOSE=1         pile web demarree a chaque boot (ports 8000/8180/8081)
 #   BOOT_SD_LAST=1        carte SD examinee en TOUT DERNIER (sd_boot CHECK)
 #   BOOT_FRONT_CLOCK=1    horloge frontale custom (front_digit CLOCK)
 #   BOOT_CHROOT=1         liens proc/sys/dev des environnements chroot_env

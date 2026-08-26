@@ -1,6 +1,6 @@
 #!/system/bin/sh
 
-PORT=8080
+PORT=8180
 
 # detection root robuste : id -u, sinon parsing du "id" brut (vieux toolbox)
 is_root()
@@ -49,7 +49,7 @@ log()
 
 # reply <code> <status> <body> [content-type]
 # En-tete CORS obligatoire : le panneau est servi sur :8000 et l'API sur
-# :8080 -> origines differentes ; sans Access-Control-Allow-Origin le
+# :8180 -> origines differentes ; sans Access-Control-Allow-Origin le
 # navigateur bloque la lecture de la reponse (fetch rejette cote IHM).
 # Content-Length calcule en OCTETS (wc -c) : ${#var} compte des caracteres
 # et tronquerait les corps UTF-8 (text/plain accentues).
@@ -688,7 +688,7 @@ listen_up()
 
 # qui tient le port ? inode socket -> /proc/*/fd -> pid/uid/cmdline.
 # Un squatter NOMME vaut mieux qu'un mystere (cas v23 : serveur HTTP de
-# Kodi sur 8080 par defaut, rebondissant a chaque reprise d'ecran TV).
+# Kodi sur 8080 par defaut, rebondissant a chaque reprise d'ecran TV). API desormais sur 8180.
 holder_of()
 {
     H_="$(printf '%04X' "$PORT" 2>/dev/null)"
@@ -936,7 +936,7 @@ if listen_up; then
         case "$C" in
             *control_server.sh*|*"nc -l -p $PORT"*|*"nc -lp $PORT"*) ;;
             # superviseur tcpsvd d'une session precedente : sa cmdline
-            # ("... tcpsvd -c N 0.0.0.0 8080 sh ...") ne matche ni le nom de
+            # ("... tcpsvd -c N 0.0.0.0 8180 sh ...") ne matche ni le nom de
             # script ni nc, mais il tient le bind et fait echouer TOUS les
             # binds du demarrage courant (temoin v20 : REPLI FIFO + port NON
             # ouvert + verdict d'ecoute faux-positif)

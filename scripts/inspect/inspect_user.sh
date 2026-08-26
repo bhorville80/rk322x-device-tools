@@ -181,7 +181,7 @@ elif [ "$IS_ANDROID" -eq 1 ]; then
     echo "        (UID 10xxx propre, apps separees : ce n'est pas un role root)"
     echo "      - utilisateur Linux impossible ici (pas de /etc/passwd)"
     echo "      - bonne pratique : execution root conservee pour les outils,"
-    echo "        acces distant controle a la place (token API 8080, adb"
+    echo "        acces distant controle a la place (token API 8180, adb"
     echo "        limite au LAN, cut_services pour reduire la surface)"
 else
     echo "    Ni sudo ni Android detecte : ajout sudoers manuel requis."

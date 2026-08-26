@@ -1,10 +1,9 @@
 #!/system/bin/sh
-# kodi_web - serveur HTTP integre de Kodi vs API du kit (port 8080).
+# kodi_web - serveur HTTP integre de Kodi (port 8080) vs API du kit (port 8180).
 #
 # La telecommande web de Kodi ("Allow remote control via HTTP") ecoute PAR
-# DEFAUT sur le port 8080 : le meme que l'API commandes du kit. Tant qu'il
-# est actif, Kodi rebind le port a chaque reveil de l'ecran TV et l'API
-# control ne peut plus demarrer (temoin v23 : tcpsvd/FIFO en echec en boucle).
+# DEFAUT sur le port 8080. L'API du kit est desormais sur 8180, donc plus
+# de conflit direct, mais Kodi peut quand meme monopoliser des ressources.
 # Cet outil neutralise le conflit COTE CONFIG, sans desinstaller Kodi.
 #
 # Usage: kodi_web [STATUS|OFF|ON|HELP]
@@ -12,8 +11,7 @@
 #   STATUS   etat setting + processus Kodi + port 8080 (defaut)
 #   OFF      force-stop Kodi puis retire l'override services.webserver
 #            -> Kodi retombe sur son defaut (webserver=false) ; libere 8080
-#   ON       reactive la telecommande web de Kodi (WARN : entre en conflit
-#            avec l'API du kit sur 8080)
+#   ON       reactive la telecommande web de Kodi (port 8080)
 #
 # Sauvegarde unique avant modification : guisettings.xml.kitbak
 
@@ -116,8 +114,7 @@ do_set()
              { print }' "$GS" > "$OUT_T" 2>/dev/null \
             && mv -f "$OUT_T" "$GS" \
             || { rm -f "$OUT_T"; echo "[ERREUR] ecriture impossible dans $GS"; exit 1; }
-        echo "[WARN] telecommande web Kodi activee : elle entre EN CONFLIT"
-        echo "       avec l'API du kit sur le port 8080 (kodi_web OFF pour arreter)"
+        echo "[WARN] telecommande web Kodi activee (port 8080)"
     else
         # retirer l'override -> Kodi retombe sur son defaut (webserver=false)
         OUT_T="/data/local/tmp/kodi_web.$$.xml"
@@ -129,7 +126,7 @@ do_set()
     V="$(web_val)"
     case "$WANT:$V" in
         false:|false:"")
-            echo "[ OK ] services.webserver -> defaut (desactive) : port 8080 libere pour l'API"
+            echo "[ OK ] services.webserver -> defaut (desactive : port 8080 libere)"
             ;;
         false:*)
             echo "[ERREUR] override toujours present ($V)"

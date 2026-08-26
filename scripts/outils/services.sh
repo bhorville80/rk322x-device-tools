@@ -5,7 +5,7 @@
 # BOOT_MEM_TUNE / BOOT_SWAP_WATCH / BOOT_EXPOSE / BOOT_FRONT_CLOCK + ssh) :
 #
 #   services              demarre tout : memoire/swap, gardien swap_watch,
-#                         pile web 8000/8080/8081 + watcher USB, ssh 2222,
+#                         pile web 8000/8180/8081 + watcher USB, ssh 2222,
 #                         horloge frontale
 #   services UP           idem
 #   services STOP         arrete tout (avec balayage des orphelins nc/httpd)
@@ -119,7 +119,7 @@ do_up()
     run_quiet "$W_" START
     RC_W=$?
 
-    step "pile web (deploy EXPOSE : 8000/8080/8081 + watcher USB)"
+    step "pile web (deploy EXPOSE : 8000/8180/8081 + watcher USB)"
     D_="$(resolve deploy.sh)"
     run_quiet "$D_" EXPOSE
     RC_D=$?
@@ -149,7 +149,7 @@ do_up()
     echo ""
     echo "=== SYNTHESE SERVICES ==="
     UP_=0
-    for P_ in 8000 8080 8081; do
+    for P_ in 8000 8180 8081; do
         port_up "$P_" && { echo "  [OK] port $P_ en ecoute" ; UP_=$((UP_+1)) ; } \
                       || echo "  [KO] port $P_ absent"
     done
@@ -187,7 +187,7 @@ do_stop()
     echo ""
     echo "=== SYNTHESE SERVICES ==="
     HELD=0
-    for P_ in 8000 8080 8081 2222; do
+    for P_ in 8000 8180 8081 2222; do
         if port_up "$P_"; then
             echo "  [WARN] port $P_ encore en ecoute"
             HELD=$((HELD+1))
@@ -202,11 +202,11 @@ do_status()
     echo "=== SERVICES STATUS ==="
 
     WEB=0
-    for P_ in 8000 8080 8081; do
+    for P_ in 8000 8180 8081; do
         port_up "$P_" && WEB=$((WEB+1))
     done
     case "$WEB" in
-        3) echo "  [OK] pile web     : 8000/8080/8081 en ecoute" ;;
+        3) echo "  [OK] pile web     : 8000/8180/8081 en ecoute" ;;
         0) echo "  [KO] pile web     : arretee (services UP pour demarrer)" ;;
         *) echo "  [WARN] pile web   : $WEB/3 ports seulement" ;;
     esac

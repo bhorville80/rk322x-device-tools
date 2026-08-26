@@ -48,7 +48,7 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
 
 <div class="apistatus" id="apistatus">ports :
   <b id="as8000">8000 test...</b>
-  <b id="as8080">8080 api...</b>
+  <b id="as8180">8180 api...</b>
   <b id="as8081">8081 gui...</b>
 </div>
 
@@ -70,7 +70,7 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
     <li><span class="mono">config/device.conf</span> - profil cible (reseau, ssh, services) -
         <a href="/config/device.conf">voir la copie servie</a></li>
     <li><span class="mono">scripts/</span> - tous les outils + core/</li>
-    <li><span class="mono">server/</span> - httpd 8000, control 8080, gui 8081, watcher USB</li>
+    <li><span class="mono">server/</span> - httpd 8000, control 8180, gui 8081, watcher USB</li>
     <li><span class="mono">manifests/</span> - traces d'installation (current/history)</li>
     <li><span class="mono">log/</span> - collectes SEND_LOGS, exec, gui_shots, state_last.txt</li>
     <li><span class="mono">admin/</span> - outillage PC (provision, set_box_time, logpull, vitals_history)</li>
@@ -115,14 +115,14 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
   <h3>Serveurs exposes sur le reseau</h3>
   <ul>
     <li><span class="mono">8000</span> HTTP - cette interface + fichiers de la cle (logs, config)</li>
-    <li><span class="mono">8080</span> CONTROL - API commandes (token si server/token present)</li>
+    <li><span class="mono">8180</span> CONTROL - API commandes (token si server/token present)</li>
     <li><span class="mono">8081</span> GUI - affichage TV plein ecran, touches, screenshot</li>
     <li><span class="mono">5555</span> adb tcpip &nbsp;|&nbsp; <span class="mono">2222</span> dropbear (si lance)</li>
   </ul>
   <span class="dim">arret global : deploy STOP ou bouton correspondant page Commandes</span>
   <p>
   <b>Protection optionnelle par token.</b> Tant que <span class="mono">server/token</span>
-  n'existe pas sur la cle, l'API 8080 et la GUI 8081 sont ouvertes a tout le LAN.
+  n'existe pas sur la cle, l'API 8180 et la GUI 8081 sont ouvertes a tout le LAN.
   Pour les proteger :
   <br><span class="mono">deploy TOKEN ON</span> (token aleatoire) ou
   <span class="mono">deploy TOKEN MonSecret123</span>, puis
@@ -169,7 +169,7 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
 <div class="footer">panneau IHM v19 - rk322x device tools</div>
 
 <script>
-var API8080 = "http://" + location.hostname + ":8080/api/";
+var API8180 = "http://" + location.hostname + ":8180/api/";
 function tokQ() {
     var t = "";
     try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
@@ -203,7 +203,7 @@ async function doUpload() {
         if (sha) qs += "&sha=" + sha;
         var tk = tokQ();
         if (tk) qs += "&" + tk;
-        var r = await fetch(API8080 + "UPLOAD?" + qs, { method: "POST", body: f });
+        var r = await fetch(API8180 + "UPLOAD?" + qs, { method: "POST", body: f });
         var t = await r.text();
         out("[HTTP " + r.status + "] " + t);
         if (/\.dpk$/i.test(f.name) && r.ok &&
@@ -211,7 +211,7 @@ async function doUpload() {
             await applyNamed(f.name);
         }
     } catch (e) {
-        out("[KO] " + e + "\nverifier le badge 8080 (API injoignable ?)");
+        out("[KO] " + e + "\nverifier le badge 8180 (API injoignable ?)");
     }
     document.getElementById("upbtn").disabled = false;
 }
@@ -220,7 +220,7 @@ async function applyNamed(name) {
     var qs = "name=" + encodeURIComponent(name);
     var tk = tokQ();
     if (tk) qs += "&" + tk;
-    var r = await fetch(API8080 + "APPLY_DPK?" + qs, { cache: "no-store" });
+    var r = await fetch(API8180 + "APPLY_DPK?" + qs, { cache: "no-store" });
     out(await r.text());
 }
 
@@ -246,7 +246,7 @@ function asSet(id, cls, t) {
     if (e) { e.className = cls; e.textContent = t; }
 }
 asSet("as8000", "up", "8000 HTTP OK");
-// box mono-slot (sans tcpsvd) : une connexion a la fois sur 8080/8081 ->
+// box mono-slot (sans tcpsvd) : une connexion a la fois sur 8180/8081 ->
 // sondes avec re-essais espaces ; un refus transitoire ne s'affiche plus
 // immédiatement comme INJOIGNABLE
 function probe(url, ok, ko, n) {
@@ -260,11 +260,11 @@ function probe(url, ok, ko, n) {
         ko();
     });
 }
-probe("http://" + location.hostname + ":8080/api/HELP", function (r) {
-    asSet("as8080", r.status === 403 ? "warn" : "up",
-          r.status === 403 ? "8080 API UP - token requis" : "8080 API OK");
+probe("http://" + location.hostname + ":8180/api/HELP", function (r) {
+    asSet("as8180", r.status === 403 ? "warn" : "up",
+          r.status === 403 ? "8180 API UP - token requis" : "8180 API OK");
 }, function () {
-    asSet("as8080", "down", "8080 API INJOIGNABLE (arrete ou bloque)");
+    asSet("as8180", "down", "8180 API INJOIGNABLE (arrete ou bloque)");
 });
 probe("http://" + location.hostname + ":8081/", function (r) {
     asSet("as8081", r.status === 403 ? "warn" : "up",

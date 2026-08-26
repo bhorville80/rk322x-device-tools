@@ -476,7 +476,7 @@ Two independent causes, both fixed in v17+:
    connection after ~30 s and every click failed. Fixed by piping the
    handler INTO `nc` (`{ wait for request ; handle } | nc -l ...`), so the
    reply really travels on the socket while the connection is open.
-2. **CORS**: panel is served on :8000 while the API listens on 8080/8081 -
+2. **CORS**: panel is served on :8000 while the API listens on 8180/8081 -
    different origins. Without `Access-Control-Allow-Origin: *` the browser
    blocks the response and `fetch()` rejects.
 
@@ -506,11 +506,11 @@ deploy STOP && deploy EXPOSE
 
 `deploy TOKEN STATUS` shows the current state, `deploy TOKEN OFF`
 removes it. The value is read from the key by `control_server.sh`
-(8080) and `gui_server.sh` (8081) at each request; alphanumerics only.
+(8180) and `gui_server.sh` (8081) at each request; alphanumerics only.
 
 ### Port badges under the page title
 
-Every panel page shows three badges (`8000 HTTP / 8080 API / 8081 GUI`):
+Every panel page shows three badges (`8000 HTTP / 8180 API / 8081 GUI`):
 
 - green `OK`: port answers;
 - orange `UP - token requis`: server reachable, 403 answered (token
@@ -524,12 +524,12 @@ from your PC, the block is on the path between the two:
 
 1. `http://IP:8000` does not even load -> Wi-Fi AP isolation or router
    firewall; connect the PC to the same network segment.
-2. Panel loads but badges show `8080 INJOIGNABLE` while `net_diag PORTS`
-   on the box lists `:8080` -> inbound filter on 8080/8081 (PC firewall,
+2. Panel loads but badges show `8180 INJOIGNABLE` while `net_diag PORTS`
+   on the box lists `:8180` -> inbound filter on 8180/8081 (PC firewall,
    corporate LAN). Test from the PC:
-   `curl http://IP:8080/api/HELP` (or `Test-NetConnection IP -Port 8080`).
+   `curl http://IP:8180/api/HELP` (or `Test-NetConnection IP -Port 8180`).
 3. Badges flip OK/INJOIGNABLE intermittently -> single-slot `nc` servers
-   busy (a synchronous CONF_CHECK blocks 8080 for a few seconds); retry.
+   busy (a synchronous CONF_CHECK blocks 8180 for a few seconds); retry.
 4. Requests never appear in `log/control_server.log` (not even as
    `REQUEST REJECTED`) -> they are dropped before reaching the box:
    confirmed network/firewall issue, not a tools problem.
@@ -544,9 +544,9 @@ Launched from `adb shell` (uid 2000), root-only actions fail silently in
 su -c 'sh /data/scripts/deploy.sh EXPOSE'
 ```
 
-### Ports 8080/8081 unreachable while 8000 answers
+### Ports 8180/8081 unreachable while 8000 answers
 
-The control (8080) and gui (8081) servers are single-connection `nc`
+The control (8180) and gui (8081) servers are single-connection `nc`
 loops: a silent connection (browser preconnect, port scan) used to
 monopolize the only slot, and a server started from an adb session died
 with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
@@ -566,7 +566,7 @@ v20 fixes the two blind spots the field logs exposed:
   used to win and logs/pidfiles/incoming landed in `/data/scripts/...`,
   invisible to `SEND_LOGS` (srv_logs reads `<key>/log`) and to
   `deploy STOP`. Field witness: http_server.log said `CONTROL SERVER
-  STARTED (PORT 8080)` while no control/gui log existed on the key.
+  STARTED (PORT 8180)` while no control/gui log existed on the key.
 - **"ALREADY RUNNING" no longer exits blindly**: a live pidfile whose nc
   listener died answered ALREADY RUNNING without opening the port, BEFORE
   the orphan-recovery block was ever reached - 8081 stayed dead with no
@@ -583,32 +583,32 @@ v20 fixes the two blind spots the field logs exposed:
 
 v21 closes the hole those fixes exposed (field logs session C): after a
 STOP, a surviving `tcpsvd` supervisor from the previous session kept the
-8080 bind - it matches neither the script name nor `nc`, so every rebind
+8180 bind - it matches neither the script name nor `nc`, so every rebind
 of the new control failed (`tcpsvd en echec -> REPLI FIFO`, port NON
 ouvert) while the startup verdict reported "en ecoute" by probing the
 FOREIGN holder. `deploy STOP`/`services STOP` sweeps and the control
-orphan-recovery now target `tcpsvd ... 8080` holders too; gui requests
+orphan-recovery now target `tcpsvd ... 8180` holders too; gui requests
 without action are logged with their raw request line.
 
-v23 names the actual squatter (field logs: 8080 dead while kernel tables
+v23 names the actual squatter (field logs: 8180 dead while kernel tables
 show it free, flapping across sessions): an **Android app stealing the
 port** - on this box, Kodi (`org.xbmc.kodi`, uid u0_a44, seen on
 1585/9090) whose built-in HTTP remote-control server defaults to
-**8080**, rebinding each time the TV screen wakes. The API then fails to
+**8180**, rebinding each time the TV screen wakes. The API then fails to
 bind forever, and verdicts probed during a Kodi-held window are false
 positives. `net_diag PORTS` now resolves the owner of every listening
 port (inode socket -> /proc/*/fd -> pid/uid/cmdline), and the control
 server logs the holder in both failure paths (`DEMARRAGE IMPOSSIBLE`,
 `FIFO ATTENTION`).
 
-Fix when an app holds 8080 (Kodi case, one command):
+Fix when an app holds 8180 (Kodi case, one command):
 
 ```bash
 su -c 'sh /data/scripts/kodi_web.sh OFF'   # ou bouton KODI WEB OFF du panneau
 deploy STOP && deploy EXPOSE               # l'API reprend le port
 ```
 
-`kodi_web STATUS` shows the setting, the Kodi process and who owns 8080;
+`kodi_web STATUS` shows the setting, the Kodi process and who owns 8180;
 `OFF` force-stops Kodi then removes its `services.webserver` override
 (backup in `guisettings.xml.kitbak`) so it stays off across relaunches.
 Manual alternative: Kodi > Settings > Services > Control >
@@ -641,7 +641,7 @@ Recovery:
 ```bash
 su -c 'sh /data/scripts/deploy.sh STOP'
 su -c 'sh /data/scripts/deploy.sh EXPOSE'
-net_diag PORTS           # 8000/8080/8081 expected
+net_diag PORTS           # 8000/8180/8081 expected
 ```
 
 ---
