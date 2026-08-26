@@ -536,11 +536,17 @@ do_stop()
         [ -f "$P" ] || continue
         PID="$(cat "$P" 2>/dev/null)"
         if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-            if kill "$PID" 2>/dev/null; then
+            kill "$PID" 2>/dev/null
+            sleep 1
+            if kill -0 "$PID" 2>/dev/null; then
+                kill -9 "$PID" 2>/dev/null
+                sleep 1
+            fi
+            if kill -0 "$PID" 2>/dev/null; then
+                echo "[ ERREUR ] impossible d'arreter PID $PID ($(basename "$P"))"
+            else
                 echo "[ OK ] $(basename "$P") arrete (PID $PID)"
                 FOUND=1
-            else
-                echo "[ ERREUR ] impossible d'arreter PID $PID ($(basename "$P"))"
             fi
         else
             echo "[ WARN ] PID invalide dans $(basename "$P")"
@@ -578,7 +584,13 @@ do_stop()
             *)                   continue ;;
         esac
         PID="${D#/proc/}"
-        if kill "$PID" 2>/dev/null; then
+        kill "$PID" 2>/dev/null
+        sleep 1
+        if kill -0 "$PID" 2>/dev/null; then
+            kill -9 "$PID" 2>/dev/null
+            sleep 1
+        fi
+        if ! kill -0 "$PID" 2>/dev/null; then
             echo "[ OK ] $N orphelin arrete (PID $PID)"
             FOUND=1
         fi
@@ -593,8 +605,7 @@ do_stop()
     done
     if [ -n "$HELD" ]; then
         echo "[ WARN ] port(s)$HELD encore en ecoute apres arret"
-        echo "         detenteur non identifie : rebooter la box avant EXPOSE"
-        echo "         (sinon le bind echouera silencieusement)"
+        echo "         rebooter la box avant EXPOSE"
     fi
 
     if [ "$FOUND" -eq 0 ] && [ -z "$HELD" ]; then
