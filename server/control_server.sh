@@ -682,7 +682,7 @@ listen_up()
         return 0
     fi
     H_="$(printf '%04X' "$PORT" 2>/dev/null)"
-    [ -n "$H_" ] && grep -qi ":$H_ .* 0A " /proc/net/tcp 2>/dev/null && return 0
+    [ -n "$H_" ] && awk -v p=":${H_}$" '$2 ~ p && $4 == "0A" {found=1} END {exit !found}' /proc/net/tcp 2>/dev/null && return 0
     return 1
 }
 
@@ -696,9 +696,7 @@ holder_of()
     IN_=""
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        L_="$(grep -i ":$H_ .* 0A " "$F_" 2>/dev/null | head -n 1)"
-        [ -n "$L_" ] || continue
-        IN_="$(printf '%s\n' "$L_" | awk '{print $11}')"
+        IN_="$(awk -v p=":${H_}$" '$2 ~ p && $4 == "0A" {printf "%d",$11; exit}' "$F_" 2>/dev/null)"
         [ -n "$IN_" ] && break
     done
     [ -n "$IN_" ] || { printf 'processus sans socket visible (bind flappant ?)' ; return 0 ; }
