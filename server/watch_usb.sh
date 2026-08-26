@@ -26,6 +26,14 @@ LOG_DIR="$USB/log"
 LOG="$LOG_DIR/watch.log"
 LOCK="$USB/server/watch.lock"
 
+# scripts installes en interne en priorite, sinon sur la cle
+SCRIPTS=""
+if [ -d /data/scripts ] && [ -f /data/scripts/config.sh ]; then
+    SCRIPTS="/data/scripts"
+elif [ -d "$USB/scripts" ] && [ -f "$USB/scripts/config.sh" ]; then
+    SCRIPTS="$USB/scripts"
+fi
+
 mkdir -p "$INCOMING" "$LOG_DIR" "$USB/server"
 
 if [ -f "$LOCK" ]; then
@@ -85,66 +93,66 @@ do
             SEND_LOGS)
                 log "SEND_LOGS"
                 sh "$USB/deploy.sh" SEND_LOGS >> "$LOG" 2>&1
-                sh "$USB/scripts/rotate_logs.sh" > /dev/null 2>&1
+                sh "$SCRIPTS/rotate_logs.sh" > /dev/null 2>&1
                 rm -f "$FILE"
                 ;;
 
             SYNC)
                 log "SYNC"
-                sh "$USB/scripts/sync_usb.sh" >> "$LOG" 2>&1
+                sh "$SCRIPTS/sync_usb.sh" >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             FIELD_OFF)
                 log "FIELD_OFF"
-                sh "$USB/scripts/field_mode.sh" OFF >> "$LOG" 2>&1
+                sh "$SCRIPTS/field_mode.sh" OFF >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             FIELD_ON)
                 log "FIELD_ON"
-                sh "$USB/scripts/field_mode.sh" ON >> "$LOG" 2>&1
+                sh "$SCRIPTS/field_mode.sh" ON >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             HDMI_OFF)
                 log "HDMI_OFF"
-                sh "$USB/scripts/hdmi.sh" OFF >> "$LOG" 2>&1
+                sh "$SCRIPTS/hdmi.sh" OFF >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             HDMI_ON)
                 log "HDMI_ON"
-                sh "$USB/scripts/hdmi.sh" ON >> "$LOG" 2>&1
+                sh "$SCRIPTS/hdmi.sh" ON >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             PANEL)
                 log "PANEL"
-                IP="$(sed -n 's/^IP=//p' "$USB/scripts/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
+                IP="$(sed -n 's/^IP=//p' "$SCRIPTS/config/device.conf" 2>/dev/null | head -n 1 | tr -d '\r')"
                 [ -n "$IP" ] || IP="192.168.50.20"
-                sh "$USB/scripts/inspect_gui.sh" URL "http://$IP:8000" >> "$LOG" 2>&1
+                sh "$SCRIPTS/inspect_gui.sh" URL "http://$IP:8000" >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             STATE)
                 log "STATE"
                 mkdir -p "$LOG_DIR"
-                sh "$USB/scripts/check_state.sh" > "$LOG_DIR/state_last.txt" 2>&1
+                sh "$SCRIPTS/check_state.sh" > "$LOG_DIR/state_last.txt" 2>&1
                 rm -f "$FILE"
                 ;;
 
             VITALS)
                 log "VITALS"
                 mkdir -p "$LOG_DIR"
-                sh "$USB/scripts/vitals.sh" STATUS > "$LOG_DIR/vitals_last.txt" 2>&1
+                sh "$SCRIPTS/vitals.sh" STATUS > "$LOG_DIR/vitals_last.txt" 2>&1
                 rm -f "$FILE"
                 ;;
 
             RECETTE)
                 log "RECETTE"
                 mkdir -p "$LOG_DIR"
-                sh "$USB/scripts/recette.sh" > "$LOG_DIR/recette_last.txt" 2>&1
+                sh "$SCRIPTS/recette.sh" > "$LOG_DIR/recette_last.txt" 2>&1
                 rm -f "$FILE"
                 ;;
 
@@ -152,25 +160,25 @@ do
                 log "RECETTE $NAME"
                 mkdir -p "$LOG_DIR"
                 PH="${NAME#RECETTE_}"
-                sh "$USB/scripts/recette.sh" "$PH" >> "$LOG_DIR/recette_last.txt" 2>&1
+                sh "$SCRIPTS/recette.sh" "$PH" >> "$LOG_DIR/recette_last.txt" 2>&1
                 rm -f "$FILE"
                 ;;
 
             ROTATE_LOGS)
                 log "ROTATE_LOGS"
-                sh "$USB/scripts/rotate_logs.sh" >> "$LOG" 2>&1
+                sh "$SCRIPTS/rotate_logs.sh" >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             ECO_MODE)
                 log "ECO_MODE"
-                sh "$USB/scripts/thermal.sh" ECO >> "$LOG" 2>&1
+                sh "$SCRIPTS/thermal.sh" ECO >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
             PERF_MODE)
                 log "PERF_MODE"
-                sh "$USB/scripts/thermal.sh" PERF >> "$LOG" 2>&1
+                sh "$SCRIPTS/thermal.sh" PERF >> "$LOG" 2>&1
                 rm -f "$FILE"
                 ;;
 
@@ -193,8 +201,8 @@ do
                 log "MEDIA"
                 if [ -f "/data/scripts/core/media.sh" ]; then
                     sh /data/scripts/core/media.sh >> "$LOG" 2>&1
-                elif [ -f "$USB/scripts/core/media.sh" ]; then
-                    sh "$USB/scripts/core/media.sh" >> "$LOG" 2>&1
+                elif [ -f "$SCRIPTS/core/media.sh" ]; then
+                    sh "$SCRIPTS/core/media.sh" >> "$LOG" 2>&1
                 else
                     log "MEDIA: media.sh introuvable"
                 fi
