@@ -112,13 +112,25 @@ for T in boot optim inspect frontal outils; do
     done
 done
 
+# --- tampon version du panneau (footer IHM) ---------------------------------
+# Le footer des pages web porte la version EN DUR ("panneau IHM vNN") ; le
+# build la re-tamponne depuis DEPLOY_VERSION : aucun risque de derive entre
+# le dpk construit et le numero affiche en bas de chaque page.
+cp -r web "$STAGE/web" || die "copie web echouee"
+for H in "$STAGE"/web/*.html; do
+    sed -i "s/panneau IHM v[0-9][0-9]*/panneau IHM v${VERSION}/" "$H" \
+        || die "tampon footer impossible : $H"
+done
+MISS_="$(grep -L "panneau IHM v${VERSION}" "$STAGE"/web/*.html 2>/dev/null)"
+[ -z "$MISS_" ] || die "footer non tampoine dans :$MISS_ (ancre 'panneau IHM v...' absente ?)"
+
 if ! tar --exclude='*.bak' --exclude='*.swp' --exclude='*~' \
          --exclude='*.pid' --exclude='*.log' \
          --exclude='config/secrets.conf' \
          -C "$REPO" -czf "$OUT" BUILD-INFO.txt \
              AMORCE INSTALLER.sh deploy.sh \
-             server config web docs README.md TROUBLESHOOTING.md ROADMAP.md \
-         -C "$STAGE" scripts; then
+             server config docs README.md TROUBLESHOOTING.md ROADMAP.md \
+         -C "$STAGE" scripts web; then
     die "echec tar (voir messages ci-dessus)"
 fi
 rm -f "$BUILD_INFO"
