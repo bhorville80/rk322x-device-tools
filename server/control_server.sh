@@ -818,6 +818,12 @@ if listen_up; then
         C="$(tr '\0' ' ' < "$D/cmdline" 2>/dev/null)"
         case "$C" in
             *control_server.sh*|*"nc -l -p $PORT"*|*"nc -lp $PORT"*) ;;
+            # superviseur tcpsvd d'une session precedente : sa cmdline
+            # ("... tcpsvd -c N 0.0.0.0 8080 sh ...") ne matche ni le nom de
+            # script ni nc, mais il tient le bind et fait echouer TOUS les
+            # binds du demarrage courant (temoin v20 : REPLI FIFO + port NON
+            # ouvert + verdict d'ecoute faux-positif)
+            *tcpsvd*$PORT*|*"tcpsvd -$PORT"*) ;;
             *) continue ;;
         esac
         if kill "$P_" 2>/dev/null; then

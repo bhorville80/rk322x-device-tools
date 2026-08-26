@@ -581,6 +581,15 @@ v20 fixes the two blind spots the field logs exposed:
   `ports_raw.txt` (netstat + `/proc/net/tcp{,6}`) is collected too, so a
   silent net_diag can never blind a session again.
 
+v21 closes the hole those fixes exposed (field logs session C): after a
+STOP, a surviving `tcpsvd` supervisor from the previous session kept the
+8080 bind - it matches neither the script name nor `nc`, so every rebind
+of the new control failed (`tcpsvd en echec -> REPLI FIFO`, port NON
+ouvert) while the startup verdict reported "en ecoute" by probing the
+FOREIGN holder. `deploy STOP`/`services STOP` sweeps and the control
+orphan-recovery now target `tcpsvd ... 8080` holders too; gui requests
+without action are logged with their raw request line.
+
 Diagnosis on the box:
 
 ```bash

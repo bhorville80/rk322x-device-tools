@@ -261,6 +261,7 @@ handle_request()
             ;;
 
         "")
+            log "REJET requete sans action : ${REQUEST:-<ligne vide>}"
             ko "action absente"
             ;;
 

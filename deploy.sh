@@ -552,6 +552,17 @@ do_stop()
             *watch_usb.sh*)      N="watch_usb" ;;
             *"busybox nc"*)      N="nc (listener)" ;;
             *"httpd -f"*)        N="httpd (panneau)" ;;
+            # superviseur multi-listeners du control : tuer la boucle sh
+            # parente ne le touche PAS (temoin v20 : apres STOP le tcpsvd de
+            # la session precedente tenait encore 8080 -> tous les binds du
+            # control relance echouaient, verdict d'ecoute faux-positif car
+            # il sondait le detenteur etranger)
+            *tcpsvd*)
+                case "$C" in
+                    *" 8080 "*|*" 8080") N="tcpsvd (superviseur 8080)" ;;
+                    *)                   continue ;;
+                esac
+                ;;
             *)                   continue ;;
         esac
         PID="${D#/proc/}"
