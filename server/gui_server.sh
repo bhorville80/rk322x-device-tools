@@ -136,7 +136,7 @@ tw_count()
     N_=0
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        C_="$(awk -v p=":${H_}$" '$2 ~ p && $4 != "0A" {n++} END {printf "%d", n}' "$F_" 2>/dev/null)"
+        C_="$(awk '{split($2,a,":")} a[2]=="'"$H_"' && $4!="0A" {n++} END {printf "%d", n}' "$F_" 2>/dev/null)"
         [ -n "$C_" ] && N_=$((N_ + C_))
     done
     printf '%d' "$N_"

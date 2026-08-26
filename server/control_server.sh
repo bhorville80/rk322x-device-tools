@@ -682,7 +682,7 @@ listen_up()
         return 0
     fi
     H_="$(printf '%04X' "$PORT" 2>/dev/null)"
-    [ -n "$H_" ] && awk -v p=":${H_}$" '$2 ~ p && $4 == "0A" {found=1} END {exit !found}' /proc/net/tcp 2>/dev/null && return 0
+    [ -n "$H_" ] && awk '{split($2,a,":")} a[2]=="'"$H_"'" && $4=="0A" {found=1} END {exit !found}' /proc/net/tcp 2>/dev/null && return 0
     return 1
 }
 
@@ -696,7 +696,7 @@ holder_of()
     IN_=""
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        IN_="$(awk -v p=":${H_}$" '$2 ~ p && $4 == "0A" {printf "%d",$11; exit}' "$F_" 2>/dev/null)"
+        IN_="$(awk '{split($2,a,":")} a[2]=="'"$H_"'" && $4=="0A" {printf "%d",$11; exit}' "$F_" 2>/dev/null)"
         [ -n "$IN_" ] && break
     done
     [ -n "$IN_" ] || { printf 'processus sans socket visible (bind flappant ?)' ; return 0 ; }
@@ -736,7 +736,7 @@ tw_count()
     N_=0
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        C_="$(awk -v p=":${H_}$" '$2 ~ p && $4 != "0A" {n++} END {printf "%d", n}' "$F_" 2>/dev/null)"
+        C_="$(awk '{split($2,a,":")} a[2]=="'"$H_"' && $4!="0A" {n++} END {printf "%d", n}' "$F_" 2>/dev/null)"
         [ -n "$C_" ] && N_=$((N_ + C_))
     done
     printf '%d' "$N_"
@@ -761,6 +761,7 @@ wait_drain()
 
 serve_one()
 {
+    log "SERVE-ONE start (PID $$)"
     TMP_BODY="/data/local/tmp/control_body.$$"
     BODY_FILE=""
     BODY_LEN=0
@@ -860,7 +861,8 @@ fifo_loop()
             done
             sleep "$STEP"
 
-            REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
+    REQUEST="$(head -n 1 "$TMP_REQ" 2>/dev/null)"
+    log "SERVE-ONE REQUEST=${REQUEST:-(vide)}"
             if [ -n "$REQUEST" ]; then
                 req_dispatch
             fi
