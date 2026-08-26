@@ -296,8 +296,22 @@ handle_request()
             fi
             ;;
 
-        # reponse synchrone : validation de la configuration active (conf_check)
+        # reponse cachee : dernier resultat conf_check (pas dexecution live)
         CONF_CHECK)
+            CACHE="$USB/log/conf_check_last.txt"
+            if [ -f "$CACHE" ]; then
+                STAMP="$(stat -c '%Y' "$CACHE" 2>/dev/null || stat -f '%m' "$CACHE" 2>/dev/null)"
+                OUT="$(cat "$CACHE" 2>/dev/null)"
+                # prefixe avec la date du fichier pour affichage cote IHM
+                [ -n "$STAMP" ] && OUT="[conf_check : $(date -d "@$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -r "$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '?')]$(printf '\n')$OUT"
+                reply 200 OK "$OUT" "text/plain; charset=utf-8"
+            else
+                reply 200 OK "[aucun conf_check en cache - utiliser CONF_CHECK_REFRESH]" "text/plain; charset=utf-8"
+            fi
+            ;;
+
+        # rafraichissement : execution live + sauvegarde datee
+        CONF_CHECK_REFRESH)
             CHK=""
             if [ -f /data/scripts/conf_check.sh ]; then
                 CHK="/data/scripts/conf_check.sh"
@@ -308,10 +322,16 @@ handle_request()
             if [ -n "$CHK" ]; then
                 OUT="$(sh "$CHK" 2>&1)"
                 RC=$?
-                log "COMMANDE ACCEPTED: CONF_CHECK (rc=$RC)"
+                # sauvegarde datee
+                DATED="$USB/log/conf_check_$(date '+%Y%m%d').txt"
+                printf '%s\n' "$OUT" > "$DATED" 2>/dev/null
+                printf '%s\n' "$OUT" > "$USB/log/conf_check_last.txt" 2>/dev/null
+                log "COMMANDE ACCEPTED: CONF_CHECK_REFRESH (rc=$RC, saved=$DATED)"
+                STAMP="$(date '+%Y-%m-%d %H:%M:%S')"
+                OUT="[conf_check : $STAMP]$(printf '\n')$OUT"
                 reply 200 OK "$OUT" "text/plain; charset=utf-8"
             else
-                log "COMMANDE REJECTED: CONF_CHECK introuvable"
+                log "COMMANDE REJECTED: CONF_CHECK_REFRESH introuvable"
                 reply 404 "Not Found" '{"status":"error","message":"conf_check introuvable"}'
             fi
             ;;

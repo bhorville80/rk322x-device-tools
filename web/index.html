@@ -70,9 +70,9 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
 </div>
 
 <div class="card">
-  <h3>Configuration</h3>
+  <h3>Configuration <button id="btnconfck" style="font-size:11px;padding:2px 8px;margin-left:8px;border-radius:4px;border:1px solid #555;background:#333;color:#eee;cursor:pointer" onclick="refreshConfCheck()">Mise a jour</button></h3>
   <pre id="confverdict">chargement...</pre>
-  <span class="dim">verdict conf_check ; detail sur la page Metriques</span>
+  <span class="dim">conf_check (cache ; bouton = rafraichir)</span>
 </div>
 
 <div class="card">
@@ -182,14 +182,30 @@ api("CONFIG")
         txt("versions", "indisponible");
     });
 
+function showConfCheck(t) {
+    var last = t.trim().split("\n").slice(-3).join("\n");
+    txt("confverdict", last);
+    document.getElementById("confverdict").className =
+        t.indexOf("[ ERREUR ]") >= 0 ? "ko" : "ok";
+}
+
+function refreshConfCheck() {
+    txt("confverdict", "execution en cours...");
+    document.getElementById("confverdict").className = "dim";
+    document.getElementById("btnconfck").disabled = true;
+    document.getElementById("btnconfck").textContent = "...";
+    api("CONF_CHECK_REFRESH")
+        .then(function(t) { showConfCheck(t); })
+        .catch(function() { txt("confverdict", "erreur refresh"); })
+        .then(function() {
+            document.getElementById("btnconfck").disabled = false;
+            document.getElementById("btnconfck").textContent = "Mise a jour";
+        });
+}
+
 api("CONF_CHECK")
-    .then(t => {
-        var last = t.trim().split("\n").slice(-3).join("\n");
-        txt("confverdict", last);
-        document.getElementById("confverdict").className =
-            t.indexOf("[ ERREUR ]") >= 0 ? "ko" : "ok";
-    })
-    .catch(() => txt("confverdict", "indisponible"));
+    .then(function(t) { showConfCheck(t); })
+    .catch(function() { txt("confverdict", "indisponible"); });
 
 fetch("/log/state_last.txt", {cache:"no-store"})
     .then(r => r.ok ? r.text() : Promise.reject())
