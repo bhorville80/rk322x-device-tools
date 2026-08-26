@@ -22,9 +22,27 @@ button:disabled { background:#222; color:#666; border-color:#333;
                   cursor:default; }
 button.done   { background:#2a4a2a; border-color:#3a6a3a; color:#bfb; }
 #result { white-space:pre-wrap; background:#000; padding:15px; min-height:120px;
-          max-height:420px; overflow:auto; border-radius:8px;
+          max-height:320px; overflow:auto; border-radius:0 0 8px 8px;
           font-family:monospace; font-size:13px; }
+#result.compact { max-height:none; overflow:visible; }
 .dim { font-size:12px; color:#888; }
+/* --- result block --- */
+.rhdr { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+        background:#111; border:1px solid #333; border-bottom:none;
+        border-radius:8px 8px 0 0; padding:6px 10px; min-height:32px; }
+.rhdr .rtog { cursor:pointer; color:#9cf; font-size:14px; width:18px;
+              text-align:center; user-select:none; flex-shrink:0; }
+.rhdr .rtog::after { content:"\25B4"; }
+.rblock.collapsed .rhdr .rtog::after { content:"\25BE"; }
+.rhdr .rtitle { font-size:13px; color:#9cf; font-weight:bold; flex:1 1 auto; }
+.rhdr .rspacer { flex:1; }
+.rbtn { padding:3px 8px; font-size:11px; cursor:pointer; border-radius:4px;
+        border:1px solid #555; background:#222; color:#9cf; white-space:nowrap; }
+.rbtn:hover { background:#333; }
+.rbtn:active { background:#444; }
+.rbtn.ok { color:#7c7; }
+.rblock.collapsed > #result { display:none; }
+.rblock.collapsed > .rhdr { border-radius:8px; border-bottom:1px solid #333; }
 /* themes depliables (ergonomie : seules les sections utiles sont ouvertes) */
 details.sec { margin:16px 0 8px; border-bottom:1px solid #222; padding-bottom:6px; }
 details.sec summary { font-size:18px; color:#9cf; cursor:pointer;
@@ -56,11 +74,12 @@ details.sec summary:hover   { color:#bdf; }
 
 <nav>
   <a href="index.html">Accueil</a>
-  <a href="cle.html">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html" class="here">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
   <a href="infos.html">Infos</a>
+  <a href="cle.html">Cle</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -206,7 +225,16 @@ RETOUR rapatrie les resultats sur la cle</span><br>
 </details>
 
 <h2>Resultat</h2>
-<div id="result">Pret.</div>
+<div class="rblock" id="rb-result">
+  <div class="rhdr">
+    <span class="rtog" onclick="rblockToggle('result')"></span>
+    <span class="rtitle">Resultat</span>
+    <span class="rspacer"></span>
+    <button class="rbtn" onclick="rblockCopy('result')">Copier</button>
+    <button class="rbtn" onclick="rblockRefreshResult()">Relancer</button>
+  </div>
+  <div id="result">Pret.</div>
+</div>
 
 </div>
 
@@ -217,7 +245,82 @@ RETOUR rapatrie les resultats sur la cle</span><br>
 
 var API = "http://" + location.hostname + ":8180/api/";
 
-function show(t) { document.getElementById("result").textContent = t; }
+/* ---- result block utilities ---- */
+function rblockCopy(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var txt = el.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function() { rbtnFlash("result", "Copie !"); });
+    } else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        rbtnFlash("result", "Copie !");
+    }
+}
+function rbtnFlash(rbId, msg) {
+    var rb = document.getElementById("rb-" + rbId);
+    if (!rb) return;
+    var btns = rb.querySelectorAll(".rbtn");
+    for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent === "Copier") {
+            var orig = btns[i].textContent;
+            btns[i].textContent = msg; btns[i].classList.add("ok");
+            setTimeout(function() { btns[i].textContent = orig; btns[i].classList.remove("ok"); }, 1200);
+            break;
+        }
+    }
+}
+function rblockToggle(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    rb.classList.toggle("collapsed");
+    try { localStorage.setItem("rk_rb_" + location.pathname + "_" + id,
+          rb.classList.contains("collapsed") ? "1" : "0"); } catch (e) {}
+}
+function rblockAutoHeight(el) {
+    if (!el) return;
+    var lines = (el.textContent || "").split("\n").length;
+    if (lines <= 2) { el.classList.add("compact"); } else { el.classList.remove("compact"); }
+}
+function rblockRestoreState() {
+    try {
+        if (localStorage.getItem("rk_rb_" + location.pathname + "_result") === "1") {
+            var rb = document.getElementById("rb-result");
+            if (rb) rb.classList.add("collapsed");
+        }
+    } catch (e) {}
+}
+function rblockCacheSave(id, txt) {
+    try { localStorage.setItem("rk_cache_" + location.pathname + "_" + id, txt); } catch (e) {}
+}
+function rblockCacheLoad(id) {
+    try { return localStorage.getItem("rk_cache_" + location.pathname + "_" + id); } catch (e) {}
+}
+rblockRestoreState();
+
+/* ---- last command tracking for refresh ---- */
+var _lastCmd = null;
+function rblockRefreshResult() {
+    if (_lastCmd === "STATE") { pollState(); return; }
+    if (_lastCmd) { show("Re-execution : " + _lastCmd + "..."); cmd(_lastCmd); }
+}
+
+function show(t) {
+    var el = document.getElementById("result");
+    if (!el) return;
+    el.textContent = t;
+    rblockAutoHeight(el);
+    rblockCacheSave("result", t);
+}
+
+/* restore cached result on load */
+(function() {
+    var c = rblockCacheLoad("result");
+    if (c) { var el = document.getElementById("result"); if (el) { el.textContent = c; rblockAutoHeight(el); } }
+})();
 
 /* themes depliables : ouvre/ferme toutes les sections d'un coup */
 function foldAll(open) {
@@ -281,6 +384,7 @@ function api(cmd) {
 }
 
 function cmd(command) {
+    _lastCmd = command;
     show("Execution : " + command + "...");
     api(command)
         .then(t => {
@@ -295,6 +399,7 @@ function timeSync() {
     function p(n) { return (n < 10 ? "0" : "") + n; }
     var v = "" + d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) +
             "." + p(d.getUTCHours()) + p(d.getUTCMinutes()) + p(d.getUTCSeconds());
+    _lastCmd = "TIME_SYNC";
     show("SYNC HORLOGE : envoi " + v + " (UTC)...");
     api("TIME_SYNC?t=" + v)
         .then(t => { show("SYNC HORLOGE\n" + t); boxTime(); })
@@ -330,6 +435,7 @@ boxTime();
 setInterval(boxTime, 15000);
 
 function hwReport() {
+    _lastCmd = "HW_REPORT";
     show("RAPPORT MATERIEL : generation (~10 s)...");
     document.getElementById("hwlink").style.color = "#7c7";
     api("HW_REPORT")

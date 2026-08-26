@@ -25,8 +25,26 @@ input[type=text] { padding:9px; font-size:14px; border-radius:6px; border:1px so
                    background:#222; color:#eee; width:60%; }
 select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:#eee; border:1px solid #555; }
 #runout { white-space:pre-wrap; font-family:monospace; font-size:12px; background:#000;
-          padding:10px; min-height:40px; max-height:300px; overflow:auto;
-          border-radius:6px; color:#cf9; margin-top:8px; }
+          padding:10px; min-height:40px; max-height:320px; overflow:auto;
+          border-radius:0 0 6px 6px; color:#cf9; margin-top:0; }
+#runout.compact { max-height:none; overflow:visible; }
+/* --- result block --- */
+.rhdr { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+        background:#111; border:1px solid #333; border-bottom:none;
+        border-radius:6px 6px 0 0; padding:6px 10px; min-height:32px; }
+.rhdr .rtog { cursor:pointer; color:#9cf; font-size:14px; width:18px;
+              text-align:center; user-select:none; flex-shrink:0; }
+.rhdr .rtog::after { content:"\25B4"; }
+.rblock.collapsed .rhdr .rtog::after { content:"\25BE"; }
+.rhdr .rtitle { font-size:13px; color:#9cf; font-weight:bold; flex:1 1 auto; }
+.rhdr .rspacer { flex:1; }
+.rbtn { padding:3px 8px; font-size:11px; cursor:pointer; border-radius:4px;
+        border:1px solid #555; background:#222; color:#9cf; white-space:nowrap; }
+.rbtn:hover { background:#333; }
+.rbtn:active { background:#444; }
+.rbtn.ok { color:#7c7; }
+.rblock.collapsed > #runout { display:none; }
+.rblock.collapsed > .rhdr { border-radius:6px; border-bottom:1px solid #333; }
 .row { display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
 .apistatus { margin:-10px 0 18px; font-size:12px; color:#888; }
 .apistatus b { display:inline-block; padding:2px 8px; margin-right:6px;
@@ -47,11 +65,12 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
 
 <nav>
   <a href="index.html">Accueil</a>
-  <a href="cle.html">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html" class="here">Telecommande</a>
   <a href="infos.html">Infos</a>
+  <a href="cle.html">Cle</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -135,7 +154,16 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
   device.conf + token actif conseille ; borne 15 s / 8 Ko, toute ligne est loggee.</span><br><br>
   <input type="text" id="runcmd" placeholder="ex : check_state | net_diag PING | deploy STATUS" style="width:75%">
   <button id="runbtn" onclick="runCmd()">EXECUTER</button>
-  <div id="runout">(aucune execution)</div>
+  <div class="rblock" id="rb-runout">
+    <div class="rhdr">
+      <span class="rtog" onclick="rblockToggle('runout')"></span>
+      <span class="rtitle">Console distante</span>
+      <span class="rspacer"></span>
+      <button class="rbtn" onclick="rblockCopy('runout')">Copier</button>
+      <button class="rbtn" onclick="runCmd()">Relancer</button>
+    </div>
+    <div id="runout">(aucune execution)</div>
+  </div>
 </div>
 
 </div>
@@ -147,6 +175,66 @@ select { padding:8px; font-size:13px; border-radius:6px; background:#222; color:
 
 var GUI = "http://" + location.hostname + ":8081/gui/";
 var API = "http://" + location.hostname + ":8180/api/";
+
+/* ---- result block utilities ---- */
+function rblockCopy(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var txt = el.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function() { rbtnFlash(id, "Copie !"); });
+    } else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        rbtnFlash(id, "Copie !");
+    }
+}
+function rbtnFlash(id, msg) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    var btns = rb.querySelectorAll(".rbtn");
+    for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent === "Copier") {
+            var orig = btns[i].textContent;
+            btns[i].textContent = msg; btns[i].classList.add("ok");
+            setTimeout(function() { btns[i].textContent = orig; btns[i].classList.remove("ok"); }, 1200);
+            break;
+        }
+    }
+}
+function rblockToggle(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    rb.classList.toggle("collapsed");
+    try { localStorage.setItem("rk_rb_" + location.pathname + "_" + id,
+          rb.classList.contains("collapsed") ? "1" : "0"); } catch (e) {}
+}
+function rblockAutoHeight(el) {
+    if (!el) return;
+    var lines = (el.textContent || "").split("\n").length;
+    if (lines <= 2) { el.classList.add("compact"); } else { el.classList.remove("compact"); }
+}
+function rblockRestoreState() {
+    try {
+        if (localStorage.getItem("rk_rb_" + location.pathname + "_runout") === "1") {
+            var rb = document.getElementById("rb-runout");
+            if (rb) rb.classList.add("collapsed");
+        }
+    } catch (e) {}
+}
+function rblockCacheSave(id, txt) {
+    try { localStorage.setItem("rk_cache_" + location.pathname + "_" + id, txt); } catch (e) {}
+}
+function rblockCacheLoad(id) {
+    try { return localStorage.getItem("rk_cache_" + location.pathname + "_" + id); } catch (e) {}
+}
+rblockRestoreState();
+(function() {
+    var c = rblockCacheLoad("runout");
+    if (c) { var el = document.getElementById("runout"); if (el) { el.textContent = c; rblockAutoHeight(el); } }
+})();
 
 function tokQ() {
     var t = "";
@@ -186,11 +274,18 @@ function refreshShot() {
 function schedule() {
     if (timer) clearInterval(timer);
     var v = document.getElementById("rate").value;
+    try { localStorage.setItem("rk_tcmd_rate", v); } catch (e) {}
     if (v !== "0") {
         refreshShot();
         timer = setInterval(refreshShot, parseInt(v, 10));
     }
 }
+(function() {
+    try {
+        var saved = localStorage.getItem("rk_tcmd_rate");
+        if (saved !== null) document.getElementById("rate").value = saved;
+    } catch (e) {}
+})();
 document.getElementById("rate").onchange = schedule;
 
 /* ---- clic image -> TAP (echelle = taille naturelle du png) ---- */
@@ -233,7 +328,11 @@ function sendUrl() {
 
 /* ---- console RUN ---- */
 function showOut(t) {
-    document.getElementById("runout").textContent = t;
+    var el = document.getElementById("runout");
+    if (!el) return;
+    el.textContent = t;
+    rblockAutoHeight(el);
+    rblockCacheSave("runout", t);
 }
 async function runCmd() {
     var c = document.getElementById("runcmd").value.trim();

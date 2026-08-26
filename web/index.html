@@ -14,21 +14,20 @@ nav a { color:#eee; background:#333; border:1px solid #555; border-radius:6px;
         padding:8px 14px; margin-right:6px; text-decoration:none; font-size:14px; }
 nav a.here { background:#9cf; color:#000; border-color:#9cf; }
 nav { margin:12px 0 20px; }
+.desc { color:#bbb; font-size:14px; line-height:1.6; margin:0 0 18px; }
 .status { padding:12px; margin:16px 0; background:#222; border-radius:8px; line-height:1.6; }
-.card { background:#1b1b1b; border:1px solid #333; border-radius:8px;
-        padding:12px 14px; margin:10px 0; }
-.card h3 { margin:0 0 8px; font-size:15px; color:#9cf; }
-pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-height:260px;
-      overflow:auto; border-radius:8px; font-family:monospace; font-size:13px; margin:0; }
-.ok   { color:#7c7; }
-.ko   { color:#e66; }
-.dim  { font-size:12px; color:#888; }
+.status .lbl { color:#9cf; font-weight:bold; }
+.dim { font-size:12px; color:#888; }
+a { color:#9cf; }
 .apistatus { margin:-10px 0 18px; font-size:12px; color:#888; }
 .apistatus b { display:inline-block; padding:2px 8px; margin-right:6px;
                border-radius:4px; border:1px solid #444; font-weight:normal; color:#888; }
 .apistatus b.up   { color:#7c7; border-color:#3a5a3a; }
 .apistatus b.warn { color:#fc6; border-color:#a86; }
 .apistatus b.down { color:#e66; border-color:#a55; }
+.tbtn { background:none; border:none; color:#9cf; cursor:pointer; font-size:12px;
+        padding:0 4px; text-decoration:underline; }
+.tbtn:hover { color:#bdf; }
 .footer { margin-top:26px; padding-top:10px; border-top:1px solid #333;
          font-size:11px; color:#666; text-align:center; }
 </style>
@@ -38,16 +37,21 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
 
 <div class="panel">
 
-<h1>RK322X Control Panel</h1>
+<h1>RK322X Device Tools</h1>
 
 <nav>
   <a href="index.html" class="here">Accueil</a>
-  <a href="cle.html">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
   <a href="infos.html">Infos</a>
+  <a href="cle.html">Cle</a>
 </nav>
+
+<p class="desc">Kit d'administration autonome pour boitiers RK322X (Leelbox MXQ).
+Deploiement, demarrage autonome, panneau web, diagnostics, optimisation memoire
+et non-regression depuis une cle USB.</p>
 
 <div class="apistatus" id="apistatus">ports :
   <b id="as8000">8000 test...</b>
@@ -56,29 +60,12 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
 </div>
 
 <div class="status">
-  <b>BOX</b><br>
-  IP : <span id="ip">192.168.50.20</span> &nbsp;|&nbsp;
+  <span class="lbl">BOX</span><br>
+  IP : <span id="ip">-</span> &nbsp;|&nbsp;
   HTTP : 8000 &nbsp;|&nbsp; CONTROL : 8180 &nbsp;|&nbsp; GUI : 8081<br>
   <span id="cfgsum" class="dim">config : chargement...</span><br>
   <span id="boxtime" class="dim">heure box : chargement...</span>
-</div>
-
-<div class="card">
-  <h3>Versions</h3>
-  <pre id="versions">chargement...</pre>
-  <span class="dim">installee (/data/scripts) vs cle (config/device.conf)</span>
-</div>
-
-<div class="card">
-  <h3>Configuration <button id="btnconfck" style="font-size:11px;padding:2px 8px;margin-left:8px;border-radius:4px;border:1px solid #555;background:#333;color:#eee;cursor:pointer" onclick="refreshConfCheck()">Mise a jour</button></h3>
-  <pre id="confverdict">chargement...</pre>
-  <span class="dim">conf_check (cache ; bouton = rafraichir)</span>
-</div>
-
-<div class="card">
-  <h3>Dernier etat reseau</h3>
-  <pre id="statehead">(aucun releve - lancer CHECK STATE page Commandes)</pre>
-  <span class="dim">log/state_last.txt (CHECK STATE)</span>
+  <button class="tbtn" onclick="boxTime()" title="rafraichir l'heure">&#8635;</button>
 </div>
 
 </div>
@@ -90,13 +77,6 @@ pre { white-space:pre-wrap; background:#000; padding:12px; min-height:24px; max-
 
 var API = "http://" + location.hostname + ":8180/api/";
 
-function txt(id, t) { document.getElementById(id).textContent = t; }
-
-function pick(t, k, d) {
-    var r = t.match(new RegExp("^" + k + "=(.*)$", "m"));
-    return (r && r[1].trim()) ? r[1].trim() : d;
-}
-
 function tokUrl(base) {
     var t = "";
     try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
@@ -104,9 +84,27 @@ function tokUrl(base) {
     return base + (base.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(t);
 }
 
-// box sans tcpsvd : API mono-slot (une seule requete 8180 a la fois) ->
-// appels SERIALIZES via une file d'attente + re-essais espaces aleatoires ;
-// une rafale au chargement ne doit plus finir en "injoignable"
+function pick(t, k, d) {
+    var r = t.match(new RegExp("^" + k + "=(.*)$", "m"));
+    return (r && r[1].trim()) ? r[1].trim() : d;
+}
+
+api("CONFIG")
+    .then(t => {
+        document.getElementById("ip").textContent = pick(t, "IP", "-");
+        document.getElementById("cfgsum").textContent =
+            "config : " + pick(t, "DEVICE_NAME", "?") +
+            " | profil " + (pick(t, "PROFILE", "") || "-") +
+            " | v" + pick(t, "DEPLOY_VERSION", "?") +
+            " | gw " + pick(t, "GATEWAY", "-") +
+            " | dns " + pick(t, "DNS", "-") +
+            " | ssh " + pick(t, "SSH_MODE", "keys") + ":" + pick(t, "SSH_PORT", "2222");
+    })
+    .catch(() => {
+        document.getElementById("cfgsum").textContent = "config : CONTROL SERVER injoignable (port 8180)";
+    });
+
+/* ---- api chain ---- */
 var apiChain = Promise.resolve();
 
 function apiOnce(path, attempt) {
@@ -130,8 +128,6 @@ function apiOnce(path, attempt) {
     }).catch(function(e) {
         if (e && e.message && e.message.indexOf("403") === 0) throw e;
         if ((attempt || 0) < 2) {
-            // delai aleatoire : les re-essais concurrents ne retombent
-            // pas tous sur le meme slot libre
             var wait = 500 + Math.floor(Math.random() * 800) + (attempt || 0) * 900;
             return new Promise(function(res) {
                 setTimeout(function() { res(apiOnce(path, (attempt || 0) + 1)); }, wait);
@@ -139,7 +135,7 @@ function apiOnce(path, attempt) {
         }
         var cause = (e && e.message) ? e.message : "" + e;
         if (e && e.name === "AbortError") cause = "delai de 20 s depasse";
-        throw new Error("API 8180 injoignable (" + cause + ") - lancer deploy EXPOSE sur la box");
+        throw new Error("API 8180 injoignable (" + cause + ")");
     });
 }
 
@@ -150,81 +146,7 @@ function api(path) {
     return link;
 }
 
-api("CONFIG")
-    .then(t => {
-        txt("ip", pick(t, "IP", "192.168.50.20"));
-        txt("cfgsum",
-            "config : " + pick(t, "DEVICE_NAME", "?") +
-            " | profil " + (pick(t, "PROFILE", "") || "-") +
-            " | v" + pick(t, "DEPLOY_VERSION", "?") +
-            " | gw " + pick(t, "GATEWAY", "-") +
-            " | dns " + pick(t, "DNS", "-") +
-            " | ssh " + pick(t, "SSH_MODE", "keys") + ":" + pick(t, "SSH_PORT", "2222"));
-
-        var inst = pick(t, "DEPLOY_VERSION", "");
-        fetch("/config/device.conf", {cache:"no-store"})
-            .then(r => r.text())
-            .then(k => {
-                var cle = pick(k, "DEPLOY_VERSION", "?");
-                var v = "installee : v" + (inst || "?") + "\ncle       : v" + cle;
-                if (inst && inst === cle) {
-                    txt("versions", v + "\nverdict   : a jour");
-                    document.getElementById("versions").className = "ok";
-                } else {
-                    txt("versions", v + "\nverdict   : divergent -> deploy INSTALL (page Cle)");
-                    document.getElementById("versions").className = "ko";
-                }
-            })
-            .catch(() => txt("versions", "installee : v" + (inst || "?") + "\ncle       : illisible"));
-    })
-    .catch(() => {
-        txt("cfgsum", "config : CONTROL SERVER injoignable (port 8180)");
-        txt("versions", "indisponible");
-    });
-
-function showConfCheck(t) {
-    var last = t.trim().split("\n").slice(-3).join("\n");
-    txt("confverdict", last);
-    document.getElementById("confverdict").className =
-        t.indexOf("[ ERREUR ]") >= 0 ? "ko" : "ok";
-}
-
-function refreshConfCheck() {
-    txt("confverdict", "execution en cours...");
-    document.getElementById("confverdict").className = "dim";
-    document.getElementById("btnconfck").disabled = true;
-    document.getElementById("btnconfck").textContent = "...";
-    api("CONF_CHECK_REFRESH")
-        .then(function(t) { showConfCheck(t); })
-        .catch(function() { txt("confverdict", "erreur refresh"); })
-        .then(function() {
-            document.getElementById("btnconfck").disabled = false;
-            document.getElementById("btnconfck").textContent = "Mise a jour";
-        });
-}
-
-api("CONF_CHECK")
-    .then(function(t) { showConfCheck(t); })
-    .catch(function() { txt("confverdict", "indisponible"); });
-
-fetch("/log/state_last.txt", {cache:"no-store"})
-    .then(r => r.ok ? r.text() : Promise.reject())
-    .then(t => txt("statehead", t.trim().split("\n").slice(0, 14).join("\n")))
-    .catch(() => {});
-
-var AS_TOK = "";
-try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
-function asUrl(b) {
-    if (!AS_TOK) return b;
-    return b + (b.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(AS_TOK);
-}
-function asSet(id, cls, t) {
-    var e = document.getElementById(id);
-    if (e) { e.className = cls; e.textContent = t; }
-}
-asSet("as8000", "up", "8000 HTTP OK");
-
-/* ---- heure de la box (MXQ) vs PC ---- */
+/* ---- heure de la box ---- */
 function boxTime() {
     fetch(tokUrl(API + "BOX_TIME"), {cache:"no-store"})
         .then(r => { if (!r.ok) throw 0; return r.json(); })
@@ -233,15 +155,15 @@ function boxTime() {
             var d = Math.abs((j.epoch || 0) - Math.floor(Date.now() / 1000));
             if ((j.epoch || 0) < 1577836800) {
                 el.textContent = "heure box : " + j.box_time +
-                    " (UTC) — HORLOGE FAUSSE (1970 ?)";
+                    " (UTC) -- HORLOGE FAUSSE (1970 ?)";
                 el.style.color = "#e66";
             } else if (d > 180) {
                 el.textContent = "heure box : " + j.box_time +
-                    " (UTC) — ecart PC : " + d + " s (TIME_SYNC a faire)";
+                    " (UTC) -- ecart PC : " + d + " s (TIME_SYNC a faire)";
                 el.style.color = "#fc6";
             } else {
                 el.textContent = "heure box : " + j.box_time +
-                    " (UTC) — ok (ecart PC " + d + " s)";
+                    " (UTC) -- ok (ecart PC " + d + " s)";
                 el.style.color = "";
             }
         })
@@ -253,9 +175,19 @@ function boxTime() {
 }
 boxTime();
 setInterval(boxTime, 15000);
-// box mono-slot (sans tcpsvd) : une connexion a la fois sur 8180/8081 ->
-// sondes avec re-essais espaces ; un refus transitoire ne s'affiche plus
-// immédiatement comme INJOIGNABLE
+
+/* ---- badges ports ---- */
+var AS_TOK = "";
+try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}
+function asUrl(b) {
+    if (!AS_TOK) return b;
+    return b + (b.indexOf("?") < 0 ? "?" : "&") + "token=" + encodeURIComponent(AS_TOK);
+}
+function asSet(id, cls, t) {
+    var e = document.getElementById(id);
+    if (e) { e.className = cls; e.textContent = t; }
+}
+asSet("as8000", "up", "8000 HTTP OK");
 function probe(url, ok, ko, n) {
     n = n || 0;
     fetch(asUrl(url), {cache:"no-store"}).then(ok).catch(function () {

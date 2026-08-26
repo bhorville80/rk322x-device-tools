@@ -39,11 +39,12 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
 
 <nav>
   <a href="index.html">Accueil</a>
-  <a href="cle.html" class="here">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
   <a href="infos.html">Infos</a>
+  <a href="cle.html" class="here">Cle</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -165,6 +166,8 @@ ul { margin:4px 0 4px 16px; padding:0; } li { margin:2px 0; }
   </ul>
 </div>
 
+</div>
+
 
 <div class="footer">panneau IHM v19 - rk322x device tools</div>
 
@@ -273,8 +276,6 @@ probe("http://" + location.hostname + ":8081/", function (r) {
     asSet("as8081", "down", "8081 GUI INJOIGNABLE (arrete ou bloque)");
 });
 </script>
-
-</div>
 
 </body>
 </html>

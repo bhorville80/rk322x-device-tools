@@ -16,16 +16,33 @@ nav { margin:12px 0 20px; }
 .card { background:#1b1b1b; border:1px solid #333; border-radius:8px;
         padding:12px 14px; margin:14px 0; }
 .card h3 { margin:0 0 8px; font-size:15px; color:#9cf; }
-pre { white-space:pre-wrap; font-family:monospace; font-size:12.5px;
-      background:#000; padding:10px; border-radius:6px; max-height:420px;
-      overflow:auto; margin:0 0 6px; color:#cf9; }
 .dim { font-size:12px; color:#888; }
-button { padding:10px 16px; margin:3px 3px 3px 0; font-size:14px; cursor:pointer;
-         border-radius:6px; border:1px solid #555; background:#333; color:#eee; }
-button:hover { background:#444; } button:disabled { background:#222;color:#666; }
 a { color:#9cf; }
 .footer { margin-top:26px; padding-top:10px; border-top:1px solid #333;
          font-size:11px; color:#666; text-align:center; }
+
+/* --- result block --- */
+.rblock pre { white-space:pre-wrap; font-family:monospace; font-size:12.5px;
+      background:#000; padding:10px; border-radius:0 0 6px 6px;
+      max-height:320px; overflow:auto; margin:0; color:#cf9;
+      transition:max-height .15s ease; }
+.rblock pre.compact { max-height:none; overflow:visible; }
+.rhdr { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+        background:#111; border:1px solid #333; border-bottom:none;
+        border-radius:6px 6px 0 0; padding:6px 10px; min-height:32px; }
+.rhdr .rtog { cursor:pointer; color:#9cf; font-size:14px; width:18px;
+              text-align:center; user-select:none; flex-shrink:0; }
+.rhdr .rtog::after { content:"\25B4"; }
+.rblock.collapsed .rhdr .rtog::after { content:"\25BE"; }
+.rhdr .rtitle { font-size:13px; color:#9cf; font-weight:bold; flex:1 1 auto; }
+.rhdr .rspacer { flex:1; }
+.rbtn { padding:3px 8px; font-size:11px; cursor:pointer; border-radius:4px;
+        border:1px solid #555; background:#222; color:#9cf; white-space:nowrap; }
+.rbtn:hover { background:#333; }
+.rbtn:active { background:#444; }
+.rbtn.ok { color:#7c7; }
+.rblock.collapsed > pre { display:none; }
+.rblock.collapsed > .rhdr { border-radius:6px; border-bottom:1px solid #333; }
 </style>
 </head>
 
@@ -37,37 +54,57 @@ a { color:#9cf; }
 
 <nav>
   <a href="index.html">Accueil</a>
-  <a href="cle.html">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
   <a href="infos.html" class="here">Infos</a>
+  <a href="cle.html">Cle</a>
 </nav>
 
 <div class="card">
-  <h3>Identite &amp; versions</h3>
-  <pre id="sysinfo">chargement...</pre>
-  <span class="dim">installee : voir ligne version ci-dessous et page Accueil ;
-  build du paquet de la cle : <span id="buildinfo">-</span></span>
-</div>
-
-<div class="card">
-  <h3>Materiel (puces, bus, noyau)</h3>
-  <pre id="hw">chargement de log/hardware_latest.txt...</pre>
-  <button id="hwbtn" onclick="genHw()">GENERER / RAFRAICHIR LE RAPPORT MATERIEL</button>
+  <div class="rblock" id="rb-hw">
+    <div class="rhdr">
+      <span class="rtog" onclick="rblockToggle('hw')"></span>
+      <span class="rtitle">Materiel (puces, bus, noyau)</span>
+      <span class="rspacer"></span>
+      <button class="rbtn" onclick="rblockCopy('hw')">Copier</button>
+      <button class="rbtn" onclick="rblockRefresh('hw')">Relancer</button>
+      <a class="rbtn" href="/log/hardware_latest.txt" target="_blank" id="hwbtn">Generer</a>
+    </div>
+    <pre id="hw">chargement de log/hardware_latest.txt...</pre>
+  </div>
   <span class="dim">~10 s ; aussi telechargeable :
   <a href="/log/hardware_latest.txt" target="_blank">log/hardware_latest.txt</a></span>
 </div>
 
 <div class="card">
-  <h3>Configuration active (device.conf)</h3>
-  <pre id="conf">chargement...</pre>
+  <div class="rblock" id="rb-conf">
+    <div class="rhdr">
+      <span class="rtog" onclick="rblockToggle('conf')"></span>
+      <span class="rtitle">Configuration active (device.conf)</span>
+      <span class="rspacer"></span>
+      <button class="rbtn" onclick="rblockCopy('conf')">Copier</button>
+      <button class="rbtn" onclick="rblockRefresh('conf')">Relancer</button>
+      <a class="rbtn" href="/config/device.conf" target="_blank">Fichier</a>
+    </div>
+    <pre id="conf">chargement...</pre>
+  </div>
   <span class="dim">copie servie ; modification : adb shell config ou page Cle</span>
 </div>
 
 <div class="card">
-  <h3>Manifest recette certifie</h3>
-  <pre id="manifest">chargement...</pre>
+  <div class="rblock" id="rb-manifest">
+    <div class="rhdr">
+      <span class="rtog" onclick="rblockToggle('manifest')"></span>
+      <span class="rtitle">Manifest recette certifie</span>
+      <span class="rspacer"></span>
+      <button class="rbtn" onclick="rblockCopy('manifest')">Copier</button>
+      <button class="rbtn" onclick="rblockRefresh('manifest')">Relancer</button>
+      <a class="rbtn" href="/manifests/recette/latest.manifest" target="_blank">Fichier</a>
+    </div>
+    <pre id="manifest">chargement...</pre>
+  </div>
   <span class="dim"><a href="/manifests/recette/latest.manifest" target="_blank">ouvrir le fichier</a>
   - genere par RECETTE &gt; MANIFEST (7/7 phases OK)</span>
 </div>
@@ -85,10 +122,84 @@ function tokQ() {
     try { t = localStorage.getItem("rk_token") || ""; } catch (e) {}
     return t ? "&token=" + encodeURIComponent(t) : "";
 }
-function put(id, t) { document.getElementById(id).textContent = t; }
 
-// box mono-slot (sans tcpsvd) : SYS_INFO et CONFIG partent en meme temps au
-// chargement -> re-essais espaces pour ne pas perdre une des deux requetes
+/* ---- result block utilities ---- */
+function rblockCopy(id) {
+    var pre = document.getElementById(id);
+    if (!pre) return;
+    var txt = pre.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function() {
+            rbtnFlash("rb-" + id, "Copie !");
+        });
+    } else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        rbtnFlash("rb-" + id, "Copie !");
+    }
+}
+function rbtnFlash(rbId, msg) {
+    var rb = document.getElementById(rbId);
+    if (!rb) return;
+    var btns = rb.querySelectorAll(".rbtn");
+    for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent === "Copier") {
+            var orig = btns[i].textContent;
+            btns[i].textContent = msg; btns[i].classList.add("ok");
+            setTimeout(function() { btns[i].textContent = orig; btns[i].classList.remove("ok"); }, 1200);
+            break;
+        }
+    }
+}
+function rblockToggle(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    rb.classList.toggle("collapsed");
+    try { localStorage.setItem("rk_rb_" + location.pathname + "_" + id,
+          rb.classList.contains("collapsed") ? "1" : "0"); } catch (e) {}
+}
+function rblockAutoHeight(pre) {
+    if (!pre) return;
+    var lines = (pre.textContent || "").split("\n").length;
+    if (lines <= 2) { pre.classList.add("compact"); } else { pre.classList.remove("compact"); }
+}
+function rblockRestoreState() {
+    var ids = ["hw","conf","manifest"];
+    for (var i = 0; i < ids.length; i++) {
+        try {
+            if (localStorage.getItem("rk_rb_" + location.pathname + "_" + ids[i]) === "1") {
+                var rb = document.getElementById("rb-" + ids[i]);
+                if (rb) rb.classList.add("collapsed");
+            }
+        } catch (e) {}
+    }
+}
+function rblockCacheSave(id, txt) {
+    try { localStorage.setItem("rk_cache_" + location.pathname + "_" + id, txt); } catch (e) {}
+}
+function rblockCacheLoad(id) {
+    try { return localStorage.getItem("rk_cache_" + location.pathname + "_" + id); } catch (e) {}
+}
+rblockRestoreState();
+
+/* ---- display helper ---- */
+function put(id, t) {
+    var pre = document.getElementById(id);
+    if (!pre) return;
+    pre.textContent = t;
+    rblockAutoHeight(pre);
+    rblockCacheSave(id, t);
+}
+
+/* ---- refresh registry ---- */
+var _REFRESH = {};
+function rblockRefresh(id) {
+    if (_REFRESH[id]) _REFRESH[id]();
+}
+
+/* ---- api helpers ---- */
 function apiFetch(url, n) {
     n = n || 0;
     return fetch(url, {cache:"no-store"}).catch(function (e) {
@@ -102,66 +213,34 @@ function apiFetch(url, n) {
     });
 }
 
-function loadText(url, id, absent) {
+/* ---- load avec cache ---- */
+function loadTextCached(url, id, absent) {
+    var cached = rblockCacheLoad(id);
+    if (cached !== null && cached !== undefined) { put(id, cached); }
     fetch(url, {cache:"no-store"})
         .then(r => { if (!r.ok) throw 0; return r.text(); })
         .then(t => put(id, t))
-        .catch(() => put(id, absent));
+        .catch(() => { if (cached === null || cached === undefined) put(id, absent); });
 }
-
-/* identite + noyau + uptime + memoire + cpu + stockage */
-apiFetch(API + "SYS_INFO" + (tokQ() ? "?" + tokQ().slice(1) : ""))
-    .then(r => { if (!r.ok) throw 0; return r.text(); })
-    .then(t => put("sysinfo", t))
-    .catch(() => {
-        /* repli sans API : minimum statique servi par la cle */
-        loadText("/BUILD-INFO.txt", "sysinfo", "API 8180 injoignable (deploy EXPOSE)");
-    });
-
-/* version installee via l'API CONFIG existante (1re ligne) */
-apiFetch(API + "CONFIG" + (tokQ() ? "?" + tokQ().slice(1) : ""))
-    .then(r => r.text())
-    .then(t => {
-        var m = (t.split("\n")[0] || "").match(/version installee\s*:\s*(.*)/);
-        if (m) {
-            var el = document.getElementById("sysinfo");
-            el.textContent = "version installee : " + m[1] + "\n" + el.textContent;
-        }
-        var b = t.match(/build *: *([^\n]*)/);
-        if (b) put("buildinfo", b[1]);
-    })
-    .catch(() => {});
-
-/* build info du paquet de la cle */
-loadText("/BUILD-INFO.txt", "buildinfo",
-         "inconnu (pas de BUILD-INFO.txt a la racine cle)");
 
 /* materiel : dernier rapport genere */
-loadText("/log/hardware_latest.txt", "hw",
-         "pas encore genere -> bouton ci-dessous");
+_REFRESH.hw = function() {
+    put("hw", "generation du rapport (~10 s)...");
+    apiFetch(API + "HW_REPORT" + (tokQ() ? "?" + tokQ().slice(1) : ""))
+        .then(r => { if (!r.ok) throw 0; return r.text(); })
+        .then(t => put("hw", t.replace(/--- rapport sauvegarde[\s\S]*$/, "").trim()))
+        .catch(() => put("hw", "[KO] erreur generation\nverifier le badge 8180"));
+};
+loadTextCached("/log/hardware_latest.txt", "hw",
+          "pas encore genere -> bouton ci-dessous");
 
 /* configuration active */
-loadText("/config/device.conf", "conf", "config/device.conf introuvable sur la cle");
+_REFRESH.conf = function() { loadTextCached("/config/device.conf", "conf", "config/device.conf introuvable sur la cle"); };
+_REFRESH.conf();
 
 /* manifest */
-loadText("/manifests/recette/latest.manifest", "manifest",
-         "aucun manifest (lancer recette complete puis MANIFEST)");
-
-async function genHw() {
-    var b = document.getElementById("hwbtn");
-    b.disabled = true;
-    put("hw", "generation du rapport (~10 s)...");
-    try {
-        var qs = tokQ();
-        var r = await fetch(API + "HW_REPORT" + (qs ? "?" + qs.slice(1) : ""),
-                            {cache:"no-store"});
-        var t = await r.text();
-        put("hw", t.replace(/--- rapport sauvegarde[\s\S]*$/, "").trim());
-    } catch (e) {
-        put("hw", "[KO] " + e + "\nverifier le badge 8180");
-    }
-    b.disabled = false;
-}
+_REFRESH.manifest = function() { loadTextCached("/manifests/recette/latest.manifest", "manifest", "aucun manifest (lancer recette complete puis MANIFEST)"); };
+_REFRESH.manifest();
 
 </script>
 

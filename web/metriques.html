@@ -41,9 +41,27 @@ label.act { display:inline-flex; align-items:center; gap:6px; cursor:pointer; fo
 .chip.ok      { color:#7c7; border-color:#3a5a3a; }
 .chip.ko      { color:#e66; border-color:#a55; }
 @keyframes blink { 50% { opacity:.35; } }
-.outbox { white-space:pre-wrap; background:#000; margin-top:8px; padding:12px;
-          min-height:60px; max-height:320px; overflow:auto; border-radius:8px;
+.outbox { white-space:pre-wrap; background:#000; margin-top:0; padding:12px;
+          min-height:24px; max-height:320px; overflow:auto; border-radius:0 0 8px 8px;
           font-family:monospace; font-size:12px; color:#ddd; }
+.outbox.compact { max-height:none; overflow:visible; }
+/* --- result block --- */
+.rhdr { display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+        background:#111; border:1px solid #333; border-bottom:none;
+        border-radius:8px 8px 0 0; padding:6px 10px; min-height:32px; }
+.rhdr .rtog { cursor:pointer; color:#9cf; font-size:14px; width:18px;
+              text-align:center; user-select:none; flex-shrink:0; }
+.rhdr .rtog::after { content:"\25B4"; }
+.rblock.collapsed .rhdr .rtog::after { content:"\25BE"; }
+.rhdr .rtitle { font-size:13px; color:#9cf; font-weight:bold; flex:1 1 auto; }
+.rhdr .rspacer { flex:1; }
+.rbtn { padding:3px 8px; font-size:11px; cursor:pointer; border-radius:4px;
+        border:1px solid #555; background:#222; color:#9cf; white-space:nowrap; }
+.rbtn:hover { background:#333; }
+.rbtn:active { background:#444; }
+.rbtn.ok { color:#7c7; }
+.rblock.collapsed > .outbox { display:none; }
+.rblock.collapsed > .rhdr { border-radius:8px; border-bottom:1px solid #333; }
 .bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
        border:1px dashed #333; border-radius:8px; padding:10px 12px; margin-bottom:14px; }
 select { background:#222; color:#eee; border:1px solid #444; border-radius:4px; padding:4px; }
@@ -60,11 +78,12 @@ select { background:#222; color:#eee; border:1px solid #444; border-radius:4px; 
 
 <nav>
   <a href="index.html">Accueil</a>
-  <a href="cle.html">Cle</a>
+  <a href="reseau.html">Reseau</a>
   <a href="commandes.html">Commandes</a>
   <a href="metriques.html" class="here">Metriques</a>
   <a href="telecommande.html">Telecommande</a>
   <a href="infos.html">Infos</a>
+  <a href="cle.html">Cle</a>
 </nav>
 
 <div class="apistatus" id="apistatus">ports :
@@ -99,6 +118,72 @@ select { background:#222; color:#eee; border:1px solid #444; border-radius:4px; 
 <script>
 
 var API = "http://" + location.hostname + ":8180/api/";
+
+/* ---- result block utilities ---- */
+function rblockCopy(id) {
+    var el = document.getElementById("out-" + id);
+    if (!el) return;
+    var txt = el.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(function() { rbtnFlash(id, "Copie !"); });
+    } else {
+        var ta = document.createElement("textarea");
+        ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        document.execCommand("copy"); document.body.removeChild(ta);
+        rbtnFlash(id, "Copie !");
+    }
+}
+function rbtnFlash(id, msg) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    var btns = rb.querySelectorAll(".rbtn");
+    for (var i = 0; i < btns.length; i++) {
+        if (btns[i].textContent === "Copier") {
+            var orig = btns[i].textContent;
+            btns[i].textContent = msg; btns[i].classList.add("ok");
+            setTimeout(function() { btns[i].textContent = orig; btns[i].classList.remove("ok"); }, 1200);
+            break;
+        }
+    }
+}
+function rblockToggle(id) {
+    var rb = document.getElementById("rb-" + id);
+    if (!rb) return;
+    rb.classList.toggle("collapsed");
+    try { localStorage.setItem("rk_rb_" + location.pathname + "_" + id,
+          rb.classList.contains("collapsed") ? "1" : "0"); } catch (e) {}
+}
+function rblockAutoHeight(el) {
+    if (!el) return;
+    var lines = (el.textContent || "").split("\n").length;
+    if (lines <= 2) { el.classList.add("compact"); } else { el.classList.remove("compact"); }
+}
+function rblockRestoreState() {
+    Object.keys(ACTIONS).forEach(function(id) {
+        try {
+            if (localStorage.getItem("rk_rb_" + location.pathname + "_" + id) === "1") {
+                var rb = document.getElementById("rb-" + id);
+                if (rb) rb.classList.add("collapsed");
+            }
+        } catch (e) {}
+    });
+}
+function rblockCacheSave(id, txt) {
+    try { localStorage.setItem("rk_cache_" + location.pathname + "_" + id, txt); } catch (e) {}
+}
+function rblockCacheLoad(id) {
+    try { return localStorage.getItem("rk_cache_" + location.pathname + "_" + id); } catch (e) {}
+}
+function rblockRestoreCached() {
+    Object.keys(ACTIONS).forEach(function(id) {
+        var c = rblockCacheLoad(id);
+        if (c) {
+            var box = document.getElementById("out-" + id);
+            if (box) { box.textContent = c; rblockAutoHeight(box); }
+        }
+    });
+}
 
 function tokUrl(base) {
     var t = "";
@@ -208,7 +293,16 @@ function buildTabs() {
                   '<button onclick="runOne(\'' + id + '\')">&#9654; LANCER</button>' +
                   '<span class="dim">rapport dedie ci-dessous</span>' +
                 '</div>' +
-                '<div class="outbox" id="out-' + id + '">[ -- ] pas encore execute sur cette page.</div>';
+                '<div class="rblock" id="rb-' + id + '">' +
+                  '<div class="rhdr">' +
+                    '<span class="rtog" onclick="rblockToggle(\'' + id + '\')"></span>' +
+                    '<span class="rtitle">' + a.label + '</span>' +
+                    '<span class="rspacer"></span>' +
+                    '<button class="rbtn" onclick="rblockCopy(\'' + id + '\')">Copier</button>' +
+                    '<button class="rbtn" onclick="runOne(\'' + id + '\')">Relancer</button>' +
+                  '</div>' +
+                  '<div class="outbox" id="out-' + id + '">[ -- ] pas encore execute sur cette page.</div>' +
+                '</div>';
             pane.appendChild(card);
         });
 
@@ -242,6 +336,8 @@ function setOut(id, txt) {
     if (!box) return;
     box.textContent = "[" + stampNow() + "] " + txt;
     box.scrollTop = box.scrollHeight;
+    rblockAutoHeight(box);
+    rblockCacheSave(id, "[" + stampNow() + "] " + txt);
 }
 
 /* ---- runners individuels ---- */
@@ -338,6 +434,8 @@ function saveMaxConn() {
 }
 
 buildTabs();
+rblockRestoreState();
+rblockRestoreCached();
 
 var AS_TOK = "";
 try { AS_TOK = localStorage.getItem("rk_token") || ""; } catch (e) {}

@@ -149,6 +149,36 @@ fi
 
 ensure_index
 
+# --- copie de la configuration active vers la racine cle --------------------
+# Le panneau web (infos.html, index.html, cle.html) charge /config/device.conf
+# depuis le serveur HTTP. Le depot installe device.conf dans /data/scripts/config/
+# (ou scripts/config/ sur la cle) mais pas a la racine de la cle.
+# On copie/ synchronise ici pour que httpd puisse la servir.
+CONF_DEST="$USB/config/device.conf"
+CONF_SRC=""
+for C in /data/scripts/config/device.conf "$USB/scripts/config/device.conf"; do
+    [ -f "$C" ] || continue
+    # prendre la source la plus recente
+    if [ -z "$CONF_SRC" ] || [ "$C" -nt "$CONF_SRC" ]; then
+        CONF_SRC="$C"
+    fi
+done
+if [ -n "$CONF_SRC" ]; then
+    if [ ! -f "$CONF_DEST" ] || [ "$CONF_SRC" -nt "$CONF_DEST" ]; then
+        mkdir -p "$USB/config" 2>/dev/null
+        if cp -f "$CONF_SRC" "$CONF_DEST" 2>/dev/null; then
+            echo "CONFIG SYNC: $CONF_SRC -> $CONF_DEST"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') CONFIG SYNC: $CONF_SRC -> $CONF_DEST" >> "$LOG"
+        else
+            echo "CONFIG SYNC: WARN copie impossible vers $CONF_DEST"
+        fi
+    else
+        echo "CONFIG SYNC: deja a jour"
+    fi
+else
+    echo "CONFIG SYNC: WARN aucun device.conf source (/data/scripts et cle)"
+fi
+
     # nohup si dispo : la fermeture de la session adb ne doit pas tuer le serveur
     if command -v nohup > /dev/null 2>&1; then
         nohup busybox httpd -f -p 0.0.0.0:$PORT $AUTH_OPTS -h "$USB" >> "$LOG" 2>&1 &
