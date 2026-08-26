@@ -296,17 +296,38 @@ handle_request()
             fi
             ;;
 
-        # reponse cachee : dernier resultat conf_check (pas dexecution live)
+        # reponse cachee : dernier resultat conf_check ; fallback live si pas de cache
         CONF_CHECK)
             CACHE="$USB/log/conf_check_last.txt"
             if [ -f "$CACHE" ]; then
-                STAMP="$(stat -c '%Y' "$CACHE" 2>/dev/null || stat -f '%m' "$CACHE" 2>/dev/null)"
-                OUT="$(cat "$CACHE" 2>/dev/null)"
-                # prefixe avec la date du fichier pour affichage cote IHM
-                [ -n "$STAMP" ] && OUT="[conf_check : $(date -d "@$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date -r "$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '?')]$(printf '\n')$OUT"
+                # lecture du timestamp enregistre dans le fichier (ligne 1 : #TS:epoch)
+                STAMP="$(head -n 1 "$CACHE" 2>/dev/null | sed -n 's/^#TS://p' | tr -dc '0-9')"
+                OUT="$(tail -n +2 "$CACHE" 2>/dev/null)"
+                if [ -n "$STAMP" ]; then
+                    DTEXT="$(date -d "@$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null)"
+                    [ -z "$DTEXT" ] && DTEXT="$(date -r "$STAMP" '+%Y-%m-%d %H:%M:%S' 2>/dev/null)"
+                    [ -z "$DTEXT" ] && DTEXT="$STAMP"
+                    OUT="[conf_check : $DTEXT]$(printf '\n')$OUT"
+                fi
                 reply 200 OK "$OUT" "text/plain; charset=utf-8"
             else
-                reply 200 OK "[aucun conf_check en cache - utiliser CONF_CHECK_REFRESH]" "text/plain; charset=utf-8"
+                # pas de cache -> execution live (premier appel)
+                CHK=""
+                if [ -f /data/scripts/conf_check.sh ]; then
+                    CHK="/data/scripts/conf_check.sh"
+                elif [ -f "$USB/scripts/conf_check.sh" ]; then
+                    CHK="$USB/scripts/conf_check.sh"
+                fi
+                if [ -n "$CHK" ]; then
+                    OUT="$(sh "$CHK" 2>&1)"
+                    DATED="$USB/log/conf_check_$(date '+%Y%m%d').txt"
+                    printf '%s\n' "#TS:$(date +%s)" "$OUT" > "$DATED" 2>/dev/null
+                    printf '%s\n' "#TS:$(date +%s)" "$OUT" > "$CACHE" 2>/dev/null
+                    log "COMMANDE ACCEPTED: CONF_CHECK (live, cached)"
+                    reply 200 OK "$OUT" "text/plain; charset=utf-8"
+                else
+                    reply 200 OK "[conf_check introuvable]" "text/plain; charset=utf-8"
+                fi
             fi
             ;;
 
@@ -322,13 +343,14 @@ handle_request()
             if [ -n "$CHK" ]; then
                 OUT="$(sh "$CHK" 2>&1)"
                 RC=$?
-                # sauvegarde datee
+                # sauvegarde datee avec timestamp en tete
+                NOW_TS="$(date +%s)"
                 DATED="$USB/log/conf_check_$(date '+%Y%m%d').txt"
-                printf '%s\n' "$OUT" > "$DATED" 2>/dev/null
-                printf '%s\n' "$OUT" > "$USB/log/conf_check_last.txt" 2>/dev/null
+                printf '%s\n' "#TS:$NOW_TS" "$OUT" > "$DATED" 2>/dev/null
+                printf '%s\n' "#TS:$NOW_TS" "$OUT" > "$CACHE" 2>/dev/null
                 log "COMMANDE ACCEPTED: CONF_CHECK_REFRESH (rc=$RC, saved=$DATED)"
-                STAMP="$(date '+%Y-%m-%d %H:%M:%S')"
-                OUT="[conf_check : $STAMP]$(printf '\n')$OUT"
+                DTEXT="$(date '+%Y-%m-%d %H:%M:%S')"
+                OUT="[conf_check : $DTEXT]$(printf '\n')$OUT"
                 reply 200 OK "$OUT" "text/plain; charset=utf-8"
             else
                 log "COMMANDE REJECTED: CONF_CHECK_REFRESH introuvable"
