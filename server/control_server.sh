@@ -738,7 +738,7 @@ tw_count()
     N_=0
     for F_ in /proc/net/tcp /proc/net/tcp6; do
         [ -f "$F_" ] || continue
-        C_="$(grep -i ":$H_ " "$F_" 2>/dev/null | grep -vc ' 0A ')"
+        C_="$(awk -v p=":${H_}$" '$2 ~ p && $4 != "0A" {n++} END {printf "%d", n}' "$F_" 2>/dev/null)"
         [ -n "$C_" ] && N_=$((N_ + C_))
     done
     printf '%d' "$N_"
@@ -846,6 +846,7 @@ fifo_loop()
         log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?) $H_"
     fi
 
+    NC_FAILS=0
     while true
     do
         rm -f "$TMP_REQ" "$FIFO"
@@ -869,14 +870,35 @@ fifo_loop()
         HP="$!"
 
         $RUNNC -l -p "$PORT" < "$FIFO" > "$TMP_REQ" 2>/dev/null
+        NC_RC=$?
 
-        # au retour de nc la reponse est deja relatee (EOF FIFO = fin
-        # d'ecriture handler) : on relibe le port IMMEDIATEMENT, sans les
-        # ~3 s de grace d'avant. Chaque milliseconde hors ecoute est une
-        # connexion navigateur REFUSEE (rafales IHM -> badge "injoignable").
         rm -f "$FIFO"
         kill "$HP" 2>/dev/null
         wait "$HP" 2>/dev/null
+
+        # nc exit non-zero = bind echoue (TIME_WAIT, detenteur etrangener
+        # genre Kodi, etc.) : backoff exponentiel + diagnostique.
+        if [ "$NC_RC" -ne 0 ]; then
+            NC_FAILS=$((NC_FAILS + 1))
+            R_="$(tw_count)"
+            H_=""
+            if [ "${R_:-0}" -gt 0 ]; then
+                H_="${R_} socket(s) TIME_WAIT, vidange en cours"
+            else
+                H_="$(holder_of 2>/dev/null)"
+                [ -n "$H_" ] && H_="detenteur: $H_" || H_="cause inconnue"
+            fi
+            log "FIFO : nc bind echoue (rc=$NC_RC, tentative $NC_FAILS) -- $H_"
+            if [ "$NC_FAILS" -lt 5 ]; then
+                sleep 2
+            else
+                sleep 5
+            fi
+            continue
+        fi
+
+        # nc a reussi le bind et a servi une connexion : reset compteur
+        NC_FAILS=0
     done
 }
 
