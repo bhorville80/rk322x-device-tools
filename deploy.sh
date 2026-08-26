@@ -355,6 +355,11 @@ do_install()
 {
     require_usb || return 1
 
+    # arret prealable : evite d'ecraser des fichiers pendant qu'un
+    # serveur les lit (segfault possible) et garantit le demarrage
+    # avec le nouveau code
+    do_stop
+
     # layout zip officiel : deploy.sh + .dpk a la racine, sans scripts/ ->
     # bascule automatique sur l'installation par paquet (sinon install
     # incomplete : scripts manquants + server/ vide)
@@ -406,6 +411,9 @@ do_pkg()
     if ! require_root; then
         return 1
     fi
+
+    # arret prealable avant extraction/copie
+    do_stop
 
     find_pkg "$1" || return 1
     echo "[0] Paquet : $PKG_FILE"
@@ -481,6 +489,10 @@ do_expose()
     if ! require_busybox; then
         return 1
     fi
+
+    # arret prealable : evite ALREADY RUNNING silencieux si un ancien
+    # process tourne encore avec un code obsolete
+    do_stop
 
     # start_server : installation locale d'abord (fiable), cle en secours
     STARTER=""
