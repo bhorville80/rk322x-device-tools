@@ -1224,6 +1224,17 @@ case "$1" in
         ;;
 
     SEND_LOGS)
+        # auto-elevation : sans root, ps est aveugle (proc hidepid=2 : aucun
+        # processus des serveurs visibles, temoin v21 : ps.txt sans httpd ni
+        # nc alors que 8000/8081 ecoutaient) et certains /proc restent muets.
+        # Re-exec unique via su, garde-fou anti-boucle par variable d'env.
+        if [ "${RK_SEND_LOGS_ELEVATED:-}" != "1" ] && [ "$(id -u 2>/dev/null)" != "0" ] \
+           && [ "$(id 2>/dev/null | cut -d: -f1)" != "uid=0" ] \
+           && command -v su > /dev/null 2>&1; then
+            echo "[*] uid non root : relance automatique via su (ps/logcat complets)"
+            RK_SEND_LOGS_ELEVATED=1 exec su -c "RK_SEND_LOGS_ELEVATED=1 sh '$0' SEND_LOGS"
+        fi
+
         TS="$(date '+%Y%m%d_%H%M%S')"
 
         echo ""
@@ -1250,7 +1261,7 @@ case "$1" in
         }
 
         N=0
-        TOTAL=11
+        TOTAL=12
         collect logcat   logcat -d
         collect dmesg    dmesg
         collect getprop  getprop
@@ -1316,6 +1327,15 @@ case "$1" in
         done
         if [ -n "$ND" ]; then
             collect ports sh "$ND" PORTS
+            # valeur impossible = net_diag perime (sans filtre 1-65535,
+            # temoin v21 : "12884901988") -> annotation dans le bundle
+            # (tout nombre de 6 chiffres + depasse forcement 65535)
+            if tr -cs '0-9' '\n' < "$OUT/ports.txt" 2>/dev/null \
+               | grep -q '^[0-9][0-9][0-9][0-9][0-9][0-9]'; then
+                echo "" >> "$OUT/ports.txt"
+                echo "!! valeur(s) > 65535 : net_diag installe PERIME - se fier a ports_raw.txt et reinstaller le kit (deploy PKG)" >> "$OUT/ports.txt"
+                echo "         [WARN] ports : net_diag perime detecte (voir annotation)"
+            fi
         else
             N=$((N+1))
             printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "ports"
@@ -1335,6 +1355,27 @@ case "$1" in
             cat /proc/net/tcp6 2>&1
         } > "$OUT/ports_raw.txt" 2>&1
         grep -q . "$OUT/ports_raw.txt" && echo "[OK]" || echo "[ERREUR]"
+
+        # [12] versions installee vs cle : une install partielle/perimee se
+        # voit immédiatement dans le bundle (temoin v21 : net_diag sans le
+        # filtre 1-65535 executé alors que le reste etait a jour)
+        N=$((N+1))
+        printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "versions"
+        {
+            echo '--- installee (/data/scripts) ---'
+            cat /data/scripts/VERSION 2>&1
+            grep -h '^DEPLOY_VERSION=' /data/scripts/config/device.conf 2>&1
+            echo ''
+            echo '--- cle (config/device.conf) ---'
+            grep -h '^DEPLOY_VERSION=' "$USB_DIR/config/device.conf" 2>&1
+            echo ''
+            echo '--- empreintes net_diag/control/gui (installees) ---'
+            if command -v sha256sum > /dev/null 2>&1; then SUM="sha256sum"; else SUM="busybox sha256sum"; fi
+            $SUM /data/scripts/net_diag.sh \
+                 /data/scripts/server/control_server.sh \
+                 /data/scripts/server/gui_server.sh 2>&1
+        } > "$OUT/versions.txt" 2>&1
+        grep -q . "$OUT/versions.txt" && echo "[OK]" || echo "[ERREUR]"
 
         echo ""
         echo "=== TERMINE ==="
