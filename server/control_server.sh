@@ -682,6 +682,47 @@ listen_up()
     return 1
 }
 
+# qui tient le port ? inode socket -> /proc/*/fd -> pid/uid/cmdline.
+# Un squatter NOMME vaut mieux qu'un mystere (cas v23 : serveur HTTP de
+# Kodi sur 8080 par defaut, rebondissant a chaque reprise d'ecran TV).
+holder_of()
+{
+    H_="$(printf '%04X' "$PORT" 2>/dev/null)"
+    [ -n "$H_" ] || return 1
+    IN_=""
+    for F_ in /proc/net/tcp /proc/net/tcp6; do
+        [ -f "$F_" ] || continue
+        L_="$(grep -i ":$H_ .* 0A " "$F_" 2>/dev/null | head -n 1)"
+        [ -n "$L_" ] || continue
+        IN_="$(printf '%s\n' "$L_" | awk '{print $11}')"
+        [ -n "$IN_" ] && break
+    done
+    [ -n "$IN_" ] || { printf 'processus sans socket visible (bind flappant ?)' ; return 0 ; }
+    for D_ in /proc/[0-9]*; do
+        PID_="${D_#/proc/}"
+        [ "$PID_" = "$$" ] && continue
+        for FD_ in "$D_"/fd/*; do
+            L_="$(readlink "$FD_" 2>/dev/null)"
+            case "$L_" in
+                socket:\[$IN_\])
+                    C_="$(tr '\0' ' ' < "$D_/cmdline" 2>/dev/null | cut -c1-70)"
+                    [ -n "$C_" ] || C_="$(cat "$D_/comm" 2>/dev/null | tr -d '\r\n')"
+                    U_="$(awk '/^Uid:/{print $2}' "$D_/status" 2>/dev/null)"
+                    case "${U_:-}" in
+                        0)    U_="root" ;;
+                        1000) U_="system" ;;
+                        2000) U_="shell" ;;
+                        10*)  U_="app u0_a${U_#100}" ;;
+                    esac
+                    printf 'PID %s (%s) : %s' "$PID_" "${U_:-uid?}" "${C_:-?}"
+                    return 0 ;;
+            esac
+        done
+    done
+    printf 'socket inode %s sans detenteur visible' "$IN_"
+    return 0
+}
+
 serve_one()
 {
     TMP_BODY="/data/local/tmp/control_body.$$"
@@ -689,7 +730,6 @@ serve_one()
     BODY_LEN=0
     TMP_REQ="/data/local/tmp/control_req.$$"
     CR=$(printf '\r')
-
     : > "$TMP_REQ" 2>/dev/null
     while IFS= read -r LINE; do
         LINE="${LINE%"$CR"}"
@@ -746,7 +786,8 @@ fifo_loop()
     if listen_up; then
         log "FIFO : port $PORT en ecoute (mono-slot : une requete a la fois)"
     else
-        log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?)"
+        H_="$(holder_of 2>/dev/null)"
+        log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?)${H_:+ -- detenteur eventuel: $H_}"
     fi
 
     while true
@@ -833,7 +874,8 @@ if listen_up; then
     done
     [ "$K_" -gt 0 ] && sleep 1
     if listen_up; then
-        log "DEMARRAGE IMPOSSIBLE : port $PORT encore tenu par un processus etranger"
+        H_="$(holder_of 2>/dev/null)"
+        log "DEMARRAGE IMPOSSIBLE : port $PORT encore tenu par $H_"
         echo "CONTROL SERVER FAILED"
         echo "PORT: $PORT occupe par un processus non kit (deploy STOP puis retry, sinon reboot)"
         exit 1

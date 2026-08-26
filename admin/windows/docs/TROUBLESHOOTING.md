@@ -590,6 +590,28 @@ FOREIGN holder. `deploy STOP`/`services STOP` sweeps and the control
 orphan-recovery now target `tcpsvd ... 8080` holders too; gui requests
 without action are logged with their raw request line.
 
+v23 names the actual squatter (field logs: 8080 dead while kernel tables
+show it free, flapping across sessions): an **Android app stealing the
+port** - on this box, Kodi (`org.xbmc.kodi`, uid u0_a44, seen on
+1585/9090) whose built-in HTTP remote-control server defaults to
+**8080**, rebinding each time the TV screen wakes. The API then fails to
+bind forever, and verdicts probed during a Kodi-held window are false
+positives. `net_diag PORTS` now resolves the owner of every listening
+port (inode socket -> /proc/*/fd -> pid/uid/cmdline), and the control
+server logs the holder in both failure paths (`DEMARRAGE IMPOSSIBLE`,
+`FIFO ATTENTION`).
+
+Fix when an app holds 8080:
+
+```bash
+am force-stop org.xbmc.kodi                      # liberer immédiatement
+# permanent : Kodi > Settings > Services > Control >
+#             "Allow remote control via HTTP" = OFF
+```
+
+Alternative if the app cannot be tamed: move our API port (CONTROL_PORT
+config plumbing - ask; not needed once Kodi webserver is off).
+
 Diagnosis on the box:
 
 ```bash

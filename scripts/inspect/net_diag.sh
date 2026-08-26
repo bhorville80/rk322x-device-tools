@@ -178,6 +178,53 @@ proc_listen_ports()
     done
 }
 
+port_inode()
+{
+    # inode du socket LISTEN sur le port decimal $1 (tcp puis tcp6)
+    H_="$(printf '%04X' "$1" 2>/dev/null)"
+    [ -n "$H_" ] || return 1
+    for F_ in /proc/net/tcp /proc/net/tcp6; do
+        [ -f "$F_" ] || continue
+        L_="$(grep -i ":$H_ .* 0A " "$F_" 2>/dev/null | head -n 1)"
+        [ -n "$L_" ] || continue
+        # champs : sl la ra st tx-rx tr tm-when retrnsmt UID TIMEOUT INODE
+        printf '%s\n' "$L_" | awk '{print $11}'
+        return 0
+    done
+    return 1
+}
+
+port_owner()
+{
+    # qui tient ce port ? resolution inode socket -> /proc/*/fd -> pid/cmdline.
+    # Rend le squatter NOMME au lieu d'un mystere (cas v23 : serveur HTTP
+    # integre de Kodi sur 8080, rebondissant a chaque reprise d'ecran).
+    IN_="$(port_inode "$1")" || return 1
+    [ -n "$IN_" ] || return 1
+    for D_ in /proc/[0-9]*; do
+        PID_="${D_#/proc/}"
+        [ "$PID_" = "$$" ] && continue
+        for FD_ in "$D_"/fd/*; do
+            L_="$(readlink "$FD_" 2>/dev/null)"
+            case "$L_" in
+                socket:\[$IN_\])
+                    C_="$(tr '\0' ' ' < "$D_/cmdline" 2>/dev/null | cut -c1-70)"
+                    [ -n "$C_" ] || C_="$(cat "$D_/comm" 2>/dev/null | tr -d '\r\n')"
+                    U_="$(awk '/^Uid:/{print $2}' "$D_/status" 2>/dev/null)"
+                    case "${U_:-}" in
+                        0)      U_="root" ;;
+                        1000)   U_="system" ;;
+                        2000)   U_="shell" ;;
+                        10*)    U_="app u0_a${U_#100}" ;;
+                    esac
+                    printf 'pid %s (%s) : %s' "$PID_" "${U_:-uid?}" "${C_:-?}"
+                    return 0 ;;
+            esac
+        done
+    done
+    return 1
+}
+
 # ne garder que des ports credibles (1..65535) : un netstat exotique
 # (vieux toolbox) peut sortir n'importe quoi (recette v18 : unique entree
 # "12884901988 service inconnu" qui masquait le fallback /proc)
@@ -207,6 +254,8 @@ do_ports()
         for P in $LISTEN; do
             L="$(port_label ":$P")"
             printf '  %-8s %s\n' "$P" "${L:-service inconnu}"
+            O_="$(port_owner "$P" 2>/dev/null)"
+            [ -n "$O_" ] && printf '           ^ %s\n' "$O_"
         done
     else
         echo "  (rien detecte : netstat muet ET /proc/net/tcp illisible)"
