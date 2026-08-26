@@ -646,21 +646,6 @@ req_dispatch_inner()
     esac
 }
 
-case "$1" in
-    start)
-        ;;
-    serve-one)
-        # une connexion (invoque par tcpsvd) : socket sur stdin/stdout
-        TMP_BODY="/data/local/tmp/control_body.$$"
-        serve_one
-        exit 0
-        ;;
-    *)
-        echo "Usage: sh $0 start|serve-one"
-        exit 1
-        ;;
-esac
-
 # --- factory multi-listeners : tcpsvd cree un processus par connexion ---
 # borne par -c N (API_MAX_CONN dans device.conf, 1..7, defaut 2).
 # Repli automatique sur la boucle FIFO mono-slot si tcpsvd manque/echoue.
@@ -901,6 +886,21 @@ fifo_loop()
         NC_FAILS=0
     done
 }
+
+case "$1" in
+    start)
+        ;;
+    serve-one)
+        # une connexion (invoque par tcpsvd) : socket sur stdin/stdout
+        TMP_BODY="/data/local/tmp/control_body.$$"
+        serve_one
+        exit 0
+        ;;
+    *)
+        echo "Usage: sh $0 start|serve-one"
+        exit 1
+        ;;
+esac
 
 SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 
