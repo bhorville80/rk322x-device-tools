@@ -662,14 +662,14 @@ case "$1" in
 esac
 
 # --- factory multi-listeners : tcpsvd cree un processus par connexion ---
-# borne par -c N (API_MAX_CONN dans device.conf, 1..7, defaut 3).
+# borne par -c N (API_MAX_CONN dans device.conf, 1..7, defaut 2).
 # Repli automatique sur la boucle FIFO mono-slot si tcpsvd manque/echoue.
 
 max_conn()
 {
     N="$(sed -n 's/^API_MAX_CONN=//p' /data/scripts/config/device.conf 2>/dev/null | head -n 1 | tr -dc '0-9')"
     [ -z "$N" ] && N="$(sed -n 's/^API_MAX_CONN=//p' "$USB/scripts/config/device.conf" 2>/dev/null | head -n 1 | tr -dc '0-9')"
-    case "$N" in ''|*[!0-9]*) N=3 ;; esac
+    case "$N" in ''|*[!0-9]*) N=2 ;; esac
     [ "$N" -lt 1 ] && N=1
     [ "$N" -gt 7 ] && N=7
     echo "$N"
