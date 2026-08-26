@@ -14,15 +14,23 @@
 
 PORT=8081
 
-USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
-    USB=""
-    for d in /mnt/media_rw/*; do
-        if [ -f "$d/deploy.sh" ]; then
-            USB="$d"
-            break
-        fi
-    done
+# racine = CLE en priorite (scan media_rw), fallback repertoire du script :
+# lance depuis /data/scripts/server (pile installlee), dirname aurait fait
+# ecrire logs/pidfiles/shots dans /data/scripts -> invisibles a SEND_LOGS
+# (srv_logs ne lit que <cle>/log) et a deploy STOP (pidfiles <cle>/server),
+# pendant que le panneau servi par httpd reste la cle. Temoin terrain :
+# CONTROL STARTED trace par start_server mais ni control_server.log ni
+# gui_server.log sur la cle.
+USB=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/deploy.sh" ]; then
+        USB="$d"
+        break
+    fi
+done
+if [ -z "$USB" ]; then
+    USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+    [ -f "$USB/deploy.sh" ] || USB=""
 fi
 
 if [ -z "$USB" ]; then
@@ -66,9 +74,22 @@ esac
 if [ -f "$PIDFILE" ]; then
     PID="$(cat "$PIDFILE" 2>/dev/null)"
     if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        echo "GUI SERVER ALREADY RUNNING"
-        echo "PID: $PID"
-        exit 0
+        # un pid vivant ne prouve pas le service : une boucle sh dont le nc
+        # est mort repond ALREADY RUNNING sans ouvrir le port, et la reprise
+        # d'orphelin ci-dessous n'etait JAMAIS atteinte (temoin terrain :
+        # 8081 "deja actif" muet, aucune trace nulle part). Port verifie :
+        # up -> sortie normale ; muet -> on abat ce PID et on ENCHAINE vers
+        # la reprise au lieu de sortir.
+        if port_up "$PORT"; then
+            log "DEJA ACTIF (PID $PID), port $PORT en ecoute"
+            echo "GUI SERVER ALREADY RUNNING"
+            echo "PID: $PID"
+            exit 0
+        fi
+        log "PID $PID vivant MAIS port $PORT muet -> reprise orphelin"
+        kill "$PID" 2>/dev/null
+        sleep 1
+        kill -0 "$PID" 2>/dev/null && kill -9 "$PID" 2>/dev/null
     fi
     rm -f "$PIDFILE"
 fi

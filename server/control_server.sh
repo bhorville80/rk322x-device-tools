@@ -14,15 +14,19 @@ is_root()
     return 1
 }
 
-USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
-    USB=""
-    for d in /mnt/media_rw/*; do
-        if [ -f "$d/deploy.sh" ]; then
-            USB="$d"
-            break
-        fi
-    done
+# racine = CLE en priorite (cf gui_server.sh) : lance depuis
+# /data/scripts/server, dirname aurait fait ecrire log/pidfile dans
+# /data/scripts -> invisibles a SEND_LOGS (srv_logs) et deploy STOP.
+USB=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/deploy.sh" ]; then
+        USB="$d"
+        break
+    fi
+done
+if [ -z "$USB" ]; then
+    USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+    [ -f "$USB/deploy.sh" ] || USB=""
 fi
 
 if [ -z "$USB" ]; then
@@ -653,16 +657,6 @@ case "$1" in
         ;;
 esac
 
-if [ -f "$PIDFILE" ]; then
-    PID="$(cat "$PIDFILE" 2>/dev/null)"
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        echo "CONTROL SERVER ALREADY RUNNING"
-        echo "PID: $PID"
-        exit 0
-    fi
-    rm -f "$PIDFILE"
-fi
-
 # --- factory multi-listeners : tcpsvd cree un processus par connexion ---
 # borne par -c N (API_MAX_CONN dans device.conf, 1..7, defaut 3).
 # Repli automatique sur la boucle FIFO mono-slot si tcpsvd manque/echoue.
@@ -790,6 +784,26 @@ fifo_loop()
 }
 
 SELF_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+# --- pidfile : place APRES les definitions (listen_up requis ici) ----------
+# un pid vivant ne prouve pas le service (cf gui_server.sh) : boucle sh dont
+# le listener est mort -> ALREADY RUNNING muet, reprise jamais atteinte.
+if [ -f "$PIDFILE" ]; then
+    PID="$(cat "$PIDFILE" 2>/dev/null)"
+    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        if listen_up; then
+            log "DEJA ACTIF (PID $PID), port $PORT en ecoute"
+            echo "CONTROL SERVER ALREADY RUNNING"
+            echo "PID: $PID"
+            exit 0
+        fi
+        log "PID $PID vivant MAIS port $PORT muet -> reprise orphelin"
+        kill "$PID" 2>/dev/null
+        sleep 1
+        kill -0 "$PID" 2>/dev/null && kill -9 "$PID" 2>/dev/null
+    fi
+    rm -f "$PIDFILE"
+fi
 
 # --- reprise d'orphelin (cf gui_server.sh, recette v18) ---------------------
 # Un detenteur kit du port sans superviseur vivant (boucle sh morte, pidfile

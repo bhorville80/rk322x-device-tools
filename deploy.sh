@@ -1239,7 +1239,7 @@ case "$1" in
         }
 
         N=0
-        TOTAL=10
+        TOTAL=11
         collect logcat   logcat -d
         collect dmesg    dmesg
         collect getprop  getprop
@@ -1273,15 +1273,24 @@ case "$1" in
         } > "$OUT/mmc_dev.txt" 2>&1
         grep -q . "$OUT/mmc_dev.txt" && echo "[OK]" || echo "[ERREUR]"
 
-        # [9] logs des serveurs de la cle : seuls traces portant les
-        # verdicts de bind 8080/8081 (FIFO en ecoute / NON ouvert) et les
-        # requetes recues — indispensables au diagnostic "port injoignable"
+        # [9] logs des serveurs : traces portant les verdicts de bind
+        # 8080/8081 (FIFO en ecoute / NON ouvert) et les requetes recues.
+        # Pile installee : les serveurs lances depuis /data/scripts/server ont
+        # pu ecrire dans /data/scripts/log (layout ancien) -> pour chaque
+        # fichier on prend la copie LA PLUS RECENTE des deux sources, sinon
+        # le diagnostic "port injoignable" reste aveugle sur ces box (temoin :
+        # CONTROL STARTED trace, control_server.log absent de la cle).
         N=$((N+1))
         printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "srv_logs"
         SRV_N=0
         for SL in http_server.log control_server.log gui_server.log watch.log; do
-            [ -f "$USB_DIR/log/$SL" ] || continue
-            cp -f "$USB_DIR/log/$SL" "$OUT/srv_$SL" 2>/dev/null && SRV_N=$((SRV_N+1))
+            SRC=""
+            for CAND in "$USB_DIR/log/$SL" "/data/scripts/log/$SL"; do
+                [ -f "$CAND" ] || continue
+                if [ -z "$SRC" ] || [ "$CAND" -nt "$SRC" ]; then SRC="$CAND"; fi
+            done
+            [ -n "$SRC" ] || continue
+            cp -f "$SRC" "$OUT/srv_$SL" 2>/dev/null && SRV_N=$((SRV_N+1))
         done
         if [ "$SRV_N" -gt 0 ]; then
             echo "[OK] ($SRV_N fichier(s))"
@@ -1301,6 +1310,20 @@ case "$1" in
             printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "ports"
             echo "[ ERREUR ] net_diag introuvable"
         fi
+
+        # [11] brut reseau : meme si net_diag restait muet (collecte degradee,
+        # regression), les sources premieres restent exploitables hors ligne
+        N=$((N+1))
+        printf '  [%d/%d] %-12s ' "$N" "$TOTAL" "ports_raw"
+        {
+            echo '--- netstat -tln ---'
+            netstat -tln 2>&1
+            echo '--- /proc/net/tcp ---'
+            cat /proc/net/tcp 2>&1
+            echo '--- /proc/net/tcp6 ---'
+            cat /proc/net/tcp6 2>&1
+        } > "$OUT/ports_raw.txt" 2>&1
+        grep -q . "$OUT/ports_raw.txt" && echo "[OK]" || echo "[ERREUR]"
 
         echo ""
         echo "=== TERMINE ==="

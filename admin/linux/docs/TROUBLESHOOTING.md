@@ -551,13 +551,35 @@ loops: a silent connection (browser preconnect, port scan) used to
 monopolize the only slot, and a server started from an adb session died
 with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
 (`timeout`), loops ignore SIGHUP, `deploy STOP` also sweeps orphaned
-instances through `/proc/*/cmdline`. next version: at startup each server
+instances through `/proc/*/cmdline`. v18: at startup each server
 also kills its own leftover port holder (orphan `nc` keeps the bind while
 serving nothing - seen in the v18 field logs: 8081 "up" to TCP probes but
 every SHOT silent, TV mirror never displayed), and fails loudly if a
-foreign process still holds the port. `net_diag PORTS` now merges netstat
+foreign process still holds the port. v19: `net_diag PORTS` merges netstat
 and `/proc/net/tcp` readings and drops entries outside 1-65535 (a bogus
 toolbox value used to mask the /proc fallback).
+
+v20 fixes the two blind spots the field logs exposed:
+
+- **Key-first root resolution** (`gui_server.sh`, `control_server.sh`,
+  `watch_usb.sh`): launched from `/data/scripts/server`, `dirname($0)/..`
+  used to win and logs/pidfiles/incoming landed in `/data/scripts/...`,
+  invisible to `SEND_LOGS` (srv_logs reads `<key>/log`) and to
+  `deploy STOP`. Field witness: http_server.log said `CONTROL SERVER
+  STARTED (PORT 8080)` while no control/gui log existed on the key.
+- **"ALREADY RUNNING" no longer exits blindly**: a live pidfile whose nc
+  listener died answered ALREADY RUNNING without opening the port, BEFORE
+  the orphan-recovery block was ever reached - 8081 stayed dead with no
+  trace anywhere. The pid is now verified against the port: listening ->
+  normal exit (traced); silent -> killed and startup falls through to
+  orphan recovery.
+- **Every outcome traced**: start_server writes deja actif / ECHEC (with
+  server output) / script absent / WARN port-not-open into
+  `log/http_server.log` for both GUI and CONTROL.
+- **SEND_LOGS sees both layouts**: srv_logs picks the newest copy of each
+  server log from `<key>/log` OR `/data/scripts/log`; a raw
+  `ports_raw.txt` (netstat + `/proc/net/tcp{,6}`) is collected too, so a
+  silent net_diag can never blind a session again.
 
 Diagnosis on the box:
 
@@ -665,6 +687,10 @@ Solution:  v13 : INSTALL bascule automatiquement sur le .dpk quand la cle n'a
 Status:    Corrige en v13. Re-deployer : dezipper rk322x-cle_v13_*.zip a la
            racine de la cle puis su -c 'sh /mnt/media_rw/*/deploy.sh INSTALL'
            et relancer la recette. zram reste impossible sur ce firmware.
+           v18 : net_diag PORTS applique le meme repli (netstat ->
+           /proc/net/tcp hexa, etat 0A) ; sur firmware muet il listait
+           "rien" et le pied de page "Arret global" induisait en erreur
+           alors que les serveurs repondaient.
 ```
 
 ### 2026-08-23 - Recette bloquee en P7 + boot bloque sur front_digit
@@ -736,3 +762,59 @@ realistic RAM budget of a 2 GB headless box.
 Behavioural IDS needs are covered natively by `net_watch`
 (BAN/UNBAN iptables, event log). If CrowdSec is ever required, run it on
 the gateway/PC side instead - not on the box.
+
+---
+
+## SWAP
+
+### Swap chain: key file with /data fallback (v17+)
+
+Context: zram is impossible on this firmware (broken lz4 backend, see
+entry above), so disk swap is the only swap available. The original V1
+design used a single 512 MB `swap.bin` on the USB key
+(`MEM_SWAP_FILE=auto`, priority 1, re-armed each boot by
+`BOOT_MEM_TUNE=1`). Failure mode: unplug/lose/rekey the USB stick and
+the box runs with NO swap at all until someone notices.
+
+Solution (v17): explicit two-link chain in `mem_tune`:
+
+| Link | Path | Priority | When |
+|---|---|---|---|
+| Key file | `/mnt/media_rw/*/swap.bin` | 1 | normal operation |
+| Data fallback | `/data/local/swap.bin` | 2 | only when the key link fails |
+
+Rules:
+- OPTIMIZE activates the key first; only on failure it creates/enables
+  the data fallback (`MEM_SWAP_DATA_MB=512`, 0 = disabled).
+- When the key comes back, the next OPTIMIZE swaps off the fallback and
+  rests the eMMC ("retour de la cle" log line).
+- STATUS shows every link state plus a one-line chain verdict
+  ("JAMAIS sans swap" / "cle ACTIF seule" / "repli /data ACTIF").
+- The boot path needs no change: BOOT_MEM_TUNE runs the same OPTIMIZE.
+
+Kernel capability gate is unchanged: if `swapon` refuses a file on the
+key it will refuse `/data` too (same filesystem mechanics) - check
+`preflight` (swap section) and `dmesg` first.
+
+### swapon acceptance assurance + live-built syscall binary (v17+)
+
+The swap chain assumed a working `swapon` executor. Two failure modes
+remained: busybox without the swapon/swapoff applets, and a kernel that
+refuses file swap. `mem_tune PROBE` (action [O9]) closes both:
+
+- Detects available agents in order: busybox applet, system binary.
+- If NONE: builds one LIVE - `core/swap.sh` emits a minimal static
+  ELF32 ARMv7 (129 bytes) byte-by-byte via printf, embedding the real
+  target path, calling raw syscall __NR_swapon=167 / __NR_swapoff=168.
+  Dropped in /data/local/tmp (ext4, exec-safe; never on vfat key).
+- mkswap fallback: if the applet is missing too, a pure-dd formatter
+  writes the SWAPSPACE2 magic at end of last page (sufficient for ext4
+  file swap on 4k kernels).
+- Real capability test: 1 MB probe file on the SAME filesystem as the
+  target -> KERNEL_OK / KERNEL_REFUSE / EXEC_IMPOSSIBLE, verdict kept in
+  /data/etc/mem_tune.swap_capability and surfaced by mem_tune STATUS.
+
+Emitter validated offline: magic/entry/phdr/code words checked byte per
+byte for both variants. KERNEL_REFUSE (CONFIG_SWAP off or fstype reject)
+is a firmware limit no userspace build can bypass - PROBE makes that
+explicit instead of failing silently at OPTIMIZE time.

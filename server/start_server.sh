@@ -181,12 +181,16 @@ if kill -0 "$PID" 2>/dev/null; then
     # serveur en tache de fond ne doit pas bloquer le demarrage de la pile
     SRV_TMP="/data/local/tmp/start_server_out.$$"
 
+    # TOUT verdict est trace dans http_server.log : un 8081 muet ne doit
+    # jamais rester sans explication sur la cle (temoin v19 : seul STARTED
+    # laissait une trace, deja actif/echec/absent etaient invisibles)
     if [ -f "$SRV/gui_server.sh" ]; then
         sh "$SRV/gui_server.sh" start > "$SRV_TMP" 2>&1
         GUI_OUT="$(cat "$SRV_TMP" 2>/dev/null)"
         case "$GUI_OUT" in
             *"ALREADY RUNNING"*)
                 echo "GUI SERVER: deja actif"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER deja actif (port 8081 verifie par gui_server)" >> "$LOG"
                 ;;
             *"STARTED"*)
                 echo "GUI SERVER: 8081"
@@ -194,14 +198,21 @@ if kill -0 "$PID" 2>/dev/null; then
                 ;;
             *)
                 echo "GUI SERVER: echec ($GUI_OUT)"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER ECHEC (${GUI_OUT:-aucune sortie})" >> "$LOG"
                 ;;
         esac
         sleep 1
         if port_up 8081; then
             echo "GUI PORT: 8081 en ecoute (verifie)"
+            case "$GUI_OUT" in
+                *"STARTED"*) echo "$(date '+%Y-%m-%d %H:%M:%S') GUI PORT 8081 en ecoute (verifie)" >> "$LOG" ;;
+            esac
         else
             echo "GUI PORT: WARN 8081 absent (voir gui_server.log)"
+            echo "$(date '+%Y-%m-%d %H:%M:%S') GUI PORT WARN 8081 NON en ecoute apres demarrage" >> "$LOG"
         fi
+    else
+        echo "$(date '+%Y-%m-%d %H:%M:%S') GUI SERVER ABSENT (gui_server.sh introuvable sous $SRV)" >> "$LOG"
     fi
 
     if [ -f "$SRV/control_server.sh" ]; then
@@ -210,6 +221,7 @@ if kill -0 "$PID" 2>/dev/null; then
         case "$CTRL_OUT" in
             *"ALREADY RUNNING"*)
                 echo "CONTROL SERVER: deja actif"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER deja actif (port 8080 verifie par control_server)" >> "$LOG"
                 ;;
             *"STARTED"*)
                 echo "CONTROL SERVER: 8080"
@@ -217,14 +229,21 @@ if kill -0 "$PID" 2>/dev/null; then
                 # verdict d'ecoute repris du rapport du serveur lui-meme :
                 # un pid vivant ne prouve pas le bind du port
                 case "$CTRL_OUT" in
-                    *"ECOUTE: verifiee"*) echo "CONTROL PORT: 8080 en ecoute (verifie)" ;;
-                    *WARN*)               echo "CONTROL PORT: WARN 8080 absent (voir control_server.log)" ;;
+                    *"ECOUTE: verifiee"*)
+                        echo "CONTROL PORT: 8080 en ecoute (verifie)"
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT 8080 en ecoute (verifie)" >> "$LOG" ;;
+                    *WARN*)
+                        echo "CONTROL PORT: WARN 8080 absent (voir control_server.log)"
+                        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL PORT WARN 8080 NON ouvert" >> "$LOG" ;;
                 esac
                 ;;
             *)
                 echo "CONTROL SERVER: echec ($CTRL_OUT)"
+                echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER ECHEC (${CTRL_OUT:-aucune sortie})" >> "$LOG"
                 ;;
         esac
+    else
+        echo "$(date '+%Y-%m-%d %H:%M:%S') CONTROL SERVER ABSENT (control_server.sh introuvable sous $SRV)" >> "$LOG"
     fi
 
     rm -f "$SRV_TMP" 2>/dev/null

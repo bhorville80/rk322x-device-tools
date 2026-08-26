@@ -551,13 +551,35 @@ loops: a silent connection (browser preconnect, port scan) used to
 monopolize the only slot, and a server started from an adb session died
 with it (SIGHUP). Fixed in v17+: idle connections expire after 30 s
 (`timeout`), loops ignore SIGHUP, `deploy STOP` also sweeps orphaned
-instances through `/proc/*/cmdline`. next version: at startup each server
+instances through `/proc/*/cmdline`. v18: at startup each server
 also kills its own leftover port holder (orphan `nc` keeps the bind while
 serving nothing - seen in the v18 field logs: 8081 "up" to TCP probes but
 every SHOT silent, TV mirror never displayed), and fails loudly if a
-foreign process still holds the port. `net_diag PORTS` now merges netstat
+foreign process still holds the port. v19: `net_diag PORTS` merges netstat
 and `/proc/net/tcp` readings and drops entries outside 1-65535 (a bogus
 toolbox value used to mask the /proc fallback).
+
+v20 fixes the two blind spots the field logs exposed:
+
+- **Key-first root resolution** (`gui_server.sh`, `control_server.sh`,
+  `watch_usb.sh`): launched from `/data/scripts/server`, `dirname($0)/..`
+  used to win and logs/pidfiles/incoming landed in `/data/scripts/...`,
+  invisible to `SEND_LOGS` (srv_logs reads `<key>/log`) and to
+  `deploy STOP`. Field witness: http_server.log said `CONTROL SERVER
+  STARTED (PORT 8080)` while no control/gui log existed on the key.
+- **"ALREADY RUNNING" no longer exits blindly**: a live pidfile whose nc
+  listener died answered ALREADY RUNNING without opening the port, BEFORE
+  the orphan-recovery block was ever reached - 8081 stayed dead with no
+  trace anywhere. The pid is now verified against the port: listening ->
+  normal exit (traced); silent -> killed and startup falls through to
+  orphan recovery.
+- **Every outcome traced**: start_server writes deja actif / ECHEC (with
+  server output) / script absent / WARN port-not-open into
+  `log/http_server.log` for both GUI and CONTROL.
+- **SEND_LOGS sees both layouts**: srv_logs picks the newest copy of each
+  server log from `<key>/log` OR `/data/scripts/log`; a raw
+  `ports_raw.txt` (netstat + `/proc/net/tcp{,6}`) is collected too, so a
+  silent net_diag can never blind a session again.
 
 Diagnosis on the box:
 

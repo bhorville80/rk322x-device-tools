@@ -1,14 +1,19 @@
 #!/system/bin/sh
 
-USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
-if [ -z "$USB" ] || [ ! -f "$USB/deploy.sh" ]; then
-    USB=""
-    for d in /mnt/media_rw/*; do
-        if [ -f "$d/deploy.sh" ]; then
-            USB="$d"
-            break
-        fi
-    done
+# racine = CLE en priorite (cf gui_server.sh) : sinon, lance depuis
+# /data/scripts/server, le watcher surveille /data/scripts/incoming au lieu
+# de <cle>/incoming (la ou httpd 8000 et le depot deposent) -> commandes
+# incoming jamais declenchees.
+USB=""
+for d in /mnt/media_rw/*; do
+    if [ -f "$d/deploy.sh" ]; then
+        USB="$d"
+        break
+    fi
+done
+if [ -z "$USB" ]; then
+    USB="$(cd "$(dirname "$0")/.." 2>/dev/null && pwd)"
+    [ -f "$USB/deploy.sh" ] || USB=""
 fi
 
 if [ -z "$USB" ]; then

@@ -42,6 +42,11 @@ Registre executable : `scripts/core/actions.tsv` - lancer par ID :
 | sd_boot | carte SD examinee en dernier au boot |
 | preflight | verif commandes critiques box + verdicts features (autonome) |
 
+`deploy SEND_LOGS` : collecte logcat/dmesg/getprop/ip/mount/ps, pstore,
+logs serveurs (srv_logs : copie la plus recente cle OU /data/scripts/log),
+ports (net_diag PORTS) et brut reseau (ports_raw : netstat +
+/proc/net/tcp{,6}) dans log/log_<TS>/.
+
 `deploy NEWKEY [chemin]` : usine a cles depuis la box. Branche une cle neuve,
 l'outil ANALYSE les cles montees (fs, espace, contenu, cle ACTIVE), demande
 la destination, DEPLOYE le kit exposition complet (deploy.sh, INSTALLER.sh,
