@@ -617,6 +617,18 @@ Manual alternative: Kodi > Settings > Services > Control >
 Alternative if the app cannot be tamed: move our API port (CONTROL_PORT
 config plumbing - ask; not needed once Kodi webserver is off).
 
+v25 fixes the LAST mechanism those logs exposed: after browser traffic,
+the served TCP connections leave ~60 s of TIME_WAIT residues ON OUR OWN
+PORTS; `nc`/`tcpsvd` (no SO_REUSEADDR on this busybox) then refuse to
+rebind, so a STOP+EXPOSE right after browsing killed the API with no
+LISTEN visible anywhere (field witness v24: holder diagnostic said
+"aucun socket visible" while every bind failed - the residues had drained
+by collection time). Control and GUI now DRAIN before opening (poll
+non-LISTEN sockets on the port, max 60 s, traced), the tcpsvd supervisor
+tolerates up to 10 instant failures (~20 s) before falling back to FIFO,
+and the ATTENTION verdicts report residual counts. Restarting the stack
+after heavy use now self-heals instead of dying silently.
+
 Diagnosis on the box:
 
 ```bash

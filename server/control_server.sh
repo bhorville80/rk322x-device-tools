@@ -727,6 +727,40 @@ holder_of()
     return 0
 }
 
+# sockets residuels sur $PORT hors LISTEN (TIME_WAIT/CLOSE_WAIT...) : un
+# trafic navigateur laisse ~60 s de residus qui bloquent le rebind d'un
+# nc/tcpsvd sans SO_REUSEADDR (temoin v24/v25 : API morte apres chaque
+# STOP+EXPOSE suivant du trafic, aucune trace car vidange entre-temps)
+tw_count()
+{
+    H_="$(printf '%04X' "$PORT" 2>/dev/null)"
+    [ -n "$H_" ] || { printf '0' ; return 0 ; }
+    N_=0
+    for F_ in /proc/net/tcp /proc/net/tcp6; do
+        [ -f "$F_" ] || continue
+        C_="$(grep -i ":$H_ " "$F_" 2>/dev/null | grep -vc ' 0A ')"
+        [ -n "$C_" ] && N_=$((N_ + C_))
+    done
+    printf '%d' "$N_"
+}
+
+wait_drain()
+{
+    i_=0
+    while [ "$i_" -lt 30 ]; do
+        N_="$(tw_count)"
+        [ "${N_:-0}" -le 0 ] && return 0
+        [ "$i_" -eq 0 ] && \
+            log "port $PORT : ${N_} socket(s) residuel(s) (TIME_WAIT), attente de vidange (max 60 s)..."
+        sleep 2
+        i_=$((i_ + 1))
+    done
+    N_="$(tw_count)"
+    [ "${N_:-0}" -gt 0 ] && \
+        log "port $PORT : encore ${N_} residu(s) apres 60 s -> premier bind possiblement refuse, la boucle reessaie"
+    return 0
+}
+
 serve_one()
 {
     TMP_BODY="/data/local/tmp/control_body.$$"
@@ -769,11 +803,25 @@ serve_one()
 run_tcpsvd_forever()
 {
     N_="$(max_conn)"
+    FAILS_=0
     log "MODE MULTI-LISTENERS : $TCPSVD_BIN -c $N_ port $PORT"
     while true; do
-        $TCPSVD_BIN -c "$N_" 0.0.0.0 "$PORT" sh "$SELF_PATH" serve-one > /dev/null 2>&1 \
-            || { log "SUPERVISEUR: tcpsvd en echec -> REPLI FIFO mono-slot" ; break ; }
-        log "SUPERVISEUR: relance tcpsvd dans 2 s"
+        if $TCPSVD_BIN -c "$N_" 0.0.0.0 "$PORT" sh "$SELF_PATH" serve-one > /dev/null 2>&1; then
+            FAILS_=0
+            log "SUPERVISEUR: relance tcpsvd dans 2 s"
+            sleep 2
+            continue
+        fi
+        # echec instantane = le plus souvent un residu TIME_WAIT qui
+        # bloque le bind : on PATIENTE (la vidange prend ~60 s) avant de
+        # declarer forfait, au lieu d'abandonner a la premiere erreur
+        FAILS_=$((FAILS_ + 1))
+        if [ "$FAILS_" -ge 10 ]; then
+            log "SUPERVISEUR: tcpsvd en echec ($FAILS_ tentatives, residus=$(tw_count)) -> REPLI FIFO mono-slot"
+            break
+        fi
+        [ $((FAILS_ % 5)) -eq 0 ] && \
+            log "SUPERVISEUR: tcpsvd echec ${FAILS_}/10 (residus=$(tw_count)), nouvelle tentative dans 2 s"
         sleep 2
     done
 }
@@ -790,8 +838,12 @@ fifo_loop()
     if listen_up; then
         log "FIFO : port $PORT en ecoute (mono-slot : une requete a la fois)"
     else
-        H_="$(holder_of 2>/dev/null)"
-        log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?)${H_:+ -- detenteur eventuel: $H_}"
+        R_="$(tw_count)"
+        H_=""
+        [ "${R_:-0}" -gt 0 ] \
+            && H_="-- ${R_} socket(s) residuel(s) TIME_WAIT, la boucle reessaie automatiquement" \
+            || { H_="$(holder_of 2>/dev/null)" ; H_="${H_:+-- detenteur eventuel: $H_}" ; }
+        log "FIFO : ATTENTION port $PORT NON ouvert (nc refuse le bind ?) $H_"
     fi
 
     while true
@@ -886,6 +938,11 @@ if listen_up; then
     fi
     [ "$K_" -gt 0 ] && log "REPRISE ORPHELIN : port $PORT libere ($K_ processus arretes)"
 fi
+
+# vidange des residus TIME_WAIT avant d'ouvrir (cf tw_count) : sans elle,
+# un STOP+EXPOSE apres du trafic navigateur laissait l'API morte ~60 s,
+# tous les binds echouant silencieusement
+wait_drain
 
 (
     # immunise contre SIGHUP : la fermeture de la session adb ne doit pas

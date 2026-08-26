@@ -127,6 +127,38 @@ if port_up "$PORT"; then
     [ "$K_" -gt 0 ] && log "REPRISE ORPHELIN : port $PORT libere ($K_ processus arretes)"
 fi
 
+# sockets residuels hors LISTEN (TIME_WAIT ~60 s apres du trafic SHOT) :
+# ils bloquent le rebind d'un nc sans SO_REUSEADDR -> vidange avant ouverture
+tw_count()
+{
+    H_="$(printf '%04X' "$PORT" 2>/dev/null)"
+    [ -n "$H_" ] || { printf '0' ; return 0 ; }
+    N_=0
+    for F_ in /proc/net/tcp /proc/net/tcp6; do
+        [ -f "$F_" ] || continue
+        C_="$(grep -i ":$H_ " "$F_" 2>/dev/null | grep -vc ' 0A ')"
+        [ -n "$C_" ] && N_=$((N_ + C_))
+    done
+    printf '%d' "$N_"
+}
+
+wait_drain()
+{
+    i_=0
+    while [ "$i_" -lt 30 ]; do
+        N_="$(tw_count)"
+        [ "${N_:-0}" -le 0 ] && return 0
+        [ "$i_" -eq 0 ] && \
+            log "port $PORT : ${N_} socket(s) residuel(s) (TIME_WAIT), attente de vidange (max 60 s)..."
+        sleep 2
+        i_=$((i_ + 1))
+    done
+    N_="$(tw_count)"
+    [ "${N_:-0}" -gt 0 ] && \
+        log "port $PORT : encore ${N_} residu(s) apres 60 s -> premier bind possiblement refuse, la boucle reessaie"
+    return 0
+}
+
 reply()
 {
     # reply <code> <status> <body> ; CORS : panneau sur :8000, API ici :8081
@@ -341,6 +373,8 @@ if port_up "$PORT"; then
     log "GUI : port $PORT DEJA en ecoute avant demarrage (orphelin ? deploy STOP)"
 fi
 
+wait_drain
+
 sleep 1
 
 if kill -0 "$PID" 2>/dev/null; then
@@ -356,7 +390,8 @@ if kill -0 "$PID" 2>/dev/null; then
         sleep 1
     done
     case "$UP_" in
-        "")  log "GUI : ATTENTION port $PORT NON ouvert (bind refuse)" ;;
+        "")  R_="$(tw_count)"
+             log "GUI : ATTENTION port $PORT NON ouvert (bind refuse)${R_:+ -- $R_ residu(s) TIME_WAIT, la boucle reessaie}" ;;
         oui) if [ "$WAS_UP" -eq 1 ]; then
                  log "GUI : port $PORT en ecoute MAIS l'etait deja avant (bind incertain, orphelin possible)"
              else
