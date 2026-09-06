@@ -62,7 +62,7 @@ system_rw_sh()
 
 tool_list()
 {
-    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch kodi_web menu aliases"
+    echo "deploy amorce boot reboot remote_map front_digit launcher_toggle investigate stress_ram net_watch capture inspect_usb inspect_proc inspect_dev sync_usb disable_wireless media inspect_user inspect_system inspect_services inspect_display inspect_gui inspect_remote inspect_all device_info hdmi check_state conf_check help run_state recette selftest nreg config manage services hw_report show_key field_mode rotate_logs thermal vitals mem_tune cut_services system_rw front_led motd net_diag sys_diag sd_inspect sd_boot set_network set_time chroot_env busi macro tips swap_watch ip kodi_web menu aliases"
 }
 
 is_ported()
@@ -129,6 +129,7 @@ tool_desc()
         sd_boot)          echo "examen de la carte SD en fin de boot" ;;
         set_network)      echo "applique IP, route et DNS sans coupure" ;;
         set_time)         echo "synchronise l'horloge depuis source AUTO ou manuelle" ;;
+        ip)               echo "etat IP : adresse, masque, route, MAC, etat du lien" ;;
         chroot_env)       echo "mini-conteneurs chroot ARM isoles sous /data/chroots" ;;
         busi)             echo "busybox devoile : applets, puissances cachees, demos" ;;
         macro)            echo "sequences nommees d'actions rejouables en un coup" ;;

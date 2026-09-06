@@ -120,6 +120,7 @@ main()
     check_rc "system_rw STATUS"    "0" sh "$BASE/system_rw.sh" STATUS
     check_rc "motd STATUS"         "0 1" sh "$BASE/motd.sh" STATUS
     check_rc "net_diag"            "0 1" sh "$BASE/net_diag.sh"
+    check_rc "ip"                  "0 1" sh "$BASE/ip.sh"
     check_rc "sys_diag"            "0 1" sh "$BASE/sys_diag.sh"
     check_rc "sd_inspect"          "0 1 2" sh "$BASE/sd_inspect.sh"
     check_rc "sd_boot STATUS"      "0" sh "$BASE/sd_boot.sh" STATUS
