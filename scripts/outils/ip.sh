@@ -1,7 +1,7 @@
 #!/system/bin/sh
 # ip - etat IP de la box : adresse, interface, masque, route, MAC,
 # etat du lien. Version courte et directe de net_diag pour la vue
-# "quelle IP ?" demandee par docs/reco-agents.md (section 13).
+# "quelle IP ?" demandee par docs/AGENTS.md (question centrale).
 #
 # Usage: ip [STATUS] : synthesis reseau (defaut)
 #        ip MAC      : adresses MAC des interfaces
