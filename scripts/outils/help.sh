@@ -316,6 +316,8 @@ ACCES / ACCUEIL
                      (remount rw/ro automatique via system_rw)
 
 RESEAU / DIAGNOSTIC
+  ip                 Etat IP : adresse, interface, masque, route, MAC,
+                     etat du lien ; MAC = adresses MAC des interfaces
   net_diag           Diagnostic complet : lien (vitesse/duplex),
                      adresses auto-detectees, routes, DNS,
                      ping passerelle + internet, resume ok/ko/warn

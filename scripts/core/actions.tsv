@@ -75,5 +75,6 @@ N13	Applets requis par le kit	sh %BASE%/busi.sh CHECK
 N14	Puissance busybox en action	sh %BASE%/busi.sh POWERS
 N15	Qui fournit /system/bin	sh %BASE%/busi.sh WHO
 N16	Golden one-liners sur la box	sh %BASE%/tips.sh
+N17	Etat IP de la box	sh %BASE%/ip.sh
 O11	Etat chaine memoire	sh %BASE%/mem_tune.sh STATUS
 O12	Gardien swap : etat	sh %BASE%/swap_watch.sh STATUS

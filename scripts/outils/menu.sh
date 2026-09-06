@@ -282,6 +282,7 @@ help_diag()
     cat << 'EOF'
 diag - diagnostics ponctuels
   state             etat cible reseau/wireless/hdmi (check_state)
+  ip                etat IP : adresse, masque, route, MAC (ip)
   net               reseau (net_diag)
   sys               systeme complet (sys_diag)
   vitals            signes vitaux (vitals STATUS)
@@ -295,6 +296,7 @@ do_diag()
     case "$1" in
         ""|help|-h) help_diag ;;
         state)      run_tool check_state.sh ;;
+        ip)         run_tool ip.sh ;;
         net)        run_tool net_diag.sh ;;
         sys)        run_tool sys_diag.sh ;;
         vitals)     run_tool vitals.sh STATUS ;;

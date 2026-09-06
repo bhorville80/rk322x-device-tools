@@ -3,6 +3,7 @@ dist/
 *.dpk
 *.dpk.sha256
 BUILD-INFO.txt
+*.zip
 
 # Secrets (mots de passe ssh...) - jamais diffuses
 config/secrets.conf

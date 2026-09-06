@@ -87,6 +87,7 @@ n'est pas prete (scriptable).
 
 | Outil | Role |
 |---|---|
+| ip | etat IP court : adresse, interface, masque, route, MAC, etat du lien (STATUS/MAC) |
 | net_diag | PING/PORTS/THROUGHPUT + verdicts ; PORTS fusionne netstat + /proc/net/tcp (filtre 1-65535) |
 | net_watch | daemon suivi connexions + BAN/UNBAN iptables |
 | disable_wireless | coupe Wi-Fi/BT (OFF) / restaure (ON) / STATUS |
